@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>KSPT TOKEN</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0">
+
+<style>
+*{box-sizing:border-box}
+
+body{
+  margin:0;
+  background:#0b0b0b;
+  color:#fff;
+  font-family:Arial, sans-serif;
+  user-select:none;
+}
+
+/* GLOBAL LAYOUT */
+.app{
+  width:100%;
+  max-width:420px;
+  margin:0 auto;
+  min-height:100vh;
+  display:flex;
+  flex-direction:column;
+  align-items:center;
+  padding:16px;
+}
+
+.screen{display:none;width:100%}
+.screen.active{display:block}
+
+/* MAIN */
+.balance{
+  font-size:22px;
+  margin:10px 0 30px;
+}
+
+.coin{
+  width:220px;
+  height:220px;
+  margin:20px auto 40px;
+  display:block;
+  transition:transform .08s;
+}
+.coin:active{transform:scale(.92)}
+
+.bottom{
+  margin-top:auto;
+  width:100%;
+  display:flex;
+  justify-content:space-between;
+}
+.bottom img{
+  width:56px;
+  height:56px;
+}
+
+/* SHOP */
+h2{text-align:center;margin-bottom:20px}
+
+.card{
+  background:#161616;
+  border-radius:16px;
+  padding:14px;
+  margin-bottom:14px;
+}
+
+.card-title{
+  font-weight:bold;
+  margin-bottom:6px;
+}
+
+.price{
+  opacity:.7;
+  font-size:14px;
+  margin-bottom:8px;
+}
+
+button{
+  width:100%;
+  padding:12px;
+  border:none;
+  border-radius:12px;
+  background:#262626;
+  color:#fff;
+  font-size:15px;
+}
+
+input{
+  width:100%;
+  padding:12px;
+  border-radius:12px;
+  border:none;
+  font-size:16px;
+  margin-bottom:8px;
+}
+
+.small{
+  font-size:13px;
+  opacity:.6;
+  margin-top:6px;
+}
+
+.back{
+  margin-top:20px;
+  opacity:.6;
+}
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+<!-- MAIN -->
+<div id="main" class="screen active">
+  <div class="balance" id="balance">0.00 KSPT</div>
+  <img id="coin" class="coin" src="kspt.png">
+  <div class="bottom">
+    <img src="m.png" onclick="openScreen('skins')">
+    <img src="t.png" onclick="openScreen('tech')">
+  </div>
+</div>
+
+<!-- SKINS -->
+<div id="skins" class="screen">
+  <h2>Skin Shop</h2>
+
+  <div class="card">
+    <div class="card-title">WHAT IS KSPT</div>
+    <div class="price">Price: 1 KSPT</div>
+    <button onclick="buySkin('what',1)">Buy</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">KSPT Burger Edition</div>
+    <div class="price">Price: 10 KSPT</div>
+    <button onclick="buySkin('burger',10)">Buy</button>
+  </div>
+
+  <div class="card">
+    <button onclick="setSkin('default')">Use Default</button>
+    <button onclick="setSkin('what')">Use WHAT IS KSPT</button>
+    <button onclick="setSkin('burger')">Use Burger</button>
+  </div>
+
+  <button class="back" onclick="openScreen('main')">Back</button>
+</div>
+
+<!-- TECH -->
+<div id="tech" class="screen">
+  <h2>Tech Shop</h2>
+
+  <div class="card">
+    <div class="card-title">Permanent x2</div>
+    <div class="price">Price: 5 KSPT</div>
+    <button onclick="buyX2()">Buy</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">x5 Multiplier</div>
+    <div class="price">10 KSPT • 1 minute</div>
+    <button onclick="buyX5()">Buy</button>
+    <div class="small" id="x5timer"></div>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Bet</div>
+    <input id="betAmount" type="number" min="1" max="30" placeholder="Amount (1–30)">
+    <button onclick="setMax()">MAX</button>
+    <button onclick="bet(1.5,30)">x1.5 (30%)</button>
+    <button onclick="bet(3,17)">x3 (17%)</button>
+    <button onclick="bet(5,8)">x5 (8%)</button>
+    <button onclick="bet(10,3)">x10 (3%)</button>
+    <div class="small" id="betTimer"></div>
+  </div>
+
+  <button class="back" onclick="openScreen('main')">Back</button>
+</div>
+
+</div>
+
+<script>
+let d=JSON.parse(localStorage.getItem("kspt"))||{
+ tokens:0,skin:"default",skins:{},
+ x2:false,x5:0,x5cd:0,
+ betCd:0,betLock:{},
+ last:0,fast:0,warn:false
+};
+
+const save=()=>localStorage.setItem("kspt",JSON.stringify(d));
+const ui=()=>{ 
+ document.getElementById("balance").innerText=d.tokens.toFixed(2)+" KSPT";
+ document.getElementById("coin").src=
+  d.skin=="what"?"what.png":d.skin=="burger"?"burger.png":"kspt.png";
+};
+ui();
+
+function openScreen(id){
+ document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+ document.getElementById(id).classList.add("active");
+}
+
+/* CLICK */
+coin.onpointerdown=()=>{
+ let n=Date.now();
+ if(n-d.last<30){
+  d.fast+=0.01;
+  if(d.fast>0.67){
+   if(!d.warn){alert("Autoclicker detected");d.warn=true;}
+   else{d.tokens=0;alert("Tokens wiped");}
+  }
+ }else d.fast=0;
+ d.last=n;
+
+ let m=1;
+ if(d.x2)m*=2;
+ if(n<d.x5)m*=5;
+ d.tokens+=0.01*m;
+ save();ui();
+};
+
+/* SKINS */
+function buySkin(s,c){if(d.tokens>=c){d.tokens-=c;d.skins[s]=1;save();ui();}}
+function setSkin(s){if(s=="default"||d.skins[s]){d.skin=s;save();ui();}}
+
+/* MULT */
+function buyX2(){if(!d.x2&&d.tokens>=5){d.tokens-=5;d.x2=true;save();ui();}}
+function buyX5(){
+ let n=Date.now();
+ if(n<d.x5cd||d.tokens<10)return;
+ d.tokens-=10;d.x5=n+60000;d.x5cd=n+300000;
+ save();
+}
+
+/* BET */
+function setMax(){betAmount.value=Math.min(30,d.tokens.toFixed(2));}
+function bet(m,ch){
+ let n=Date.now();
+ if(n<d.betCd||d.betLock[m]>n)return;
+ let a=+betAmount.value;
+ if(a<1||a>30||a>d.tokens)return;
+ d.tokens-=a;
+ if(Math.random()*100<ch)d.tokens+=a*m;
+ d.betCd=n+60000;
+ d.betLock[m]=n+900000;
+ save();ui();
+}
+
+setInterval(()=>{
+ betTimer.innerText=d.betCd>Date.now()
+  ?"Next bet in "+Math.ceil((d.betCd-Date.now())/1000)+"s":"";
+ x5timer.innerText=d.x5>Date.now()
+  ?"x5 active "+Math.ceil((d.x5-Date.now())/1000)+"s":"";
+},500);
+</script>
+</body>
+</html>

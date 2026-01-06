@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <title>KSPT Token</title>
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
 
@@ -14,8 +14,7 @@ body{
   background:#0b0b0b;
   font-family:Arial,sans-serif;
   color:#fff;
-  user-select: none; /* Убирает выделение текста при кликах */
-  -webkit-tap-highlight-color: transparent;
+  -webkit-tap-highlight-color: transparent; /* Убирает синее выделение на мобильных */
 }
 
 .app{
@@ -58,12 +57,11 @@ body{
   height:220px;
   margin:0 auto 40px;
   display:block;
+  transition:transform .08s ease; /* Плавность для JS анимации */
   cursor: pointer;
-  /* Базовая анимация через CSS */
-  transition: transform 0.05s ease;
 }
 
-/* Анимация при добавлении класса через JS (надежнее чем :active) */
+/* Класс для JS-анимации нажатия */
 .coin.anim {
   transform: scale(0.92);
 }
@@ -123,9 +121,9 @@ button.owned{background:#333;opacity:.6}
 }
 
 /* ===== BET ===== */
-.bet-row {
+.input-group {
   display: flex;
-  gap: 8px;
+  gap: 10px;
   margin-bottom: 8px;
 }
 
@@ -135,11 +133,14 @@ input{
   border-radius:12px;
   border:none;
   font-size:16px;
+  background: #fff;
+  color: #000;
 }
 
 .max-btn {
-  width: 70px;
-  background: #d32f2f; /* Красный для заметности */
+  width: auto;
+  padding: 0 20px;
+  background: #ff9800; /* Выделим кнопку MAX цветом */
   font-weight: bold;
 }
 
@@ -159,13 +160,13 @@ input{
 
 <div id="main" class="screen active">
   <div class="balance-main" id="balanceMain">0.00 KSPT</div>
-  <img id="coin" class="coin" src="kspt.png">
+  <img id="coin" class="coin" src="kspt.png" alt="Coin">
   <div class="bottom-bar">
     <div class="long-btn" onclick="openScreen('skins')">
-      <img src="m.png">
+      <img src="m.png" alt="Skins">
     </div>
     <div class="long-btn" onclick="openScreen('tech')">
-      <img src="t.png">
+      <img src="t.png" alt="Tech">
     </div>
   </div>
 </div>
@@ -177,8 +178,8 @@ input{
   </div>
 
   <div class="card">
-    <div class="card-title">Default KSPT</div>
-    <div class="card-sub">Standard Look</div>
+    <div class="card-title">Default Coin</div>
+    <div class="card-sub">Standard</div>
     <button id="skin-default" onclick="buySkin('default',0)"></button>
   </div>
 
@@ -211,12 +212,11 @@ input{
 
   <div class="card">
     <div class="card-title">Bet</div>
-    
-    <div class="bet-row">
+    <div class="input-group">
       <input id="betAmount" type="number" placeholder="1–30">
       <button class="max-btn" onclick="setMaxBet()">MAX</button>
     </div>
-
+    
     <button onclick="prepareBet(1.5,30)">x1.5 (30%)</button>
     <button onclick="prepareBet(3,17)">x3 (17%)</button>
     <button onclick="prepareBet(5,8)">x5 (8%)</button>
@@ -240,12 +240,10 @@ if (window.Telegram?.WebApp){
   Telegram.WebApp.expand();
 }
 
+// Данные
 let d=JSON.parse(localStorage.getItem("kspt"))||{
  tokens:0,skin:"default",skins:{},x2:false
 };
-
-// Гарантируем, что дефолтный скин считается "купленным"
-d.skins['default'] = 1; 
 
 let pendingBet=null;
 
@@ -256,15 +254,25 @@ function ui(){
  balanceSkins.innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
  balanceTech.innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
 
- coin.src=d.skin==="what"?"what.png":d.skin==="burger"?"burger.png":"kspt.png";
+ // Логика картинки
+ coin.src = d.skin === "what" ? "what.png" : d.skin === "burger" ? "burger.png" : "kspt.png";
 
- // Обновленный список скинов, включая default
- ["default", "what", "burger"].forEach(s=>{
+ // Логика кнопок скинов (добавлен default)
+ ["default", "what","burger"].forEach(s=>{
   let b=document.getElementById("skin-"+s);
-  if(b) { // Проверка на существование элемента
-      if(d.skin===s){b.textContent="ACTIVE";b.className="active";}
-      else if(d.skins[s]){b.textContent="OWNED";b.className="owned";}
-      else{b.textContent="BUY";b.className="";}
+  if (!b) return; // Защита если элемента нет
+
+  if(d.skin===s){
+    b.textContent="ACTIVE";
+    b.className="active";
+  }
+  else if(s === "default" || d.skins[s]){
+    b.textContent="OWNED"; // Для дефолтного всегда OWNED, если не активен
+    b.className="owned";
+  }
+  else{
+    b.textContent="BUY";
+    b.className="";
   }
  });
 }
@@ -276,28 +284,27 @@ function openScreen(id){
  ui();
 }
 
+// Исправлена анимация: используем класс вместо CSS :active
 coin.onclick=()=>{
- // Логика анимации
- coin.classList.remove("anim");
- void coin.offsetWidth; // Триггер reflow для перезапуска анимации
- coin.classList.add("anim");
- setTimeout(() => coin.classList.remove("anim"), 100);
-
- // Логика клика
  let m=d.x2?2:1;
  d.tokens+=0.01*m;
+ 
+ // Анимация
+ coin.classList.add('anim');
+ setTimeout(() => {
+   coin.classList.remove('anim');
+ }, 80); // Быстрое удаление класса для эффекта клика
+
  save();ui();
 };
 
 function buySkin(s,c){
- // Если цена 0 (для дефолтного), просто меняем
- if (c === 0) {
-    d.skin = s;
-    save(); ui();
-    return;
+ if(s === "default") {
+    d.skin = "default"; // Всегда можно выбрать дефолт
  }
- 
- if(d.skins[s]) d.skin=s;
+ else if(d.skins[s]) {
+    d.skin=s;
+ }
  else if(d.tokens>=c){
   d.tokens-=c;
   d.skins[s]=1;
@@ -316,10 +323,12 @@ function buyX2(){
 
 // Новая функция для кнопки MAX
 function setMaxBet() {
-    let max = Math.floor(d.tokens);
-    if (max > 30) max = 30; // Лимит ставки 30
-    if (max < 0) max = 0;
-    document.getElementById('betAmount').value = max;
+  let max = 30;
+  if (d.tokens < 30) {
+    max = Math.floor(d.tokens); // Округляем вниз до целого
+  }
+  if (max < 1) max = 1; // Минимум 1
+  betAmount.value = max;
 }
 
 function prepareBet(mult,ch){

@@ -75,11 +75,18 @@ body{
 }
 
 /* ===== BOTTOM BUTTONS ===== */
+/* Layout Updated to support two layers */
 .bottom-bar{
   margin-top:auto;
   display:flex;
-  justify-content:space-between;
-  gap:10px; /* Reduced gap to fit 3 buttons */
+  flex-direction: column; /* Changed to column for layers */
+  gap:10px; 
+}
+
+.button-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .long-btn{
@@ -103,19 +110,22 @@ body{
   border-radius:18px;
   padding:14px;
   margin-bottom:14px;
+  overflow: hidden; /* For rectangular images */
 }
 
 .card-title{font-weight:bold;margin-bottom:6px}
 .card-sub{font-size:13px;opacity:.6;margin-bottom:8px}
 
-/* NEW: Card Image support for Offline Shop */
+/* NEW: Rectangular (Wide) Card Image Style */
 .card-img {
-  width: 50px;
-  height: 50px;
+  width: 120px; /* Wider rectangular shape */
+  height: 70px;
   float: right;
-  margin-top: -30px;
-  border-radius: 8px;
+  margin-top: -10px;
+  border-radius: 12px;
+  object-fit: cover;
 }
+
 .card-lvl {
   font-size: 12px;
   color: #ff9800;
@@ -187,14 +197,18 @@ input{
   <img id="coin" class="coin" src="kspt.png" alt="Coin">
   
   <div class="bottom-bar">
-    <div class="long-btn" onclick="openScreen('skins')">
-      <img src="m.png" alt="Skins">
+    <div class="button-row">
+      <div class="long-btn" onclick="openScreen('skins')">
+        <img src="m.png" alt="Skins">
+      </div>
+      <div class="long-btn" onclick="openScreen('offlineShop')">
+        <img src="k.png" alt="Mining">
+      </div>
     </div>
-    <div class="long-btn" onclick="openScreen('offlineShop')">
-      <img src="k.png" alt="Mining">
-    </div>
-    <div class="long-btn" onclick="openScreen('tech')">
-      <img src="t.png" alt="Tech">
+    <div class="button-row">
+      <div class="long-btn" onclick="openScreen('tech')">
+        <img src="t.png" alt="Tech">
+      </div>
     </div>
   </div>
 </div>
@@ -243,7 +257,7 @@ input{
 
   <div class="card">
     <div class="card-title">NUMBER #1!</div>
-    <div class="card-sub" style="color:#ff9800">Special: Win x10 Bet (Limited 50)</div>
+    <div class="card-sub" id="limitedSkinSub" style="color:#ff9800">Special: Win x10 Bet (Limited 50 left)</div>
     <button id="skin-priz" onclick="buySkin('priz',0)">LOCKED</button>
   </div>
 
@@ -317,14 +331,15 @@ if (window.Telegram?.WebApp){
   Telegram.WebApp.expand();
 }
 
+// Global Skin Counter Initialization
+let globalSkinLimit = parseInt(localStorage.getItem("kspt_global_priz_count")) || 50;
+
 // Данные
-// EXTENDED for new features
 let d=JSON.parse(localStorage.getItem("kspt"))||{
  tokens:0,skin:"default",skins:{},x2:false,
- // New properties
  lastLogin: Date.now(),
  wonX10: false,
- cards: { c1: -1, c2: -1 } // -1 = unowned, 0..5 = levels
+ cards: { c1: -1, c2: -1 } 
 };
 
 // Migration for old saves
@@ -334,21 +349,20 @@ if(typeof d.cards === 'undefined') d.cards = { c1: -1, c2: -1 };
 
 let pendingBet=null;
 
-// Card Data Configuration
 const CARDS = {
   1: {
     levels: [
-      { price: 25, income: 1.0 }, // Purchase (Lvl 0)
-      { price: 32, income: 2.1 }, // Upg 1 (Lvl 1)
+      { price: 25, income: 1.0 },
+      { price: 32, income: 2.1 },
       { price: 40, income: 2.8 },
       { price: 51, income: 4.4 },
       { price: 65, income: 5.1 },
-      { price: 80, income: 6.5 }  // Max (Lvl 5)
+      { price: 80, income: 6.5 }
     ]
   },
   2: {
     levels: [
-      { price: 100, income: 2.5 }, // Purchase
+      { price: 100, income: 2.5 },
       { price: 130, income: 3.8 },
       { price: 170, income: 5.1 },
       { price: 190, income: 6.7 },
@@ -360,48 +374,40 @@ const CARDS = {
 
 const save=()=>localStorage.setItem("kspt",JSON.stringify(d));
 
-// --- NEW LOGIC: Offline Calculation ---
+// Updated Offline Calculation with Startup Screen and 1-hour minimum
 function processOfflineIncome() {
   const now = Date.now();
   const diffMs = now - d.lastLogin;
   const hours = diffMs / (1000 * 60 * 60);
 
-  // Calculate rate based on current cards
   let rate = getHourlyRate();
 
-  if (rate > 0 && hours > 0) {
+  // Condition: Only add if hours >= 1
+  if (rate > 0 && hours >= 1) {
     let effectiveHours = hours;
-    if (effectiveHours > 8) effectiveHours = 8; // Hard cap
+    if (effectiveHours > 8) effectiveHours = 8;
     
     let earnings = rate * effectiveHours;
     if (earnings > 0.01) {
        d.tokens += earnings;
-       alert(`Welcome back!\nYou were away for ${hours.toFixed(2)} hours.\nOffline Income: +${earnings.toFixed(2)} KSPT`);
+       // Requirement: Show earnings popup on startup
+       alert(`While you were away, you earned ${earnings.toFixed(2)} KSPT.`);
     }
   }
 
-  // Reset timer
   d.lastLogin = now;
   save();
 }
 
 function getHourlyRate() {
   let rate = 0;
-  // Card 1
-  if(d.cards.c1 >= 0) {
-    rate += CARDS[1].levels[d.cards.c1].income;
-  }
-  // Card 2
-  if(d.cards.c2 >= 0) {
-    rate += CARDS[2].levels[d.cards.c2].income;
-  }
+  if(d.cards.c1 >= 0) rate += CARDS[1].levels[d.cards.c1].income;
+  if(d.cards.c2 >= 0) rate += CARDS[2].levels[d.cards.c2].income;
   return rate;
 }
 
-// Run once on load
 processOfflineIncome();
 
-// Save lastLogin periodically or on interaction
 setInterval(() => {
   d.lastLogin = Date.now();
   save();
@@ -411,14 +417,14 @@ function ui(){
  balanceMain.innerText=d.tokens.toFixed(2)+" KSPT";
  balanceSkins.innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
  balanceTech.innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
- // Update new shop header
  document.getElementById("balanceOffline").innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
 
- // NEW: Update Main Menu Rate
  let rate = getHourlyRate();
  document.getElementById("offlineRateMain").innerText = "Offline: " + rate.toFixed(1) + " KSPT/h";
 
- // Логика картинки (Updated with new skins)
+ // Exclusive Counter UI
+ document.getElementById("limitedSkinSub").innerText = `Special: Win x10 Bet (Limited ${globalSkinLimit} left)`;
+
  let imgName = "kspt.png";
  if(d.skin === "what") imgName = "what.png";
  else if(d.skin === "burger") imgName = "burger.png";
@@ -428,25 +434,23 @@ function ui(){
  else if(d.skin === "priz") imgName = "priz.png";
  coin.src = imgName;
 
- // Логика кнопок скинов (добавлен default и новые)
  ["default", "what","burger", "joost", "dog", "diam", "priz"].forEach(s=>{
   let b=document.getElementById("skin-"+s);
   if (!b) return;
 
-  // Logic for Special Skin
   if(s === "priz") {
       if(d.skin === "priz") {
           b.textContent = "ACTIVE";
           b.className = "active";
           return;
       }
-      if(d.wonX10) {
-         b.textContent = "OWNED"; // Can switch freely if unlocked
+      if(d.wonX10 && globalSkinLimit > 0) {
+         b.textContent = "OWNED"; 
          b.className = "owned";
          b.onclick = function(){ buySkin('priz', 0); };
       } else {
-         b.textContent = "LOCKED (Win x10)";
-         b.className = "owned"; // Greyed out
+         b.textContent = globalSkinLimit <= 0 ? "SOLD OUT" : "LOCKED (Win x10)";
+         b.className = "owned";
          b.onclick = null;
       }
       return;
@@ -461,9 +465,8 @@ function ui(){
     b.className="owned";
   }
   else{
-    // Need price to check
     let prices = {what:1, burger:10, joost:30, dog:80, diam:100};
-    b.textContent=`BUY ${prices[s]} KSPT`; // Dynamic label
+    b.textContent=`BUY ${prices[s]} KSPT`;
     b.className="";
   }
  });
@@ -472,16 +475,12 @@ function ui(){
 }
 
 function updateCardUI() {
-  // Helper to render card state
   const renderCard = (id, cardKey) => {
-    let lvl = d.cards[cardKey]; // -1 to 5
+    let lvl = d.cards[cardKey];
     let data = CARDS[id].levels;
     let btn = document.getElementById("btn_c"+id);
-    let txtLvl = document.getElementById("c1_lvl"); // Reusing for generic if needed, but IDs are specific
-    if(id===2) txtLvl = document.getElementById("c2_lvl");
-    
-    let txtInc = document.getElementById("c1_income");
-    if(id===2) txtInc = document.getElementById("c2_income");
+    let txtLvl = document.getElementById(id===2 ? "c2_lvl" : "c1_lvl");
+    let txtInc = document.getElementById(id===2 ? "c2_income" : "c1_income");
 
     if (lvl === 5) {
       txtLvl.innerText = "Level: MAX";
@@ -496,10 +495,10 @@ function updateCardUI() {
       
       if(lvl === -1) {
         txtLvl.innerText = "Not Owned";
-        txtInc.innerText = "+" + nextInc + " KSPT/h"; // Show what you get
+        txtInc.innerText = "+" + nextInc + " KSPT/h";
         btn.innerText = `Buy ${cost} KSPT`;
       } else {
-        txtLvl.innerText = `Level: ${lvl}`; // e.g. Level 0 (Just bought)
+        txtLvl.innerText = `Level: ${lvl}`;
         txtInc.innerText = `Current: +${data[lvl].income} -> +${nextInc}`;
         btn.innerText = `Upgrade ${cost} KSPT`;
       }
@@ -510,15 +509,12 @@ function updateCardUI() {
 
   renderCard(1, "c1");
 
-  // Logic for Card 2 Lock
   let c2Div = document.getElementById("card2_container");
-  // Unlock condition: Card 1 must be Level 3 (index 3) or higher
   if (d.cards.c1 >= 3) {
       c2Div.style.display = "block";
       c2Div.style.filter = "none";
       renderCard(2, "c2");
   } else {
-      // It acts hidden/locked
       c2Div.style.display = "block";
       c2Div.style.filter = "grayscale(1) opacity(0.5)";
       document.getElementById("btn_c2").innerText = "Unlock: Card #1 Lvl 3";
@@ -526,15 +522,12 @@ function updateCardUI() {
   }
 }
 
-// --- NEW FUNCTION: Buy Cards ---
 function buyCard(id) {
   let key = "c" + id;
   let curLvl = d.cards[key];
   if(curLvl >= 5) return;
-
   let nextLvl = curLvl + 1;
   let cost = CARDS[id].levels[nextLvl].price;
-
   if(d.tokens >= cost) {
     d.tokens -= cost;
     d.cards[key] = nextLvl;
@@ -549,35 +542,25 @@ function openScreen(id){
  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
  document.getElementById(id).classList.add("active");
  ui();
- 
- // Sync time on screen change
  d.lastLogin = Date.now();
  save();
 }
 
-// Исправлена анимация: используем класс вместо CSS :active
 coin.onclick=()=>{
  let m=d.x2?2:1;
  d.tokens+=0.01*m;
- 
- // Анимация
  coin.classList.add('anim');
- setTimeout(() => {
-   coin.classList.remove('anim');
- }, 80); // Быстрое удаление класса для эффекта клика
-
- // Update last login on click too
+ setTimeout(() => { coin.classList.remove('anim'); }, 80);
  d.lastLogin = Date.now();
-
  save();ui();
 };
 
 function buySkin(s,c){
  if(s === "default") {
-    d.skin = "default"; // Всегда можно выбрать дефолт
+    d.skin = "default";
  }
  else if(s === "priz") {
-    if(d.wonX10) d.skin = "priz";
+    if(d.wonX10 && globalSkinLimit > 0) d.skin = "priz";
  }
  else if(d.skins[s]) {
     d.skin=s;
@@ -598,13 +581,10 @@ function buyX2(){
  }
 }
 
-// Новая функция для кнопки MAX
 function setMaxBet() {
   let max = 30;
-  if (d.tokens < 30) {
-    max = Math.floor(d.tokens); // Округляем вниз до целого
-  }
-  if (max < 1) max = 1; // Минимум 1
+  if (d.tokens < 30) max = Math.floor(d.tokens);
+  if (max < 1) max = 1;
   betAmount.value = max;
 }
 
@@ -628,10 +608,12 @@ function confirmBet(){
  d.tokens-=a;
  if(Math.random()*100<ch){
    d.tokens+=a*mult;
-   // NEW: Check for x10 win
    if(mult === 10) {
-     if(!d.wonX10) {
+     if(!d.wonX10 && globalSkinLimit > 0) {
        d.wonX10 = true;
+       // Decrement Global Counter
+       globalSkinLimit--;
+       localStorage.setItem("kspt_global_priz_count", globalSkinLimit);
        alert("🎉 UNBELIEVABLE! You won x10!\nSkin 'NUMBER #1!' Unlocked!");
      }
    }

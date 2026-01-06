@@ -14,6 +14,8 @@ body{
   background:#0b0b0b;
   font-family:Arial,sans-serif;
   color:#fff;
+  user-select: none; /* Убирает выделение текста при кликах */
+  -webkit-tap-highlight-color: transparent;
 }
 
 .app{
@@ -56,9 +58,15 @@ body{
   height:220px;
   margin:0 auto 40px;
   display:block;
-  transition:transform .08s;
+  cursor: pointer;
+  /* Базовая анимация через CSS */
+  transition: transform 0.05s ease;
 }
-.coin:active{transform:scale(.92)}
+
+/* Анимация при добавлении класса через JS (надежнее чем :active) */
+.coin.anim {
+  transform: scale(0.92);
+}
 
 /* ===== BOTTOM BUTTONS ===== */
 .bottom-bar{
@@ -76,6 +84,7 @@ body{
   display:flex;
   align-items:center;
   justify-content:center;
+  cursor: pointer;
 }
 .long-btn img{
   height:42px;
@@ -101,6 +110,7 @@ button{
   background:#262626;
   color:#fff;
   font-size:15px;
+  cursor: pointer;
 }
 
 button.active{background:#2e7d32}
@@ -113,13 +123,24 @@ button.owned{background:#333;opacity:.6}
 }
 
 /* ===== BET ===== */
+.bet-row {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
 input{
   width:100%;
   padding:12px;
   border-radius:12px;
   border:none;
-  margin-bottom:8px;
   font-size:16px;
+}
+
+.max-btn {
+  width: 70px;
+  background: #d32f2f; /* Красный для заметности */
+  font-weight: bold;
 }
 
 .confirm{
@@ -136,7 +157,6 @@ input{
 <body>
 <div class="app">
 
-<!-- MAIN -->
 <div id="main" class="screen active">
   <div class="balance-main" id="balanceMain">0.00 KSPT</div>
   <img id="coin" class="coin" src="kspt.png">
@@ -150,11 +170,16 @@ input{
   </div>
 </div>
 
-<!-- SKINS -->
 <div id="skins" class="screen">
   <div class="top-bar">
     <img src="kspt.png">
     <span id="balanceSkins"></span>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Default KSPT</div>
+    <div class="card-sub">Standard Look</div>
+    <button id="skin-default" onclick="buySkin('default',0)"></button>
   </div>
 
   <div class="card">
@@ -172,7 +197,6 @@ input{
   <button class="back" onclick="openScreen('main')">Back</button>
 </div>
 
-<!-- TECH -->
 <div id="tech" class="screen">
   <div class="top-bar">
     <img src="kspt.png">
@@ -187,7 +211,12 @@ input{
 
   <div class="card">
     <div class="card-title">Bet</div>
-    <input id="betAmount" type="number" placeholder="1–30">
+    
+    <div class="bet-row">
+      <input id="betAmount" type="number" placeholder="1–30">
+      <button class="max-btn" onclick="setMaxBet()">MAX</button>
+    </div>
+
     <button onclick="prepareBet(1.5,30)">x1.5 (30%)</button>
     <button onclick="prepareBet(3,17)">x3 (17%)</button>
     <button onclick="prepareBet(5,8)">x5 (8%)</button>
@@ -215,6 +244,9 @@ let d=JSON.parse(localStorage.getItem("kspt"))||{
  tokens:0,skin:"default",skins:{},x2:false
 };
 
+// Гарантируем, что дефолтный скин считается "купленным"
+d.skins['default'] = 1; 
+
 let pendingBet=null;
 
 const save=()=>localStorage.setItem("kspt",JSON.stringify(d));
@@ -226,11 +258,14 @@ function ui(){
 
  coin.src=d.skin==="what"?"what.png":d.skin==="burger"?"burger.png":"kspt.png";
 
- ["what","burger"].forEach(s=>{
+ // Обновленный список скинов, включая default
+ ["default", "what", "burger"].forEach(s=>{
   let b=document.getElementById("skin-"+s);
-  if(d.skin===s){b.textContent="ACTIVE";b.className="active";}
-  else if(d.skins[s]){b.textContent="OWNED";b.className="owned";}
-  else{b.textContent="BUY";b.className="";}
+  if(b) { // Проверка на существование элемента
+      if(d.skin===s){b.textContent="ACTIVE";b.className="active";}
+      else if(d.skins[s]){b.textContent="OWNED";b.className="owned";}
+      else{b.textContent="BUY";b.className="";}
+  }
  });
 }
 ui();
@@ -242,12 +277,26 @@ function openScreen(id){
 }
 
 coin.onclick=()=>{
+ // Логика анимации
+ coin.classList.remove("anim");
+ void coin.offsetWidth; // Триггер reflow для перезапуска анимации
+ coin.classList.add("anim");
+ setTimeout(() => coin.classList.remove("anim"), 100);
+
+ // Логика клика
  let m=d.x2?2:1;
  d.tokens+=0.01*m;
  save();ui();
 };
 
 function buySkin(s,c){
+ // Если цена 0 (для дефолтного), просто меняем
+ if (c === 0) {
+    d.skin = s;
+    save(); ui();
+    return;
+ }
+ 
  if(d.skins[s]) d.skin=s;
  else if(d.tokens>=c){
   d.tokens-=c;
@@ -263,6 +312,14 @@ function buyX2(){
   d.x2=true;
   save();ui();
  }
+}
+
+// Новая функция для кнопки MAX
+function setMaxBet() {
+    let max = Math.floor(d.tokens);
+    if (max > 30) max = 30; // Лимит ставки 30
+    if (max < 0) max = 0;
+    document.getElementById('betAmount').value = max;
 }
 
 function prepareBet(mult,ch){

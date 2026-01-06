@@ -186,53 +186,6 @@ input{
   background:#444;
   margin-top:6px;
 }
-
-/* ===== LEADERBOARD STYLES (NEW) ===== */
-.lb-list {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding-bottom: 20px;
-}
-.lb-item {
-  display: flex;
-  align-items: center;
-  background: #161616;
-  padding: 10px;
-  border-radius: 12px;
-}
-.lb-rank {
-  width: 30px;
-  font-size: 16px;
-  font-weight: bold;
-  color: #ff9800;
-  text-align: center;
-}
-.lb-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  margin: 0 12px;
-  object-fit: cover;
-  background: #222;
-}
-.lb-info {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-}
-.lb-name {
-  font-size: 14px;
-  font-weight: bold;
-  margin-bottom: 2px;
-}
-.lb-stats {
-  font-size: 12px;
-  opacity: 0.7;
-}
-.lb-me {
-  border: 1px solid #2e7d32; /* Highlight current user */
-}
 </style>
 </head>
 
@@ -259,11 +212,6 @@ input{
         <img src="t.png" alt="Tech">
       </div>
     </div>
-    <div class="button-row">
-        <div class="long-btn" onclick="openScreen('records')" style="width: 50%; flex: 0 0 48%;">
-          <img src="records.png" alt="Records">
-        </div>
-        <div style="flex:1"></div> </div>
   </div>
 </div>
 
@@ -388,18 +336,6 @@ input{
     <button class="confirm" onclick="confirmBet()">Confirm</button>
     <button class="cancel" onclick="cancelBet()">Cancel</button>
   </div>
-
-  <button class="back" onclick="openScreen('main')">Back</button>
-</div>
-
-<div id="records" class="screen">
-  <div class="top-bar">
-    <img src="records.png">
-    <span>Leaderboard</span>
-  </div>
-  
-  <div id="leaderboardList" class="lb-list">
-    </div>
 
   <button class="back" onclick="openScreen('main')">Back</button>
 </div>
@@ -686,7 +622,6 @@ ui();
 function openScreen(id){
  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
  document.getElementById(id).classList.add("active");
- if(id === 'records') renderLeaderboard();
  ui();
  d.lastLogin = Date.now();
  save();
@@ -772,81 +707,6 @@ function confirmBet(){
    }
  }
  save();ui();
-}
-
-// ===== LEADERBOARD LOGIC =====
-function renderLeaderboard() {
-  const list = document.getElementById('leaderboardList');
-  list.innerHTML = "Loading...";
-
-  // 1. Get Current User Data
-  let myName = "You";
-  let myPhoto = null;
-  if (window.Telegram?.WebApp?.initDataUnsafe?.user) {
-    let u = window.Telegram.WebApp.initDataUnsafe.user;
-    if (u.first_name) myName = u.first_name;
-    if (u.photo_url) myPhoto = u.photo_url;
-  }
-  
-  let myRate = getHourlyRate();
-  let myBal = d.tokens;
-
-  let me = {
-    name: myName,
-    photo: myPhoto, // null will trigger fallback
-    balance: myBal,
-    rate: myRate,
-    isMe: true
-  };
-
-  // 2. Generate Dummy Users (Simulating server database)
-  // In a real app, this array would come from a server API fetch.
-  let allUsers = [me];
-  
-  // Create ~220 fake users to test the 200 limit and sorting
-  for(let i=0; i<220; i++) {
-    let rRate = (Math.random() * 80).toFixed(1); // Random rate 0-80
-    let rBal = (Math.random() * 5000).toFixed(2);
-    let hasAvatar = Math.random() > 0.5;
-    
-    allUsers.push({
-      name: "User " + (i+1240),
-      photo: hasAvatar ? "https://via.placeholder.com/40" : null, // Some have avatar, some null
-      balance: parseFloat(rBal),
-      rate: parseFloat(rRate),
-      isMe: false
-    });
-  }
-
-  // 3. Sorting Logic: Based ONLY on KSPT/h (descending)
-  allUsers.sort((a, b) => b.rate - a.rate);
-
-  // 4. Limit to Top 200
-  let topUsers = allUsers.slice(0, 200);
-
-  // 5. Render
-  let html = "";
-  topUsers.forEach((u, index) => {
-    let rank = index + 1;
-    let avatarSrc = u.photo ? u.photo : "kspt.png";
-    let highlightClass = u.isMe ? "lb-me" : "";
-    let nameDisplay = u.isMe ? `${u.name} (You)` : u.name;
-
-    html += `
-      <div class="lb-item ${highlightClass}">
-        <div class="lb-rank">#${rank}</div>
-        <img src="${avatarSrc}" class="lb-avatar" alt="av">
-        <div class="lb-info">
-          <div class="lb-name">${nameDisplay}</div>
-          <div class="lb-stats">
-            ${u.balance.toFixed(2)} KSPT | <span style="color:#ff9800">${u.rate.toFixed(1)}/h</span>
-          </div>
-        </div>
-      </div>
-    `;
-  });
-
-  list.innerHTML = html;
 }
 </script>
 </body>

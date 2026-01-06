@@ -47,8 +47,16 @@ body{
 
 .balance-main{
   font-size:22px;
-  margin:10px 0 30px;
+  margin:10px 0 5px; /* Adjusted margin for offline text */
   text-align:center;
+}
+
+/* NEW: Offline Info Style */
+.offline-info {
+  text-align: center;
+  font-size: 14px;
+  color: #aaa;
+  margin-bottom: 25px;
 }
 
 /* ===== COIN ===== */
@@ -71,7 +79,7 @@ body{
   margin-top:auto;
   display:flex;
   justify-content:space-between;
-  gap:20px;
+  gap:10px; /* Reduced gap to fit 3 buttons */
 }
 
 .long-btn{
@@ -99,6 +107,20 @@ body{
 
 .card-title{font-weight:bold;margin-bottom:6px}
 .card-sub{font-size:13px;opacity:.6;margin-bottom:8px}
+
+/* NEW: Card Image support for Offline Shop */
+.card-img {
+  width: 50px;
+  height: 50px;
+  float: right;
+  margin-top: -30px;
+  border-radius: 8px;
+}
+.card-lvl {
+  font-size: 12px;
+  color: #ff9800;
+  margin-bottom: 4px;
+}
 
 button{
   width:100%;
@@ -160,10 +182,16 @@ input{
 
 <div id="main" class="screen active">
   <div class="balance-main" id="balanceMain">0.00 KSPT</div>
+  <div class="offline-info" id="offlineRateMain">Offline: 0.00 KSPT/h</div>
+
   <img id="coin" class="coin" src="kspt.png" alt="Coin">
+  
   <div class="bottom-bar">
     <div class="long-btn" onclick="openScreen('skins')">
       <img src="m.png" alt="Skins">
+    </div>
+    <div class="long-btn" onclick="openScreen('offlineShop')">
+      <img src="k.png" alt="Mining">
     </div>
     <div class="long-btn" onclick="openScreen('tech')">
       <img src="t.png" alt="Tech">
@@ -193,6 +221,55 @@ input{
     <div class="card-title">KSPT Burger Edition</div>
     <div class="card-sub">Price: 10 KSPT</div>
     <button id="skin-burger" onclick="buySkin('burger',10)"></button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Little Aqua</div>
+    <div class="card-sub">Price: 30 KSPT</div>
+    <button id="skin-joost" onclick="buySkin('joost',30)"></button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Dogs World</div>
+    <div class="card-sub">Price: 80 KSPT</div>
+    <button id="skin-dog" onclick="buySkin('dog',80)"></button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Cringe Diamond</div>
+    <div class="card-sub">Price: 100 KSPT</div>
+    <button id="skin-diam" onclick="buySkin('diam',100)"></button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">NUMBER #1!</div>
+    <div class="card-sub" style="color:#ff9800">Special: Win x10 Bet (Limited 50)</div>
+    <button id="skin-priz" onclick="buySkin('priz',0)">LOCKED</button>
+  </div>
+
+  <button class="back" onclick="openScreen('main')">Back</button>
+</div>
+
+<div id="offlineShop" class="screen">
+  <div class="top-bar">
+    <img src="kspt.png">
+    <span id="balanceOffline"></span>
+  </div>
+
+  <div class="card">
+    <img src="per.png" class="card-img">
+    <div class="card-title">Personal Manager</div>
+    <div class="card-lvl" id="c1_lvl">Not Owned</div>
+    <div class="card-sub" id="c1_income">+1.0 KSPT/h</div>
+    <button id="btn_c1" onclick="buyCard(1)">Buy 25 KSPT</button>
+  </div>
+
+  <div class="card" id="card2_container" style="display:none; filter: grayscale(1);">
+    <img src="inv.png" class="card-img">
+    <div class="card-title">Investors</div>
+    <div class="card-lvl" id="c2_lvl">Locked</div>
+    <div class="card-sub" id="c2_income">+2.5 KSPT/h</div>
+    <button id="btn_c2" onclick="buyCard(2)">Locked</button>
   </div>
 
   <button class="back" onclick="openScreen('main')">Back</button>
@@ -241,47 +318,241 @@ if (window.Telegram?.WebApp){
 }
 
 // Данные
+// EXTENDED for new features
 let d=JSON.parse(localStorage.getItem("kspt"))||{
- tokens:0,skin:"default",skins:{},x2:false
+ tokens:0,skin:"default",skins:{},x2:false,
+ // New properties
+ lastLogin: Date.now(),
+ wonX10: false,
+ cards: { c1: -1, c2: -1 } // -1 = unowned, 0..5 = levels
 };
+
+// Migration for old saves
+if(typeof d.lastLogin === 'undefined') d.lastLogin = Date.now();
+if(typeof d.wonX10 === 'undefined') d.wonX10 = false;
+if(typeof d.cards === 'undefined') d.cards = { c1: -1, c2: -1 };
 
 let pendingBet=null;
 
+// Card Data Configuration
+const CARDS = {
+  1: {
+    levels: [
+      { price: 25, income: 1.0 }, // Purchase (Lvl 0)
+      { price: 32, income: 2.1 }, // Upg 1 (Lvl 1)
+      { price: 40, income: 2.8 },
+      { price: 51, income: 4.4 },
+      { price: 65, income: 5.1 },
+      { price: 80, income: 6.5 }  // Max (Lvl 5)
+    ]
+  },
+  2: {
+    levels: [
+      { price: 100, income: 2.5 }, // Purchase
+      { price: 130, income: 3.8 },
+      { price: 170, income: 5.1 },
+      { price: 190, income: 6.7 },
+      { price: 250, income: 8.0 },
+      { price: 315, income: 10.0 }
+    ]
+  }
+};
+
 const save=()=>localStorage.setItem("kspt",JSON.stringify(d));
+
+// --- NEW LOGIC: Offline Calculation ---
+function processOfflineIncome() {
+  const now = Date.now();
+  const diffMs = now - d.lastLogin;
+  const hours = diffMs / (1000 * 60 * 60);
+
+  // Calculate rate based on current cards
+  let rate = getHourlyRate();
+
+  if (rate > 0 && hours > 0) {
+    let effectiveHours = hours;
+    if (effectiveHours > 8) effectiveHours = 8; // Hard cap
+    
+    let earnings = rate * effectiveHours;
+    if (earnings > 0.01) {
+       d.tokens += earnings;
+       alert(`Welcome back!\nYou were away for ${hours.toFixed(2)} hours.\nOffline Income: +${earnings.toFixed(2)} KSPT`);
+    }
+  }
+
+  // Reset timer
+  d.lastLogin = now;
+  save();
+}
+
+function getHourlyRate() {
+  let rate = 0;
+  // Card 1
+  if(d.cards.c1 >= 0) {
+    rate += CARDS[1].levels[d.cards.c1].income;
+  }
+  // Card 2
+  if(d.cards.c2 >= 0) {
+    rate += CARDS[2].levels[d.cards.c2].income;
+  }
+  return rate;
+}
+
+// Run once on load
+processOfflineIncome();
+
+// Save lastLogin periodically or on interaction
+setInterval(() => {
+  d.lastLogin = Date.now();
+  save();
+}, 60000);
 
 function ui(){
  balanceMain.innerText=d.tokens.toFixed(2)+" KSPT";
  balanceSkins.innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
  balanceTech.innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
+ // Update new shop header
+ document.getElementById("balanceOffline").innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
 
- // Логика картинки
- coin.src = d.skin === "what" ? "what.png" : d.skin === "burger" ? "burger.png" : "kspt.png";
+ // NEW: Update Main Menu Rate
+ let rate = getHourlyRate();
+ document.getElementById("offlineRateMain").innerText = "Offline: " + rate.toFixed(1) + " KSPT/h";
 
- // Логика кнопок скинов (добавлен default)
- ["default", "what","burger"].forEach(s=>{
+ // Логика картинки (Updated with new skins)
+ let imgName = "kspt.png";
+ if(d.skin === "what") imgName = "what.png";
+ else if(d.skin === "burger") imgName = "burger.png";
+ else if(d.skin === "joost") imgName = "joost.png";
+ else if(d.skin === "dog") imgName = "dog.png";
+ else if(d.skin === "diam") imgName = "diam.png";
+ else if(d.skin === "priz") imgName = "priz.png";
+ coin.src = imgName;
+
+ // Логика кнопок скинов (добавлен default и новые)
+ ["default", "what","burger", "joost", "dog", "diam", "priz"].forEach(s=>{
   let b=document.getElementById("skin-"+s);
-  if (!b) return; // Защита если элемента нет
+  if (!b) return;
+
+  // Logic for Special Skin
+  if(s === "priz") {
+      if(d.skin === "priz") {
+          b.textContent = "ACTIVE";
+          b.className = "active";
+          return;
+      }
+      if(d.wonX10) {
+         b.textContent = "OWNED"; // Can switch freely if unlocked
+         b.className = "owned";
+         b.onclick = function(){ buySkin('priz', 0); };
+      } else {
+         b.textContent = "LOCKED (Win x10)";
+         b.className = "owned"; // Greyed out
+         b.onclick = null;
+      }
+      return;
+  }
 
   if(d.skin===s){
     b.textContent="ACTIVE";
     b.className="active";
   }
   else if(s === "default" || d.skins[s]){
-    b.textContent="OWNED"; // Для дефолтного всегда OWNED, если не активен
+    b.textContent="OWNED";
     b.className="owned";
   }
   else{
-    b.textContent="BUY";
+    // Need price to check
+    let prices = {what:1, burger:10, joost:30, dog:80, diam:100};
+    b.textContent=`BUY ${prices[s]} KSPT`; // Dynamic label
     b.className="";
   }
  });
+
+ updateCardUI();
 }
+
+function updateCardUI() {
+  // Helper to render card state
+  const renderCard = (id, cardKey) => {
+    let lvl = d.cards[cardKey]; // -1 to 5
+    let data = CARDS[id].levels;
+    let btn = document.getElementById("btn_c"+id);
+    let txtLvl = document.getElementById("c1_lvl"); // Reusing for generic if needed, but IDs are specific
+    if(id===2) txtLvl = document.getElementById("c2_lvl");
+    
+    let txtInc = document.getElementById("c1_income");
+    if(id===2) txtInc = document.getElementById("c2_income");
+
+    if (lvl === 5) {
+      txtLvl.innerText = "Level: MAX";
+      txtInc.innerText = "+" + data[5].income + " KSPT/h";
+      btn.innerText = "MAXED";
+      btn.className = "owned";
+      btn.onclick = null;
+    } else {
+      let nextLvl = lvl + 1;
+      let cost = data[nextLvl].price;
+      let nextInc = data[nextLvl].income;
+      
+      if(lvl === -1) {
+        txtLvl.innerText = "Not Owned";
+        txtInc.innerText = "+" + nextInc + " KSPT/h"; // Show what you get
+        btn.innerText = `Buy ${cost} KSPT`;
+      } else {
+        txtLvl.innerText = `Level: ${lvl}`; // e.g. Level 0 (Just bought)
+        txtInc.innerText = `Current: +${data[lvl].income} -> +${nextInc}`;
+        btn.innerText = `Upgrade ${cost} KSPT`;
+      }
+      btn.className = "";
+      btn.onclick = function() { buyCard(id); };
+    }
+  };
+
+  renderCard(1, "c1");
+
+  // Logic for Card 2 Lock
+  let c2Div = document.getElementById("card2_container");
+  // Unlock condition: Card 1 must be Level 3 (index 3) or higher
+  if (d.cards.c1 >= 3) {
+      c2Div.style.display = "block";
+      c2Div.style.filter = "none";
+      renderCard(2, "c2");
+  } else {
+      // It acts hidden/locked
+      c2Div.style.display = "block";
+      c2Div.style.filter = "grayscale(1) opacity(0.5)";
+      document.getElementById("btn_c2").innerText = "Unlock: Card #1 Lvl 3";
+      document.getElementById("btn_c2").onclick = null;
+  }
+}
+
+// --- NEW FUNCTION: Buy Cards ---
+function buyCard(id) {
+  let key = "c" + id;
+  let curLvl = d.cards[key];
+  if(curLvl >= 5) return;
+
+  let nextLvl = curLvl + 1;
+  let cost = CARDS[id].levels[nextLvl].price;
+
+  if(d.tokens >= cost) {
+    d.tokens -= cost;
+    d.cards[key] = nextLvl;
+    save();
+    ui();
+  }
+}
+
 ui();
 
 function openScreen(id){
  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
  document.getElementById(id).classList.add("active");
  ui();
+ 
+ // Sync time on screen change
+ d.lastLogin = Date.now();
+ save();
 }
 
 // Исправлена анимация: используем класс вместо CSS :active
@@ -295,12 +566,18 @@ coin.onclick=()=>{
    coin.classList.remove('anim');
  }, 80); // Быстрое удаление класса для эффекта клика
 
+ // Update last login on click too
+ d.lastLogin = Date.now();
+
  save();ui();
 };
 
 function buySkin(s,c){
  if(s === "default") {
     d.skin = "default"; // Всегда можно выбрать дефолт
+ }
+ else if(s === "priz") {
+    if(d.wonX10) d.skin = "priz";
  }
  else if(d.skins[s]) {
     d.skin=s;
@@ -349,7 +626,16 @@ function confirmBet(){
  betConfirm.style.display="none";
  pendingBet=null;
  d.tokens-=a;
- if(Math.random()*100<ch)d.tokens+=a*mult;
+ if(Math.random()*100<ch){
+   d.tokens+=a*mult;
+   // NEW: Check for x10 win
+   if(mult === 10) {
+     if(!d.wonX10) {
+       d.wonX10 = true;
+       alert("🎉 UNBELIEVABLE! You won x10!\nSkin 'NUMBER #1!' Unlocked!");
+     }
+   }
+ }
  save();ui();
 }
 </script>

@@ -22,57 +22,67 @@ body{
   min-height:100vh;
   display:flex;
   flex-direction:column;
-  align-items:center;
   padding:16px;
 }
 
-.screen{display:none;width:100%}
+/* ===== COMMON ===== */
+.screen{display:none}
 .screen.active{display:block}
 
-/* ===== MAIN ===== */
-.balance{
-  font-size:22px;
-  margin:10px 0 30px;
+.top-bar{
+  display:flex;
+  align-items:center;
+  gap:10px;
+  margin-bottom:16px;
+}
+.top-bar img{
+  width:32px;
+  height:32px;
+}
+.top-bar span{
+  font-size:16px;
+  opacity:.85;
 }
 
+.balance-main{
+  font-size:22px;
+  margin:10px 0 30px;
+  text-align:center;
+}
+
+/* ===== COIN ===== */
 .coin{
   width:220px;
   height:220px;
-  margin:20px auto 40px;
+  margin:0 auto 40px;
   display:block;
   transition:transform .08s;
 }
 .coin:active{transform:scale(.92)}
 
+/* ===== BOTTOM BUTTONS ===== */
 .bottom-bar{
   margin-top:auto;
-  width:100%;
   display:flex;
-  justify-content:center;
-  gap:40px;
-  padding-bottom:10px;
+  justify-content:space-between;
+  gap:20px;
 }
 
-.bottom-btn{
-  width:64px;
-  height:64px;
+.long-btn{
+  flex:1;
+  height:70px;
   background:#1a1a1a;
-  border-radius:18px;
+  border-radius:22px;
   display:flex;
   align-items:center;
   justify-content:center;
 }
-.bottom-btn img{
-  width:36px;
-  height:36px;
+.long-btn img{
+  height:42px;
+  width:auto;
 }
 
-/* ===== UI ===== */
-h2{
-  text-align:center;
-  margin-bottom:16px;
-}
-
+/* ===== CARDS ===== */
 .card{
   background:#161616;
   border-radius:18px;
@@ -80,16 +90,8 @@ h2{
   margin-bottom:14px;
 }
 
-.card-title{
-  font-weight:bold;
-  margin-bottom:4px;
-}
-
-.card-sub{
-  font-size:13px;
-  opacity:.6;
-  margin-bottom:8px;
-}
+.card-title{font-weight:bold;margin-bottom:6px}
+.card-sub{font-size:13px;opacity:.6;margin-bottom:8px}
 
 button{
   width:100%;
@@ -101,18 +103,13 @@ button{
   font-size:15px;
 }
 
-button.active{
-  background:#2e7d32;
-}
-
-button.owned{
-  background:#333;
-  opacity:.6;
-}
+button.active{background:#2e7d32}
+button.owned{background:#333;opacity:.6}
 
 .back{
   margin-top:20px;
   opacity:.6;
+  background:none;
 }
 
 /* ===== BET ===== */
@@ -124,9 +121,14 @@ input{
   margin-bottom:8px;
   font-size:16px;
 }
-.small{
-  font-size:13px;
-  opacity:.6;
+
+.confirm{
+  background:#2e7d32;
+  margin-top:8px;
+}
+.cancel{
+  background:#444;
+  margin-top:6px;
 }
 </style>
 </head>
@@ -136,13 +138,13 @@ input{
 
 <!-- MAIN -->
 <div id="main" class="screen active">
-  <div class="balance" id="balance">0.00 KSPT</div>
+  <div class="balance-main" id="balanceMain">0.00 KSPT</div>
   <img id="coin" class="coin" src="kspt.png">
   <div class="bottom-bar">
-    <div class="bottom-btn" onclick="openScreen('skins')">
+    <div class="long-btn" onclick="openScreen('skins')">
       <img src="m.png">
     </div>
-    <div class="bottom-btn" onclick="openScreen('tech')">
+    <div class="long-btn" onclick="openScreen('tech')">
       <img src="t.png">
     </div>
   </div>
@@ -150,7 +152,10 @@ input{
 
 <!-- SKINS -->
 <div id="skins" class="screen">
-  <h2>Skins</h2>
+  <div class="top-bar">
+    <img src="kspt.png">
+    <span id="balanceSkins"></span>
+  </div>
 
   <div class="card">
     <div class="card-title">WHAT IS KSPT</div>
@@ -164,16 +169,15 @@ input{
     <button id="skin-burger" onclick="buySkin('burger',10)"></button>
   </div>
 
-  <div class="card">
-    <button onclick="setSkin('default')">Use Default</button>
-  </div>
-
   <button class="back" onclick="openScreen('main')">Back</button>
 </div>
 
 <!-- TECH -->
 <div id="tech" class="screen">
-  <h2>Tech</h2>
+  <div class="top-bar">
+    <img src="kspt.png">
+    <span id="balanceTech"></span>
+  </div>
 
   <div class="card">
     <div class="card-title">Permanent x2</div>
@@ -184,12 +188,16 @@ input{
   <div class="card">
     <div class="card-title">Bet</div>
     <input id="betAmount" type="number" placeholder="1–30">
-    <button onclick="setMax()">MAX</button>
-    <button onclick="bet(1.5,30)">x1.5 (30%)</button>
-    <button onclick="bet(3,17)">x3 (17%)</button>
-    <button onclick="bet(5,8)">x5 (8%)</button>
-    <button onclick="bet(10,3)">x10 (3%)</button>
-    <div class="small" id="betTimer"></div>
+    <button onclick="prepareBet(1.5,30)">x1.5 (30%)</button>
+    <button onclick="prepareBet(3,17)">x3 (17%)</button>
+    <button onclick="prepareBet(5,8)">x5 (8%)</button>
+    <button onclick="prepareBet(10,3)">x10 (3%)</button>
+  </div>
+
+  <div id="betConfirm" class="card" style="display:none">
+    <div id="betText"></div>
+    <button class="confirm" onclick="confirmBet()">Confirm</button>
+    <button class="cancel" onclick="cancelBet()">Cancel</button>
   </div>
 
   <button class="back" onclick="openScreen('main')">Back</button>
@@ -204,96 +212,80 @@ if (window.Telegram?.WebApp){
 }
 
 let d=JSON.parse(localStorage.getItem("kspt"))||{
- tokens:0,skin:"default",skins:{},
- x2:false,betCd:0,betLock:{},
- last:0,fast:0,warn:false
+ tokens:0,skin:"default",skins:{},x2:false
 };
+
+let pendingBet=null;
 
 const save=()=>localStorage.setItem("kspt",JSON.stringify(d));
 
 function ui(){
-  balance.innerText=d.tokens.toFixed(2)+" KSPT";
-  coin.src=d.skin==="what"?"what.png":d.skin==="burger"?"burger.png":"kspt.png";
+ balanceMain.innerText=d.tokens.toFixed(2)+" KSPT";
+ balanceSkins.innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
+ balanceTech.innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
 
-  ["what","burger"].forEach(s=>{
-    let b=document.getElementById("skin-"+s);
-    if(d.skin===s){
-      b.textContent="ACTIVE";
-      b.className="active";
-    }else if(d.skins[s]){
-      b.textContent="OWNED";
-      b.className="owned";
-    }else{
-      b.textContent="BUY";
-      b.className="";
-    }
-  });
+ coin.src=d.skin==="what"?"what.png":d.skin==="burger"?"burger.png":"kspt.png";
+
+ ["what","burger"].forEach(s=>{
+  let b=document.getElementById("skin-"+s);
+  if(d.skin===s){b.textContent="ACTIVE";b.className="active";}
+  else if(d.skins[s]){b.textContent="OWNED";b.className="owned";}
+  else{b.textContent="BUY";b.className="";}
+ });
 }
 ui();
 
 function openScreen(id){
-  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
-  document.getElementById(id).classList.add("active");
+ document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
+ document.getElementById(id).classList.add("active");
+ ui();
 }
 
-coin.onpointerdown=()=>{
- let n=Date.now();
- if(n-d.last<30){
-  d.fast+=0.01;
-  if(d.fast>0.67){
-    if(!d.warn){alert("Autoclicker detected");d.warn=true;}
-    else{d.tokens=0;}
-  }
- }else d.fast=0;
- d.last=n;
+coin.onclick=()=>{
  let m=d.x2?2:1;
  d.tokens+=0.01*m;
  save();ui();
 };
 
 function buySkin(s,c){
- if(d.skins[s]){
-   d.skin=s;
- }else if(d.tokens>=c){
-   d.tokens-=c;
-   d.skins[s]=1;
-   d.skin=s;
+ if(d.skins[s]) d.skin=s;
+ else if(d.tokens>=c){
+  d.tokens-=c;
+  d.skins[s]=1;
+  d.skin=s;
  }
  save();ui();
-}
-
-function setSkin(s){
- d.skin=s;save();ui();
 }
 
 function buyX2(){
  if(!d.x2 && d.tokens>=5){
-   d.tokens-=5;
-   d.x2=true;
-   save();ui();
+  d.tokens-=5;
+  d.x2=true;
+  save();ui();
  }
 }
 
-function setMax(){
- betAmount.value=Math.min(30,d.tokens.toFixed(2));
-}
-
-function bet(m,ch){
- let n=Date.now();
- if(n<d.betCd||d.betLock[m]>n)return;
+function prepareBet(mult,ch){
  let a=+betAmount.value;
  if(a<1||a>30||a>d.tokens)return;
- d.tokens-=a;
- if(Math.random()*100<ch)d.tokens+=a*m;
- d.betCd=n+60000;
- d.betLock[m]=n+900000;
- save();ui();
+ pendingBet={a,mult,ch};
+ betText.innerText=`Bet ${a} KSPT with x${mult}?`;
+ betConfirm.style.display="block";
 }
 
-setInterval(()=>{
- betTimer.innerText=d.betCd>Date.now()
- ? "Next bet in "+Math.ceil((d.betCd-Date.now())/1000)+"s":"";
-},500);
+function cancelBet(){
+ pendingBet=null;
+ betConfirm.style.display="none";
+}
+
+function confirmBet(){
+ let {a,mult,ch}=pendingBet;
+ betConfirm.style.display="none";
+ pendingBet=null;
+ d.tokens-=a;
+ if(Math.random()*100<ch)d.tokens+=a*mult;
+ save();ui();
+}
 </script>
 </body>
 </html>

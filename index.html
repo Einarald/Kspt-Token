@@ -14,7 +14,10 @@ body{
   background:#0b0b0b;
   font-family:Arial,sans-serif;
   color:#fff;
-  -webkit-tap-highlight-color: transparent; /* Убирает синее выделение на мобильных */
+  -webkit-tap-highlight-color: transparent;
+  /* Prevent double-tap zoom and manipulation */
+  touch-action: manipulation; 
+  user-select: none;
 }
 
 .app{
@@ -24,6 +27,7 @@ body{
   display:flex;
   flex-direction:column;
   padding:16px;
+  position: relative;
 }
 
 /* ===== COMMON ===== */
@@ -65,7 +69,8 @@ body{
   height:220px;
   margin:0 auto 40px;
   display:block;
-  transition:transform .08s ease; /* Плавность для JS анимации */
+  transition:transform .08s ease;
+  /* Плавность для JS анимации */
   cursor: pointer;
 }
 
@@ -79,7 +84,8 @@ body{
 .bottom-bar{
   margin-top:auto;
   display:flex;
-  flex-direction: column; /* Changed to column for layers */
+  flex-direction: column;
+  /* Changed to column for layers */
   gap:10px; 
 }
 
@@ -110,20 +116,25 @@ body{
   border-radius:18px;
   padding:14px;
   margin-bottom:14px;
-  overflow: hidden; /* For rectangular images */
+  overflow: hidden;
+  /* For rectangular images */
 }
 
 .card-title{font-weight:bold;margin-bottom:6px}
 .card-sub{font-size:13px;opacity:.6;margin-bottom:8px}
 
-/* NEW: Rectangular (Wide) Card Image Style */
+/* UPDATED: Fixed Layout for Rectangular Images */
 .card-img {
-  width: 120px; /* Wider rectangular shape */
-  height: 70px;
+  width: 100px;
+  height: 80px; 
   float: right;
-  margin-top: -10px;
-  border-radius: 12px;
-  object-fit: cover;
+  margin-top: 0; /* Removed negative margin to prevent cut-off */
+  margin-left: 10px;
+  border-radius: 8px;
+  object-fit: contain;
+  /* Ensures the whole sprite fits */
+  background: rgba(255,255,255,0.03);
+  /* Slight background to frame the sprite */
 }
 
 .card-lvl {
@@ -172,7 +183,8 @@ input{
 .max-btn {
   width: auto;
   padding: 0 20px;
-  background: #ff9800; /* Выделим кнопку MAX цветом */
+  background: #ff9800;
+  /* Выделим кнопку MAX цветом */
   font-weight: bold;
 }
 
@@ -184,10 +196,76 @@ input{
   background:#444;
   margin-top:6px;
 }
+
+/* ===== NEW FEATURES STYLES ===== */
+
+/* Energy System */
+.energy-box {
+  position: absolute;
+  bottom: 180px; /* Above bottom bars */
+  left: 16px;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-weight: bold;
+  font-size: 14px;
+  background: rgba(0,0,0,0.5);
+  padding: 5px 10px;
+  border-radius: 20px;
+  pointer-events: none;
+}
+.energy-box img {
+  width: 20px;
+  height: 20px;
+}
+
+/* Promo Code */
+.promo-box {
+  margin-top: 20px;
+  padding-top: 10px;
+  border-top: 1px solid #333;
+}
+.promo-input-group {
+  display: flex;
+  gap: 8px;
+}
+.promo-input-group input {
+  flex: 1;
+}
+.promo-btn {
+  width: auto;
+  background: #ff9800;
+  color: #000;
+  font-weight: bold;
+}
+
+/* Anti-Cheat Red Screen */
+.red-screen {
+  display: none;
+  position: fixed;
+  top: 0; left: 0; right: 0; bottom: 0;
+  background: red;
+  z-index: 9999;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  text-align: center;
+}
+.red-screen h1 {
+  font-size: 40px;
+  margin: 0;
+}
+
 </style>
 </head>
 
 <body>
+
+<div id="redScreen" class="red-screen">
+  <h1>DONT CHEAT!!</h1>
+</div>
+
 <div class="app">
 
 <div id="main" class="screen active">
@@ -195,6 +273,11 @@ input{
   <div class="offline-info" id="offlineRateMain">Offline: 0.00 KSPT/h</div>
 
   <img id="coin" class="coin" src="kspt.png" alt="Coin">
+  
+  <div class="energy-box">
+    <img src="ener.png" alt="E">
+    <span id="energyDisplay">2500 / 2500</span>
+  </div>
   
   <div class="bottom-bar">
     <div class="button-row">
@@ -207,7 +290,7 @@ input{
     </div>
     <div class="button-row">
       <div class="long-btn" onclick="openScreen('tech')">
-        <img src="t.png" alt="Tech">
+         <img src="t.png" alt="Tech">
       </div>
     </div>
   </div>
@@ -221,43 +304,49 @@ input{
 
   <div class="card">
     <div class="card-title">Default Coin</div>
-    <div class="card-sub">Standard</div>
+    <div class="card-sub">Standard (+0 KSPT/h)</div>
     <button id="skin-default" onclick="buySkin('default',0)"></button>
   </div>
 
   <div class="card">
     <div class="card-title">WHAT IS KSPT</div>
-    <div class="card-sub">Price: 1 KSPT</div>
+    <div class="card-sub">Price: 1 KSPT (+1 KSPT/h)</div>
     <button id="skin-what" onclick="buySkin('what',1)"></button>
   </div>
 
   <div class="card">
     <div class="card-title">KSPT Burger Edition</div>
-    <div class="card-sub">Price: 10 KSPT</div>
+    <div class="card-sub">Price: 10 KSPT (+2.2 KSPT/h)</div>
     <button id="skin-burger" onclick="buySkin('burger',10)"></button>
   </div>
 
   <div class="card">
     <div class="card-title">Little Aqua</div>
-    <div class="card-sub">Price: 30 KSPT</div>
+    <div class="card-sub">Price: 30 KSPT (+4 KSPT/h)</div>
     <button id="skin-joost" onclick="buySkin('joost',30)"></button>
   </div>
 
   <div class="card">
     <div class="card-title">Dogs World</div>
-    <div class="card-sub">Price: 80 KSPT</div>
+    <div class="card-sub">Price: 80 KSPT (+6.7 KSPT/h)</div>
     <button id="skin-dog" onclick="buySkin('dog',80)"></button>
   </div>
 
   <div class="card">
     <div class="card-title">Cringe Diamond</div>
-    <div class="card-sub">Price: 100 KSPT</div>
+    <div class="card-sub">Price: 100 KSPT (+10 KSPT/h)</div>
     <button id="skin-diam" onclick="buySkin('diam',100)"></button>
+  </div>
+  
+  <div class="card">
+    <div class="card-title">Meme-Brain</div>
+    <div class="card-sub">Price: 240 KSPT (+15 KSPT/h)</div>
+    <button id="skin-tung" onclick="buySkin('tung',240)">BUY 240 KSPT</button>
   </div>
 
   <div class="card">
     <div class="card-title">NUMBER #1!</div>
-    <div class="card-sub" id="limitedSkinSub" style="color:#ff9800">Special: Win x10 Bet (Limited 50 left)</div>
+    <div class="card-sub" id="limitedSkinSub" style="color:#ff9800">Special: Win x10 Bet (+3 KSPT/h)</div>
     <button id="skin-priz" onclick="buySkin('priz',0)">LOCKED</button>
   </div>
 
@@ -286,6 +375,14 @@ input{
     <button id="btn_c2" onclick="buyCard(2)">Locked</button>
   </div>
 
+  <div class="card" id="card3_container" style="display:none; filter: grayscale(1);">
+    <img src="offi.png" class="card-img">
+    <div class="card-title">Office</div>
+    <div class="card-lvl" id="c3_lvl">Locked</div>
+    <div class="card-sub" id="c3_income">+10.2 KSPT/h</div>
+    <button id="btn_c3" onclick="buyCard(3)">Locked</button>
+  </div>
+
   <button class="back" onclick="openScreen('main')">Back</button>
 </div>
 
@@ -302,6 +399,13 @@ input{
   </div>
 
   <div class="card">
+    <div class="card-title">Upgrade Energy</div>
+    <div class="card-sub">Max: 8000 | +500 Energy</div>
+    <div class="card-sub" id="energyInfoText">Current Max: 2500</div>
+    <button onclick="buyEnergyLimit()">Buy (+500) 15 KSPT</button>
+  </div>
+
+  <div class="card">
     <div class="card-title">Bet</div>
     <div class="input-group">
       <input id="betAmount" type="number" placeholder="1–30">
@@ -312,12 +416,21 @@ input{
     <button onclick="prepareBet(3,17)">x3 (17%)</button>
     <button onclick="prepareBet(5,8)">x5 (8%)</button>
     <button onclick="prepareBet(10,3)">x10 (3%)</button>
+    <button onclick="prepareBet(50,1.1)" style="margin-top:5px; border:1px solid #ff9800; color:#ff9800">x50 (1.1%)</button>
   </div>
 
   <div id="betConfirm" class="card" style="display:none">
     <div id="betText"></div>
     <button class="confirm" onclick="confirmBet()">Confirm</button>
     <button class="cancel" onclick="cancelBet()">Cancel</button>
+  </div>
+
+  <div class="card promo-box">
+    <div class="card-title">Enter promo code</div>
+    <div class="promo-input-group">
+      <input id="promoInput" type="text" placeholder="Code...">
+      <button class="promo-btn" onclick="checkPromo()">Apply</button>
+    </div>
   </div>
 
   <button class="back" onclick="openScreen('main')">Back</button>
@@ -334,21 +447,51 @@ if (window.Telegram?.WebApp){
 // Global Skin Counter Initialization
 let globalSkinLimit = parseInt(localStorage.getItem("kspt_global_priz_count")) || 50;
 
+// Anti-Cheat Variables
+let clickTimes = [];
+let cheatStage = parseInt(localStorage.getItem("kspt_cheat_stage")) || 0; // 0=clean, 1=warned, 2=reset, 3=red screen
+
+// Check for Perma Ban on Load
+if(cheatStage >= 3) {
+  document.getElementById("redScreen").style.display = "flex";
+}
+
 // Данные
 let d=JSON.parse(localStorage.getItem("kspt"))||{
  tokens:0,skin:"default",skins:{},x2:false,
  lastLogin: Date.now(),
  wonX10: false,
- cards: { c1: -1, c2: -1 } 
+ cards: { c1: -1, c2: -1 },
+ // New Features Data
+ energy: 2500,
+ maxEnergy: 2500,
+ usedCodes: []
 };
 
 // Migration for old saves
 if(typeof d.lastLogin === 'undefined') d.lastLogin = Date.now();
 if(typeof d.wonX10 === 'undefined') d.wonX10 = false;
 if(typeof d.cards === 'undefined') d.cards = { c1: -1, c2: -1 };
+// Initialize Card 3 if not present
+if(typeof d.cards.c3 === 'undefined') d.cards.c3 = -1;
+// Initialize Energy
+if(typeof d.energy === 'undefined') d.energy = 2500;
+if(typeof d.maxEnergy === 'undefined') d.maxEnergy = 2500;
+if(typeof d.usedCodes === 'undefined') d.usedCodes = [];
 
 let pendingBet=null;
 
+// Skin Income Data
+const SKIN_INCOME = {
+  default: 0,
+  what: 1,
+  burger: 2.2,
+  joost: 4,
+  dog: 6.7,
+  diam: 10,
+  tung: 15,
+  priz: 3
+};
 const CARDS = {
   1: {
     levels: [
@@ -369,9 +512,19 @@ const CARDS = {
       { price: 250, income: 8.0 },
       { price: 315, income: 10.0 }
     ]
+  },
+  // NEW CARD 3 DATA
+  3: {
+    levels: [
+      { price: 310, income: 10.2 },
+      { price: 390, income: 14.1 },
+      { price: 480, income: 21 },
+      { price: 540, income: 28.6 },
+      { price: 610, income: 35.8 },
+      { price: 760, income: 50.3 }
+    ]
   }
 };
-
 const save=()=>localStorage.setItem("kspt",JSON.stringify(d));
 
 // Updated Offline Calculation with Startup Screen and 1-hour minimum
@@ -381,7 +534,6 @@ function processOfflineIncome() {
   const hours = diffMs / (1000 * 60 * 60);
 
   let rate = getHourlyRate();
-
   // Condition: Only add if hours >= 1
   if (rate > 0 && hours >= 1) {
     let effectiveHours = hours;
@@ -395,23 +547,59 @@ function processOfflineIncome() {
     }
   }
 
+  // Energy Offline Logic
+  if (hours >= 2) {
+    d.energy = d.maxEnergy; // Restore to 100%
+  } else if (hours >= 1) {
+    // Restore to 50% if currently below 50%, or keep if higher? 
+    // "After 1 hour energy restores to 50%" - usually implies a set point. 
+    // We will set it to max * 0.5 only if current is lower.
+    if(d.energy < d.maxEnergy * 0.5) {
+      d.energy = Math.floor(d.maxEnergy * 0.5);
+    }
+  }
+
   d.lastLogin = now;
   save();
 }
 
 function getHourlyRate() {
   let rate = 0;
+  // Card Income
   if(d.cards.c1 >= 0) rate += CARDS[1].levels[d.cards.c1].income;
   if(d.cards.c2 >= 0) rate += CARDS[2].levels[d.cards.c2].income;
+  if(d.cards.c3 >= 0) rate += CARDS[3].levels[d.cards.c3].income;
+
+  // Skin Stacked Income
+  // 1. Default (Always Owned)
+  rate += SKIN_INCOME.default;
+  // 2. Purchased Skins
+  for(let s in d.skins) {
+      if(d.skins[s] && SKIN_INCOME[s]) {
+          rate += SKIN_INCOME[s];
+      }
+  }
+
+  // 3. Prize Skin (Special condition)
+  if(d.wonX10) rate += SKIN_INCOME.priz;
+
   return rate;
 }
 
 processOfflineIncome();
-
 setInterval(() => {
   d.lastLogin = Date.now();
   save();
 }, 60000);
+
+// Online Energy Regeneration (4 per second)
+setInterval(() => {
+  if (d.energy < d.maxEnergy) {
+    d.energy += 4;
+    if (d.energy > d.maxEnergy) d.energy = d.maxEnergy;
+    ui();
+  }
+}, 1000);
 
 function ui(){
  balanceMain.innerText=d.tokens.toFixed(2)+" KSPT";
@@ -421,9 +609,12 @@ function ui(){
 
  let rate = getHourlyRate();
  document.getElementById("offlineRateMain").innerText = "Offline: " + rate.toFixed(1) + " KSPT/h";
-
  // Exclusive Counter UI
- document.getElementById("limitedSkinSub").innerText = `Special: Win x10 Bet (Limited ${globalSkinLimit} left)`;
+ document.getElementById("limitedSkinSub").innerText = `Special: Win x10 Bet (Limited ${globalSkinLimit} left) (+3 KSPT/h)`;
+
+ // Update Energy UI
+ document.getElementById("energyDisplay").innerText = `${Math.floor(d.energy)} / ${d.maxEnergy}`;
+ document.getElementById("energyInfoText").innerText = `Current Max: ${d.maxEnergy}`;
 
  let imgName = "kspt.png";
  if(d.skin === "what") imgName = "what.png";
@@ -432,9 +623,17 @@ function ui(){
  else if(d.skin === "dog") imgName = "dog.png";
  else if(d.skin === "diam") imgName = "diam.png";
  else if(d.skin === "priz") imgName = "priz.png";
- coin.src = imgName;
+ else if(d.skin === "tung") imgName = "tung.png";
+ // Meme-Brain base
+ 
+ // Don't overwrite if it's currently animating tung
+ if (d.skin === "tung" && coin.src.includes("tung1.png")) {
+    // keep tung1
+ } else {
+    coin.src = imgName;
+ }
 
- ["default", "what","burger", "joost", "dog", "diam", "priz"].forEach(s=>{
+ ["default", "what","burger", "joost", "dog", "diam", "tung", "priz"].forEach(s=>{
   let b=document.getElementById("skin-"+s);
   if (!b) return;
 
@@ -446,6 +645,7 @@ function ui(){
       }
       if(d.wonX10 && globalSkinLimit > 0) {
          b.textContent = "OWNED"; 
+         
          b.className = "owned";
          b.onclick = function(){ buySkin('priz', 0); };
       } else {
@@ -461,14 +661,15 @@ function ui(){
     b.className="active";
   }
   else if(s === "default" || d.skins[s]){
+ 
     b.textContent="OWNED";
     b.className="owned";
   }
   else{
-    let prices = {what:1, burger:10, joost:30, dog:80, diam:100};
+    let prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240};
     b.textContent=`BUY ${prices[s]} KSPT`;
     b.className="";
-  }
+ }
  });
 
  updateCardUI();
@@ -479,9 +680,8 @@ function updateCardUI() {
     let lvl = d.cards[cardKey];
     let data = CARDS[id].levels;
     let btn = document.getElementById("btn_c"+id);
-    let txtLvl = document.getElementById(id===2 ? "c2_lvl" : "c1_lvl");
-    let txtInc = document.getElementById(id===2 ? "c2_income" : "c1_income");
-
+    let txtLvl = document.getElementById(id===1 ? "c1_lvl" : (id===2 ? "c2_lvl" : "c3_lvl"));
+    let txtInc = document.getElementById(id===1 ? "c1_income" : (id===2 ? "c2_income" : "c3_income"));
     if (lvl === 5) {
       txtLvl.innerText = "Level: MAX";
       txtInc.innerText = "+" + data[5].income + " KSPT/h";
@@ -509,6 +709,7 @@ function updateCardUI() {
 
   renderCard(1, "c1");
 
+  // Card 2 Logic
   let c2Div = document.getElementById("card2_container");
   if (d.cards.c1 >= 3) {
       c2Div.style.display = "block";
@@ -519,6 +720,20 @@ function updateCardUI() {
       c2Div.style.filter = "grayscale(1) opacity(0.5)";
       document.getElementById("btn_c2").innerText = "Unlock: Card #1 Lvl 3";
       document.getElementById("btn_c2").onclick = null;
+  }
+
+  // Card 3 Logic
+  let c3Div = document.getElementById("card3_container");
+  // Condition: Investors (Card 2) >= Level 2 (index 1)
+  if (d.cards.c2 >= 1) {
+      c3Div.style.display = "block";
+      c3Div.style.filter = "none";
+      renderCard(3, "c3");
+  } else {
+      c3Div.style.display = "block";
+      c3Div.style.filter = "grayscale(1) opacity(0.5)";
+      document.getElementById("btn_c3").innerText = "Unlock: Card #2 Lvl 2";
+      document.getElementById("btn_c3").onclick = null;
   }
 }
 
@@ -546,15 +761,73 @@ function openScreen(id){
  save();
 }
 
+// Multi-touch Protection
+document.getElementById('coin').addEventListener('touchstart', function(e) {
+  if (e.touches.length > 2) {
+    e.preventDefault();
+    return false;
+  }
+}, {passive: false});
+
 coin.onclick=()=>{
+ // Anti-Cheat: Red Screen check
+ if(cheatStage >= 3) return;
+
+ // Energy Check
+ if (d.energy <= 0) return;
+
+ // Anti-Cheat: Rapid Click Detection
+ const now = Date.now();
+ clickTimes.push(now);
+ // Remove clicks older than 10 seconds
+ clickTimes = clickTimes.filter(t => now - t <= 10000);
+ 
+ if(clickTimes.length > 100) {
+    // Punishment Logic
+    if(cheatStage === 0) {
+        alert("Warning: You are clicking too fast! This is not allowed.");
+        cheatStage = 1;
+        localStorage.setItem("kspt_cheat_stage", 1);
+        clickTimes = []; // Reset counter to give a chance
+    } else if (cheatStage === 1) {
+        // Reset Progress
+        d.tokens = 0;
+        d.skins = {};
+        d.skin = "default";
+        d.cards = {c1:-1, c2:-1, c3:-1};
+        d.energy = 2500;
+        save();
+        alert("Account Reset due to cheating!");
+        cheatStage = 2;
+        localStorage.setItem("kspt_cheat_stage", 2);
+        clickTimes = [];
+        ui();
+    } else if (cheatStage >= 2) {
+        // Red Screen
+        cheatStage = 3;
+        localStorage.setItem("kspt_cheat_stage", 3);
+        document.getElementById("redScreen").style.display = "flex";
+        return;
+    }
+ }
+
+ // Deduct Energy
+ d.energy--;
+
  let m=d.x2?2:1;
  d.tokens+=0.01*m;
+ 
+ // Meme-Brain Animation Toggle
+ if(d.skin === "tung") {
+    if(coin.src.includes("tung.png")) coin.src = "tung1.png";
+    else coin.src = "tung.png";
+ }
+
  coin.classList.add('anim');
  setTimeout(() => { coin.classList.remove('anim'); }, 80);
  d.lastLogin = Date.now();
  save();ui();
 };
-
 function buySkin(s,c){
  if(s === "default") {
     d.skin = "default";
@@ -619,6 +892,69 @@ function confirmBet(){
    }
  }
  save();ui();
+}
+
+// NEW FUNCTIONS
+
+function checkPromo() {
+  const code = document.getElementById("promoInput").value.trim();
+  if(!code) return;
+
+  // Check if used
+  if(d.usedCodes.includes(code)) {
+    alert("This promo code has already been used.");
+    return;
+  }
+
+  // Handle special case (no usedCodes tracking for reset code needed usually, but logic below)
+  if(code === "ksptshit") {
+    if(confirm("Are you sure?")) {
+      if(confirm("WARNING: All coins, skins, and progress will be reset. Proceed?")) {
+        localStorage.removeItem("kspt");
+        location.reload(); 
+      }
+    }
+    return;
+  }
+
+  let reward = 0;
+  let valid = false;
+
+  switch(code) {
+    case "skibidi":
+      reward = 1; valid = true; break;
+    case "brainrot":
+      reward = 1; valid = true; break;
+    case "einarald":
+      reward = 10; valid = true; break;
+    case "sorryfor300":
+      reward = 300; valid = true; break;
+    case "OnlyforrRed":
+      reward = 5000; valid = true; break;
+    default:
+      alert("Invalid code");
+      return;
+  }
+
+  if(valid) {
+    d.tokens += reward;
+    d.usedCodes.push(code);
+    save();
+    ui();
+    alert(`Success! +${reward} KSPT`);
+    document.getElementById("promoInput").value = "";
+  }
+}
+
+function buyEnergyLimit() {
+  if (d.tokens >= 15 && d.maxEnergy < 8000) {
+    d.tokens -= 15;
+    d.maxEnergy += 500;
+    save();
+    ui();
+  } else if (d.maxEnergy >= 8000) {
+    alert("Maximum energy limit reached!");
+  }
 }
 </script>
 </body>

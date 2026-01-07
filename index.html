@@ -15,7 +15,6 @@ body{
   font-family:Arial,sans-serif;
   color:#fff;
   -webkit-tap-highlight-color: transparent; /* Убирает синее выделение на мобильных */
-  touch-action: manipulation; /* Improves touch response */
 }
 
 .app{
@@ -68,9 +67,6 @@ body{
   display:block;
   transition:transform .08s ease; /* Плавность для JS анимации */
   cursor: pointer;
-  /* Prevent default touch actions to handle custom multi-touch logic */
-  touch-action: none; 
-  user-select: none;
 }
 
 /* Класс для JS-анимации нажатия */
@@ -343,20 +339,15 @@ let d=JSON.parse(localStorage.getItem("kspt"))||{
  tokens:0,skin:"default",skins:{},x2:false,
  lastLogin: Date.now(),
  wonX10: false,
- cards: { c1: -1, c2: -1 },
- cheatWarnings: 0 // New logic for warnings
+ cards: { c1: -1, c2: -1 } 
 };
 
 // Migration for old saves
 if(typeof d.lastLogin === 'undefined') d.lastLogin = Date.now();
 if(typeof d.wonX10 === 'undefined') d.wonX10 = false;
 if(typeof d.cards === 'undefined') d.cards = { c1: -1, c2: -1 };
-if(typeof d.cheatWarnings === 'undefined') d.cheatWarnings = 0;
 
 let pendingBet=null;
-
-// Anti-Cheat History
-let clickHistory = []; // Stores {time, val}
 
 const CARDS = {
   1: {
@@ -555,80 +546,14 @@ function openScreen(id){
  save();
 }
 
-// ----------------------------------------------------
-// MODIFIED CLICK LOGIC: Anti-Cheat & Multi-Touch (Max 2 fingers)
-// ----------------------------------------------------
-
-function handleCoinInteraction(e) {
-  // Prevent browser zooming/scrolling on fast taps
-  if(e.type === 'touchstart') e.preventDefault();
-  
-  // MULTI-TOUCH RESTRICTION: Max 2 fingers
-  if(e.touches && e.touches.length > 2) {
-    return; // Ignore interaction if more than 2 fingers
-  }
-
-  // Basic Gain logic
-  let m = d.x2 ? 2 : 1;
-  let gain = 0.01 * m;
-
-  // --- ANTI-CHEAT CHECK ---
-  let now = Date.now();
-  // Add current earning to history
-  clickHistory.push({ t: now, v: gain });
-  
-  // Filter only clicks from last 10 seconds
-  clickHistory = clickHistory.filter(item => now - item.t < 10000);
-  
-  // Calculate total farmed in last 10 seconds
-  let sum = clickHistory.reduce((acc, cur) => acc + cur.v, 0);
-
-  // Threshold: 3 coins (3.00 KSPT) in 10 seconds
-  if (sum >= 3.00) {
-     if (d.cheatWarnings === 0) {
-        // First Offense: Warning + Deduct 3 coins
-        d.cheatWarnings = 1;
-        d.tokens -= 3.00;
-        if(d.tokens < 0) d.tokens = 0;
-        clickHistory = []; // Reset history so they don't get banned instantly next click
-        save(); ui();
-        alert("WARNING: You are tapping too fast (Anti-Cheat)!\n3 Coins deducted.\nNext time your account will be WIPED.");
-        return; 
-     } else {
-        // Second Offense: FULL WIPE
-        alert("Anti-Cheat Violation Detected.\nResetting account data...");
-        // Reset Logic
-        d = {
-          tokens:0, skin:"default", skins:{}, x2:false,
-          lastLogin: Date.now(),
-          wonX10: false,
-          cards: { c1: -1, c2: -1 },
-          cheatWarnings: 0
-        };
-        clickHistory = [];
-        save(); ui();
-        return;
-     }
-  }
-
-  // If safe, proceed to add tokens
-  d.tokens += gain;
-  
-  // Animation
-  coin.classList.add('anim');
-  setTimeout(() => { coin.classList.remove('anim'); }, 80);
-  
-  d.lastLogin = Date.now();
-  save(); ui();
-}
-
-// Attach Event Listeners
-// 'touchstart' handles mobile multitouch (passive:false allows preventDefault)
-coin.addEventListener('touchstart', handleCoinInteraction, {passive: false});
-// 'click' handles desktop mouse clicks
-// Note: preventDefault in touchstart usually prevents click from firing twice on mobile
-coin.addEventListener('click', handleCoinInteraction);
-
+coin.onclick=()=>{
+ let m=d.x2?2:1;
+ d.tokens+=0.01*m;
+ coin.classList.add('anim');
+ setTimeout(() => { coin.classList.remove('anim'); }, 80);
+ d.lastLogin = Date.now();
+ save();ui();
+};
 
 function buySkin(s,c){
  if(s === "default") {
@@ -698,4 +623,3 @@ function confirmBet(){
 </script>
 </body>
 </html>
-

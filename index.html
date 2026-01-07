@@ -15,6 +15,7 @@ body{
   font-family:Arial,sans-serif;
   color:#fff;
   -webkit-tap-highlight-color: transparent; /* Убирает синее выделение на мобильных */
+  touch-action: manipulation; /* Improves touch response */
 }
 
 .app{
@@ -67,6 +68,9 @@ body{
   display:block;
   transition:transform .08s ease; /* Плавность для JS анимации */
   cursor: pointer;
+  /* Prevent default touch actions to handle custom multi-touch logic */
+  touch-action: none; 
+  user-select: none;
 }
 
 /* Класс для JS-анимации нажатия */
@@ -116,16 +120,14 @@ body{
 .card-title{font-weight:bold;margin-bottom:6px}
 .card-sub{font-size:13px;opacity:.6;margin-bottom:8px}
 
-/* UPDATED: Fixed Layout for Rectangular Images */
+/* NEW: Rectangular (Wide) Card Image Style */
 .card-img {
-  width: 100px;
-  height: 80px; 
+  width: 120px; /* Wider rectangular shape */
+  height: 70px;
   float: right;
-  margin-top: 0; /* Removed negative margin to prevent cut-off */
-  margin-left: 10px;
-  border-radius: 8px;
-  object-fit: contain; /* Ensures the whole sprite fits */
-  background: rgba(255,255,255,0.03); /* Slight background to frame the sprite */
+  margin-top: -10px;
+  border-radius: 12px;
+  object-fit: cover;
 }
 
 .card-lvl {
@@ -223,49 +225,43 @@ input{
 
   <div class="card">
     <div class="card-title">Default Coin</div>
-    <div class="card-sub">Standard (+0 KSPT/h)</div>
+    <div class="card-sub">Standard</div>
     <button id="skin-default" onclick="buySkin('default',0)"></button>
   </div>
 
   <div class="card">
     <div class="card-title">WHAT IS KSPT</div>
-    <div class="card-sub">Price: 1 KSPT (+1 KSPT/h)</div>
+    <div class="card-sub">Price: 1 KSPT</div>
     <button id="skin-what" onclick="buySkin('what',1)"></button>
   </div>
 
   <div class="card">
     <div class="card-title">KSPT Burger Edition</div>
-    <div class="card-sub">Price: 10 KSPT (+2.2 KSPT/h)</div>
+    <div class="card-sub">Price: 10 KSPT</div>
     <button id="skin-burger" onclick="buySkin('burger',10)"></button>
   </div>
 
   <div class="card">
     <div class="card-title">Little Aqua</div>
-    <div class="card-sub">Price: 30 KSPT (+4 KSPT/h)</div>
+    <div class="card-sub">Price: 30 KSPT</div>
     <button id="skin-joost" onclick="buySkin('joost',30)"></button>
   </div>
 
   <div class="card">
     <div class="card-title">Dogs World</div>
-    <div class="card-sub">Price: 80 KSPT (+6.7 KSPT/h)</div>
+    <div class="card-sub">Price: 80 KSPT</div>
     <button id="skin-dog" onclick="buySkin('dog',80)"></button>
   </div>
 
   <div class="card">
     <div class="card-title">Cringe Diamond</div>
-    <div class="card-sub">Price: 100 KSPT (+10 KSPT/h)</div>
+    <div class="card-sub">Price: 100 KSPT</div>
     <button id="skin-diam" onclick="buySkin('diam',100)"></button>
-  </div>
-  
-  <div class="card">
-    <div class="card-title">Meme-Brain</div>
-    <div class="card-sub">Price: 240 KSPT (+15 KSPT/h)</div>
-    <button id="skin-tung" onclick="buySkin('tung',240)">BUY 240 KSPT</button>
   </div>
 
   <div class="card">
     <div class="card-title">NUMBER #1!</div>
-    <div class="card-sub" id="limitedSkinSub" style="color:#ff9800">Special: Win x10 Bet (+3 KSPT/h)</div>
+    <div class="card-sub" id="limitedSkinSub" style="color:#ff9800">Special: Win x10 Bet (Limited 50 left)</div>
     <button id="skin-priz" onclick="buySkin('priz',0)">LOCKED</button>
   </div>
 
@@ -294,14 +290,6 @@ input{
     <button id="btn_c2" onclick="buyCard(2)">Locked</button>
   </div>
 
-  <div class="card" id="card3_container" style="display:none; filter: grayscale(1);">
-    <img src="offi.png" class="card-img">
-    <div class="card-title">Office</div>
-    <div class="card-lvl" id="c3_lvl">Locked</div>
-    <div class="card-sub" id="c3_income">+10.2 KSPT/h</div>
-    <button id="btn_c3" onclick="buyCard(3)">Locked</button>
-  </div>
-
   <button class="back" onclick="openScreen('main')">Back</button>
 </div>
 
@@ -328,7 +316,6 @@ input{
     <button onclick="prepareBet(3,17)">x3 (17%)</button>
     <button onclick="prepareBet(5,8)">x5 (8%)</button>
     <button onclick="prepareBet(10,3)">x10 (3%)</button>
-    <button onclick="prepareBet(50,1.1)" style="margin-top:5px; border:1px solid #ff9800; color:#ff9800">x50 (1.1%)</button>
   </div>
 
   <div id="betConfirm" class="card" style="display:none">
@@ -356,29 +343,20 @@ let d=JSON.parse(localStorage.getItem("kspt"))||{
  tokens:0,skin:"default",skins:{},x2:false,
  lastLogin: Date.now(),
  wonX10: false,
- cards: { c1: -1, c2: -1 } 
+ cards: { c1: -1, c2: -1 },
+ cheatWarnings: 0 // New logic for warnings
 };
 
 // Migration for old saves
 if(typeof d.lastLogin === 'undefined') d.lastLogin = Date.now();
 if(typeof d.wonX10 === 'undefined') d.wonX10 = false;
 if(typeof d.cards === 'undefined') d.cards = { c1: -1, c2: -1 };
-// Initialize Card 3 if not present
-if(typeof d.cards.c3 === 'undefined') d.cards.c3 = -1;
+if(typeof d.cheatWarnings === 'undefined') d.cheatWarnings = 0;
 
 let pendingBet=null;
 
-// Skin Income Data
-const SKIN_INCOME = {
-  default: 0,
-  what: 1,
-  burger: 2.2,
-  joost: 4,
-  dog: 6.7,
-  diam: 10,
-  tung: 15,
-  priz: 3
-};
+// Anti-Cheat History
+let clickHistory = []; // Stores {time, val}
 
 const CARDS = {
   1: {
@@ -399,17 +377,6 @@ const CARDS = {
       { price: 190, income: 6.7 },
       { price: 250, income: 8.0 },
       { price: 315, income: 10.0 }
-    ]
-  },
-  // NEW CARD 3 DATA
-  3: {
-    levels: [
-      { price: 310, income: 10.2 },
-      { price: 390, income: 14.1 },
-      { price: 480, income: 21 },
-      { price: 540, income: 28.6 },
-      { price: 610, income: 35.8 },
-      { price: 760, income: 50.3 }
     ]
   }
 };
@@ -443,25 +410,8 @@ function processOfflineIncome() {
 
 function getHourlyRate() {
   let rate = 0;
-  // Card Income
   if(d.cards.c1 >= 0) rate += CARDS[1].levels[d.cards.c1].income;
   if(d.cards.c2 >= 0) rate += CARDS[2].levels[d.cards.c2].income;
-  if(d.cards.c3 >= 0) rate += CARDS[3].levels[d.cards.c3].income;
-
-  // Skin Stacked Income
-  // 1. Default (Always Owned)
-  rate += SKIN_INCOME.default;
-  
-  // 2. Purchased Skins
-  for(let s in d.skins) {
-      if(d.skins[s] && SKIN_INCOME[s]) {
-          rate += SKIN_INCOME[s];
-      }
-  }
-
-  // 3. Prize Skin (Special condition)
-  if(d.wonX10) rate += SKIN_INCOME.priz;
-
   return rate;
 }
 
@@ -482,7 +432,7 @@ function ui(){
  document.getElementById("offlineRateMain").innerText = "Offline: " + rate.toFixed(1) + " KSPT/h";
 
  // Exclusive Counter UI
- document.getElementById("limitedSkinSub").innerText = `Special: Win x10 Bet (Limited ${globalSkinLimit} left) (+3 KSPT/h)`;
+ document.getElementById("limitedSkinSub").innerText = `Special: Win x10 Bet (Limited ${globalSkinLimit} left)`;
 
  let imgName = "kspt.png";
  if(d.skin === "what") imgName = "what.png";
@@ -491,16 +441,9 @@ function ui(){
  else if(d.skin === "dog") imgName = "dog.png";
  else if(d.skin === "diam") imgName = "diam.png";
  else if(d.skin === "priz") imgName = "priz.png";
- else if(d.skin === "tung") imgName = "tung.png"; // Meme-Brain base
- 
- // Don't overwrite if it's currently animating tung
- if (d.skin === "tung" && coin.src.includes("tung1.png")) {
-    // keep tung1
- } else {
-    coin.src = imgName;
- }
+ coin.src = imgName;
 
- ["default", "what","burger", "joost", "dog", "diam", "tung", "priz"].forEach(s=>{
+ ["default", "what","burger", "joost", "dog", "diam", "priz"].forEach(s=>{
   let b=document.getElementById("skin-"+s);
   if (!b) return;
 
@@ -531,7 +474,7 @@ function ui(){
     b.className="owned";
   }
   else{
-    let prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240};
+    let prices = {what:1, burger:10, joost:30, dog:80, diam:100};
     b.textContent=`BUY ${prices[s]} KSPT`;
     b.className="";
   }
@@ -545,8 +488,8 @@ function updateCardUI() {
     let lvl = d.cards[cardKey];
     let data = CARDS[id].levels;
     let btn = document.getElementById("btn_c"+id);
-    let txtLvl = document.getElementById(id===1 ? "c1_lvl" : (id===2 ? "c2_lvl" : "c3_lvl"));
-    let txtInc = document.getElementById(id===1 ? "c1_income" : (id===2 ? "c2_income" : "c3_income"));
+    let txtLvl = document.getElementById(id===2 ? "c2_lvl" : "c1_lvl");
+    let txtInc = document.getElementById(id===2 ? "c2_income" : "c1_income");
 
     if (lvl === 5) {
       txtLvl.innerText = "Level: MAX";
@@ -575,7 +518,6 @@ function updateCardUI() {
 
   renderCard(1, "c1");
 
-  // Card 2 Logic
   let c2Div = document.getElementById("card2_container");
   if (d.cards.c1 >= 3) {
       c2Div.style.display = "block";
@@ -586,20 +528,6 @@ function updateCardUI() {
       c2Div.style.filter = "grayscale(1) opacity(0.5)";
       document.getElementById("btn_c2").innerText = "Unlock: Card #1 Lvl 3";
       document.getElementById("btn_c2").onclick = null;
-  }
-
-  // Card 3 Logic
-  let c3Div = document.getElementById("card3_container");
-  // Condition: Investors (Card 2) >= Level 2 (index 1)
-  if (d.cards.c2 >= 1) {
-      c3Div.style.display = "block";
-      c3Div.style.filter = "none";
-      renderCard(3, "c3");
-  } else {
-      c3Div.style.display = "block";
-      c3Div.style.filter = "grayscale(1) opacity(0.5)";
-      document.getElementById("btn_c3").innerText = "Unlock: Card #2 Lvl 2";
-      document.getElementById("btn_c3").onclick = null;
   }
 }
 
@@ -627,21 +555,80 @@ function openScreen(id){
  save();
 }
 
-coin.onclick=()=>{
- let m=d.x2?2:1;
- d.tokens+=0.01*m;
- 
- // Meme-Brain Animation Toggle
- if(d.skin === "tung") {
-    if(coin.src.includes("tung.png")) coin.src = "tung1.png";
-    else coin.src = "tung.png";
- }
+// ----------------------------------------------------
+// MODIFIED CLICK LOGIC: Anti-Cheat & Multi-Touch (Max 2 fingers)
+// ----------------------------------------------------
 
- coin.classList.add('anim');
- setTimeout(() => { coin.classList.remove('anim'); }, 80);
- d.lastLogin = Date.now();
- save();ui();
-};
+function handleCoinInteraction(e) {
+  // Prevent browser zooming/scrolling on fast taps
+  if(e.type === 'touchstart') e.preventDefault();
+  
+  // MULTI-TOUCH RESTRICTION: Max 2 fingers
+  if(e.touches && e.touches.length > 2) {
+    return; // Ignore interaction if more than 2 fingers
+  }
+
+  // Basic Gain logic
+  let m = d.x2 ? 2 : 1;
+  let gain = 0.01 * m;
+
+  // --- ANTI-CHEAT CHECK ---
+  let now = Date.now();
+  // Add current earning to history
+  clickHistory.push({ t: now, v: gain });
+  
+  // Filter only clicks from last 10 seconds
+  clickHistory = clickHistory.filter(item => now - item.t < 10000);
+  
+  // Calculate total farmed in last 10 seconds
+  let sum = clickHistory.reduce((acc, cur) => acc + cur.v, 0);
+
+  // Threshold: 3 coins (3.00 KSPT) in 10 seconds
+  if (sum >= 3.00) {
+     if (d.cheatWarnings === 0) {
+        // First Offense: Warning + Deduct 3 coins
+        d.cheatWarnings = 1;
+        d.tokens -= 3.00;
+        if(d.tokens < 0) d.tokens = 0;
+        clickHistory = []; // Reset history so they don't get banned instantly next click
+        save(); ui();
+        alert("WARNING: You are tapping too fast (Anti-Cheat)!\n3 Coins deducted.\nNext time your account will be WIPED.");
+        return; 
+     } else {
+        // Second Offense: FULL WIPE
+        alert("Anti-Cheat Violation Detected.\nResetting account data...");
+        // Reset Logic
+        d = {
+          tokens:0, skin:"default", skins:{}, x2:false,
+          lastLogin: Date.now(),
+          wonX10: false,
+          cards: { c1: -1, c2: -1 },
+          cheatWarnings: 0
+        };
+        clickHistory = [];
+        save(); ui();
+        return;
+     }
+  }
+
+  // If safe, proceed to add tokens
+  d.tokens += gain;
+  
+  // Animation
+  coin.classList.add('anim');
+  setTimeout(() => { coin.classList.remove('anim'); }, 80);
+  
+  d.lastLogin = Date.now();
+  save(); ui();
+}
+
+// Attach Event Listeners
+// 'touchstart' handles mobile multitouch (passive:false allows preventDefault)
+coin.addEventListener('touchstart', handleCoinInteraction, {passive: false});
+// 'click' handles desktop mouse clicks
+// Note: preventDefault in touchstart usually prevents click from firing twice on mobile
+coin.addEventListener('click', handleCoinInteraction);
+
 
 function buySkin(s,c){
  if(s === "default") {
@@ -711,3 +698,4 @@ function confirmBet(){
 </script>
 </body>
 </html>
+

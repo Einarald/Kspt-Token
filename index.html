@@ -484,9 +484,9 @@ input{
  id="skin-space" onclick="buySkin('space',1210)">BUY 1210 KSPT</button>
   </div>
   
-  <div class="card">
+  <div class="card" id="kostiaSkinCard" style="display:none">
     <div class="card-title">Special Kostia</div>
-    <div class="card-sub">Secret Skin (+5 KSPT/h)</div>
+    <div class="card-sub">Secret Skin (+3 KSPT/h)</div>
     <button id="skin-kostia" onclick="buySkin('kostia',0)">LOCKED (Use Promo)</button>
   </div>
 
@@ -513,8 +513,7 @@ input{
     <button id="btn_c1" onclick="buyCard(1)">Buy 25 KSPT</button>
   </div>
 
-  <div class="card" id="card2_container" style="display:none;
- filter: grayscale(1);">
+  <div class="card" id="card2_container" style="display:none; filter: grayscale(1);">
     <img src="inv.png" class="card-img">
     <div class="card-title">Investors</div>
     <div class="card-lvl" id="c2_lvl">Locked</div>
@@ -522,8 +521,7 @@ input{
     <button id="btn_c2" onclick="buyCard(2)">Locked</button>
   </div>
 
-  <div class="card" id="card3_container" style="display:none;
- filter: grayscale(1);">
+  <div class="card" id="card3_container" style="display:none; filter: grayscale(1);">
     <img src="offi.png" class="card-img">
     <div class="card-title">Office</div>
     <div class="card-lvl" id="c3_lvl">Locked</div>
@@ -539,8 +537,7 @@ input{
     <button id="btn_c4" onclick="buyCard(4)">Buy 910 KSPT</button>
   </div>
 
-  <div class="card" id="card5_container" style="display:none;
- filter: grayscale(1);">
+  <div class="card" id="card5_container" style="display:none; filter: grayscale(1);">
     <img src="ite.png" class="card-img">
     <div class="card-title">IT Equipment</div>
     <div class="card-lvl" id="c5_lvl">Locked</div>
@@ -573,8 +570,7 @@ input{
 
   <div class="card">
     <div class="card-title">Upgrade Energy</div>
-    <div class="card-sub">Max: 8000 |
- +500 Energy</div>
+    <div class="card-sub">Max: 8000 | +500 Energy</div>
     <div class="card-sub" id="energyInfoText">Current Max: 2500</div>
     <button onclick="buyEnergyLimit()">Buy (+500) 15 KSPT</button>
   </div>
@@ -616,7 +612,7 @@ input{
 <script>
 if (window.Telegram?.WebApp){
   Telegram.WebApp.ready();
- Telegram.WebApp.expand();
+  Telegram.WebApp.expand();
 }
 
 // Global Skin Counter Initialization
@@ -624,14 +620,15 @@ let globalSkinLimit = parseInt(localStorage.getItem("kspt_global_priz_count")) |
 
 // Anti-Cheat Variables
 let clickTimes = [];
- let cheatStage = parseInt(localStorage.getItem("kspt_cheat_stage")) || 0; 
+let cheatStage = parseInt(localStorage.getItem("kspt_cheat_stage")) || 0; 
 // 0=clean, 1=warned, 2=reset, 3=red screen
-let isWarningActive = false; // Flag for modal interaction
+let isWarningActive = false;
+// Flag for modal interaction
 
 // Check for Perma Ban on Load
 if(cheatStage >= 3) {
   document.getElementById("redScreen").style.display = "flex";
- }
+}
 
 // Данные
 let d=JSON.parse(localStorage.getItem("kspt"))||{
@@ -644,27 +641,27 @@ let d=JSON.parse(localStorage.getItem("kspt"))||{
  maxEnergy: 2500,
  usedCodes: []
 };
- // Migration for old saves
+// Migration for old saves
 if(typeof d.lastLogin === 'undefined') d.lastLogin = Date.now();
 if(typeof d.wonX10 === 'undefined') d.wonX10 = false;
- if(typeof d.cards === 'undefined') d.cards = { c1: -1, c2: -1 };
+if(typeof d.cards === 'undefined') d.cards = { c1: -1, c2: -1 };
 if(typeof d.cards.c3 === 'undefined') d.cards.c3 = -1;
- if(typeof d.cards.c4 === 'undefined') d.cards.c4 = -1; // New Card 4
+if(typeof d.cards.c4 === 'undefined') d.cards.c4 = -1; // New Card 4
 if(typeof d.cards.c5 === 'undefined') d.cards.c5 = -1;
- // New Card 5
+// New Card 5
 if(typeof d.energy === 'undefined') d.energy = 2500;
 if(typeof d.maxEnergy === 'undefined') d.maxEnergy = 2500;
- if(typeof d.usedCodes === 'undefined') d.usedCodes = [];
+if(typeof d.usedCodes === 'undefined') d.usedCodes = [];
 
 // New Settings & Boost Data Migration
 if(typeof d.bg === 'undefined') d.bg = "default";
- if(typeof d.ownedBgs === 'undefined') d.ownedBgs = ["default"];
+if(typeof d.ownedBgs === 'undefined') d.ownedBgs = ["default"];
 if(typeof d.boost === 'undefined') d.boost = { active: false, end: 0, cdEnd: 0 };
- if(typeof d.euroVar === 'undefined') d.euroVar = 1; // 1 or 2
+if(typeof d.euroVar === 'undefined') d.euroVar = 1; // 1 or 2
 
 let pendingBet=null;
 let lastTapTime = 0;
- // For Energy Regen Pause
+// For Energy Regen Pause
 
 // Skin Income Data
 const SKIN_INCOME = {
@@ -678,9 +675,9 @@ const SKIN_INCOME = {
   priz: 3,
   euro: 27,
   space: 40,
-  kostia: 2 // New Secret Skin Income
+  kostia: 3 // New Secret Skin Income
 };
- const CARDS = {
+const CARDS = {
   1: {
     levels: [
       { price: 25, income: 1.0 },
@@ -719,7 +716,8 @@ const SKIN_INCOME = {
       { price: 910, income: 16.9 }, /* Base purchase */
       { price: 1110, income: 27.1 },
       { price: 1280, income: 35.7 },
-      
+    
+   
  { price: 1410, income: 48.0 },
       { price: 1670, income: 59.3 },
       { price: 1860, income: 74.2 }
@@ -732,41 +730,42 @@ const SKIN_INCOME = {
       { price: 1970, income: 73.4 },
       { price: 2510, income: 86.7 },
       { price: 3120, income: 108.5 },
+ 
     
    { price: 3510, income: 138.3 },
       { price: 4080, income: 215.4 }
     ]
   }
 };
- const save=()=>localStorage.setItem("kspt",JSON.stringify(d));
+const save=()=>localStorage.setItem("kspt",JSON.stringify(d));
 
 // Updated Offline Calculation
 function processOfflineIncome() {
   const now = Date.now();
   const diffMs = now - d.lastLogin;
- const hours = diffMs / (1000 * 60 * 60);
+  const hours = diffMs / (1000 * 60 * 60);
 
   let rate = getHourlyRate();
- // Condition: Only add if hours >= 1
+// Condition: Only add if hours >= 1
   if (rate > 0 && hours >= 1) {
     let effectiveHours = hours;
- if (effectiveHours > 8) effectiveHours = 8;
+    if (effectiveHours > 8) effectiveHours = 8;
     
     let earnings = rate * effectiveHours;
- if (earnings > 0.01) {
+    if (earnings > 0.01) {
        d.tokens += earnings;
- alert(`While you were away, you earned ${earnings.toFixed(2)} KSPT.`);
+       alert(`While you were away, you earned ${earnings.toFixed(2)} KSPT.`);
     }
   }
 
   // Energy Offline Logic
   if (hours >= 2) {
     d.energy = d.maxEnergy;
- // Restore to 100%
+// Restore to 100%
   } else if (hours >= 1) {
     if(d.energy < d.maxEnergy * 0.5) {
       d.energy = Math.floor(d.maxEnergy * 0.5);
- }
+    }
   }
 
   d.lastLogin = now;
@@ -775,18 +774,18 @@ function processOfflineIncome() {
 
 function getHourlyRate() {
   let rate = 0;
- // Card Income
+// Card Income
   if(d.cards.c1 >= 0) rate += CARDS[1].levels[d.cards.c1].income;
   if(d.cards.c2 >= 0) rate += CARDS[2].levels[d.cards.c2].income;
- if(d.cards.c3 >= 0) rate += CARDS[3].levels[d.cards.c3].income;
+  if(d.cards.c3 >= 0) rate += CARDS[3].levels[d.cards.c3].income;
   if(d.cards.c4 >= 0) rate += CARDS[4].levels[d.cards.c4].income;
   if(d.cards.c5 >= 0) rate += CARDS[5].levels[d.cards.c5].income;
- // Skin Stacked Income
+// Skin Stacked Income
   rate += SKIN_INCOME.default;
   for(let s in d.skins) {
       if(d.skins[s] && SKIN_INCOME[s]) {
           rate += SKIN_INCOME[s];
- }
+      }
   }
 
   // Prize Skin
@@ -796,11 +795,11 @@ function getHourlyRate() {
 }
 
 processOfflineIncome();
- setInterval(() => {
+setInterval(() => {
   d.lastLogin = Date.now();
   save();
 }, 60000);
- // NEW: Energy Regeneration (4 energy twice every 1.5 seconds)
+// NEW: Energy Regeneration (4 energy twice every 1.5 seconds)
 // Conditional: Does NOT regen if active tapping
 setInterval(() => {
   const now = Date.now();
@@ -814,6 +813,7 @@ setInterval(() => {
      }
 
    
+ 
    // Second tick of 4 (immediately after logic wise to satisfy "twice every 1.5s")
      if (d.energy < d.maxEnergy) {
        d.energy += 4;
@@ -823,28 +823,28 @@ setInterval(() => {
      ui();
   }
 }, 1500);
- function updateBackground() {
+function updateBackground() {
   // Logic: Boost Active ? ogon.png : selected bg
   if (d.boost.active && Date.now() < d.boost.end) {
     document.body.style.backgroundImage = "url('ogon.png')";
- document.body.style.backgroundColor = "#220000"; // Fallback
+    document.body.style.backgroundColor = "#220000"; // Fallback
   } else {
     // Revert boost status if time expired
     if (d.boost.active && Date.now() >= d.boost.end) {
       d.boost.active = false;
- }
+    }
 
     if (d.bg === "default") {
       document.body.style.backgroundImage = "none";
       document.body.style.backgroundColor = "#0b0b0b";
- } else if (d.bg === "forest") {
+    } else if (d.bg === "forest") {
       document.body.style.backgroundImage = "url('forest.png')";
- } else if (d.bg === "space") {
+    } else if (d.bg === "space") {
       document.body.style.backgroundImage = "url('star.png')";
- } else if (d.bg === "ric") {
+    } else if (d.bg === "ric") {
       // NEW: Rich Edition Background
       document.body.style.backgroundImage = "url('ric.png')";
- }
+    }
   }
 }
 
@@ -874,9 +874,10 @@ function ui(){
  else if(d.skin === "tung") imgName = "tung.png";
  else if(d.skin === "euro") {
     imgName = d.euroVar === 2 ? "e2.png" : "e1.png";
- }
+}
  else if(d.skin === "space") imgName = "sun.png";
- else if(d.skin === "kostia") imgName = "kostia.png"; // NEW Secret Skin
+ else if(d.skin === "kostia") imgName = "kostia.png";
+ // NEW Secret Skin
 
  // Handling Animations in UI refresh
  if ((d.skin === "tung" && coin.src.includes("tung1.png")) || 
@@ -885,6 +886,14 @@ function ui(){
  } else {
     // Only update if src changed to avoid flickering reloads
     if(!coin.src.includes(imgName)) coin.src = imgName;
+}
+
+ // Visibility Check for Kostia Skin
+ let kostiaCard = document.getElementById("kostiaSkinCard");
+ if(d.skins && d.skins['kostia']) {
+     kostiaCard.style.display = "block";
+ } else {
+     kostiaCard.style.display = "none";
  }
 
  ["default", "what","burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia"].forEach(s=>{
@@ -899,7 +908,8 @@ function ui(){
       }
       if(d.wonX10 && globalSkinLimit > 0) {
          b.textContent = "OWNED"; 
-       
+      
+ 
    b.className = "owned";
          b.onclick = function(){ buySkin('priz', 0); };
       } else {
@@ -923,7 +933,7 @@ function ui(){
   else if(s === "default" || d.skins[s]){
     b.textContent="OWNED";
     b.className="owned";
- }
+  }
   else{
     let prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240, euro:780, space:1210, kostia:0};
     if(s !== "kostia") {
@@ -934,68 +944,67 @@ function ui(){
  b.className="";
   }
  });
- 
  // Background Settings UI
  if(document.getElementById('settings').classList.contains('active')){
     updateSettingsUI();
  }
 
  updateCardUI();
- }
+}
 
 function updateSettingsUI() {
   const setupBgBtn = (id, key, price) => {
     let btn = document.getElementById(id);
- if(d.bg === key) {
+    if(d.bg === key) {
       btn.innerText = "Selected";
       btn.className = "active";
- } else if (d.ownedBgs.includes(key)) {
+    } else if (d.ownedBgs.includes(key)) {
       btn.innerText = "Select";
       btn.className = "";
       btn.onclick = function(){ equipBackground(key);
- }
+}
     } else {
       // Not owned
       if(key === 'space') {
          btn.innerText = "Locked (Buy Space Skin)";
- btn.className = "owned"; // Greyed out
+         btn.className = "owned"; // Greyed out
          btn.onclick = null;
- } else {
+        } else {
          btn.innerText = `Buy ${price} KSPT`;
- btn.onclick = function(){ buyBackground(key, price); }
+         btn.onclick = function(){ buyBackground(key, price); }
       }
     }
   };
- setupBgBtn('bg-btn-default', 'default', 0);
+  setupBgBtn('bg-btn-default', 'default', 0);
   setupBgBtn('bg-btn-forest', 'forest', 320);
   setupBgBtn('bg-btn-space', 'space', 0);
-  setupBgBtn('bg-btn-ric', 'ric', 5120); // NEW Rich BG
+  setupBgBtn('bg-btn-ric', 'ric', 5120);
+ // NEW Rich BG
 }
 
 function updateTempBoostUI() {
   const btn = document.getElementById("btnTempBoost");
  const txt = document.getElementById("tempBoostTimer");
   const now = Date.now();
-
   if (d.boost.active && now < d.boost.end) {
     let secLeft = Math.ceil((d.boost.end - now) / 1000);
- txt.innerText = `ACTIVE! ${secLeft}s left`;
+    txt.innerText = `ACTIVE! ${secLeft}s left`;
     txt.style.color = "#ff0000";
     btn.innerText = "Active";
     btn.className = "active";
     btn.onclick = null;
- } else if (now < d.boost.cdEnd) {
+  } else if (now < d.boost.cdEnd) {
     let minLeft = Math.ceil((d.boost.cdEnd - now) / 60000);
- txt.innerText = `Cooldown: ${minLeft}m`;
+    txt.innerText = `Cooldown: ${minLeft}m`;
     txt.style.color = "#aaa";
     btn.innerText = "Cooldown";
     btn.className = "owned";
     btn.onclick = null;
- } else {
+  } else {
     txt.innerText = "Cooldown: Ready";
     txt.style.color = "#2e7d32";
     btn.innerText = "Buy 15 KSPT";
- btn.className = "";
+    btn.className = "";
     btn.onclick = buyTempBoost;
   }
 }
@@ -1003,88 +1012,88 @@ function updateTempBoostUI() {
 function updateCardUI() {
   const renderCard = (id, cardKey) => {
     let lvl = d.cards[cardKey];
- let data = CARDS[id].levels;
+    let data = CARDS[id].levels;
     let btn = document.getElementById("btn_c"+id);
     let txtLvl = document.getElementById("c"+id+"_lvl");
     let txtInc = document.getElementById("c"+id+"_income");
- // Max level is index 5
+    // Max level is index 5
     if (lvl === 5) {
       txtLvl.innerText = "Level: MAX";
- txtInc.innerText = "+" + data[5].income + " KSPT/h";
+      txtInc.innerText = "+" + data[5].income + " KSPT/h";
       btn.innerText = "MAXED";
       btn.className = "owned";
       btn.onclick = null;
- } else {
+    } else {
       let nextLvl = lvl + 1;
       let cost = data[nextLvl].price;
- let nextInc = data[nextLvl].income;
+      let nextInc = data[nextLvl].income;
       
       if(lvl === -1) {
         txtLvl.innerText = "Not Owned";
- txtInc.innerText = "+" + nextInc + " KSPT/h";
+        txtInc.innerText = "+" + nextInc + " KSPT/h";
         btn.innerText = `Buy ${cost} KSPT`;
- } else {
+     } else {
         txtLvl.innerText = `Level: ${lvl}`;
         txtInc.innerText = `Current: +${data[lvl].income} -> +${nextInc}`;
- btn.innerText = `Upgrade ${cost} KSPT`;
+        btn.innerText = `Upgrade ${cost} KSPT`;
       }
       btn.className = "";
       btn.onclick = function() { buyCard(id); };
- }
+    }
   };
 
   renderCard(1, "c1");
 
   // Card 2 Logic
   let c2Div = document.getElementById("card2_container");
- if (d.cards.c1 >= 3) {
+  if (d.cards.c1 >= 3) {
       c2Div.style.display = "block";
       c2Div.style.filter = "none";
       renderCard(2, "c2");
- } else {
+  } else {
       c2Div.style.display = "block";
       c2Div.style.filter = "grayscale(1) opacity(0.5)";
- document.getElementById("btn_c2").innerText = "Unlock: Card #1 Lvl 3";
+      document.getElementById("btn_c2").innerText = "Unlock: Card #1 Lvl 3";
       document.getElementById("btn_c2").onclick = null;
- }
+  }
 
   // Card 3 Logic
   let c3Div = document.getElementById("card3_container");
- if (d.cards.c2 >= 1) {
+  if (d.cards.c2 >= 1) {
       c3Div.style.display = "block";
       c3Div.style.filter = "none";
       renderCard(3, "c3");
- } else {
+  } else {
       c3Div.style.display = "block";
       c3Div.style.filter = "grayscale(1) opacity(0.5)";
- document.getElementById("btn_c3").innerText = "Unlock: Card #2 Lvl 2";
+      document.getElementById("btn_c3").innerText = "Unlock: Card #2 Lvl 2";
       document.getElementById("btn_c3").onclick = null;
- }
+  }
 
   // NEW Card 4 Logic (Always Visible)
   renderCard(4, "c4");
- // NEW Card 5 Logic
+  // NEW Card 5 Logic
   let c5Div = document.getElementById("card5_container");
- // Condition: Card 4 (Security) >= Level 4 (Index 3 is lvl 3? No, text says Level 1 is index 0. Level 4 is index 3)
+  // Condition: Card 4 (Security) >= Level 4 (Index 3 is lvl 3? No, text says Level 1 is index 0. Level 4 is index 3)
   if (d.cards.c4 >= 3) {
       c5Div.style.display = "block";
- c5Div.style.filter = "none";
+      c5Div.style.filter = "none";
       renderCard(5, "c5");
   } else {
       c5Div.style.display = "block";
       c5Div.style.filter = "grayscale(1) opacity(0.5)";
- document.getElementById("btn_c5").innerText = "Unlock: Security Lvl 4";
+      document.getElementById("btn_c5").innerText = "Unlock: Security Lvl 4";
       document.getElementById("btn_c5").onclick = null;
   }
 }
 
 function buyCard(id) {
   let key = "c" + id;
- let curLvl = d.cards[key];
+  let curLvl = d.cards[key];
   if(curLvl >= 5) return;
   let nextLvl = curLvl + 1;
   let cost = CARDS[id].levels[nextLvl].price;
- if(d.tokens >= cost) {
+  if(d.tokens >= cost) {
     d.tokens -= cost;
     d.cards[key] = nextLvl;
     save();
@@ -1109,7 +1118,7 @@ document.getElementById('coin').addEventListener('touchstart', function(e) {
     return false;
   }
 }, {passive: false});
- coin.onclick=()=>{
+coin.onclick=()=>{
  // Anti-Cheat: Red Screen check
  if(cheatStage >= 3) return;
 
@@ -1117,7 +1126,6 @@ document.getElementById('coin').addEventListener('touchstart', function(e) {
  if (d.energy <= 0) return;
  // Register Tap Time to pause regen
  lastTapTime = Date.now();
- 
  // Don't allow clicks if warning modal is active
  if(isWarningActive) return;
 
@@ -1133,20 +1141,20 @@ document.getElementById('coin').addEventListener('touchstart', function(e) {
         clickTimes = []; 
     } else if (cheatStage === 1) {
         d.tokens = 0;
- d.skins = {};
+        d.skins = {};
         d.skin = "default";
         d.cards = {c1:-1, c2:-1, c3:-1, c4:-1, c5:-1};
         d.energy = 2500;
         save();
- alert("Account Reset due to cheating!");
+        alert("Account Reset due to cheating!");
         cheatStage = 2;
         localStorage.setItem("kspt_cheat_stage", 2);
         clickTimes = [];
         ui();
- } else if (cheatStage >= 2) {
+     } else if (cheatStage >= 2) {
         cheatStage = 3;
         localStorage.setItem("kspt_cheat_stage", 3);
- document.getElementById("redScreen").style.display = "flex";
+        document.getElementById("redScreen").style.display = "flex";
         return;
     }
  }
@@ -1168,12 +1176,12 @@ document.getElementById('coin').addEventListener('touchstart', function(e) {
  // Animation Logic
  if(d.skin === "tung") {
     if(coin.src.includes("tung.png")) coin.src = "tung1.png";
- else coin.src = "tung.png";
+    else coin.src = "tung.png";
  }
  // Space Animation
  if(d.skin === "space") {
     if(coin.src.includes("sun.png")) coin.src = "moon.png";
- else coin.src = "sun.png";
+    else coin.src = "sun.png";
  }
 
  coin.classList.add('anim');
@@ -1182,7 +1190,7 @@ document.getElementById('coin').addEventListener('touchstart', function(e) {
  save();
  ui();
 };
- function buySkin(s,c){
+function buySkin(s,c){
  if(s === "default") {
     d.skin = "default";
  }
@@ -1197,7 +1205,7 @@ document.getElementById('coin').addEventListener('touchstart', function(e) {
  2 : 1;
        }
        d.skin = s;
- } else {
+     } else {
        d.skin = s;
     }
  }
@@ -1205,19 +1213,19 @@ document.getElementById('coin').addEventListener('touchstart', function(e) {
   d.tokens-=c;
   d.skins[s]=1;
   d.skin=s;
- // Unlock Space Background if buying space
+  // Unlock Space Background if buying space
   if(s === "space") {
     if(!d.ownedBgs.includes("space")) d.ownedBgs.push("space");
   }
  }
  save();ui();
- }
+}
 
 // Background Functions
 function buyBackground(bg, price) {
   if (d.tokens >= price && !d.ownedBgs.includes(bg)) {
     d.tokens -= price;
- d.ownedBgs.push(bg);
+    d.ownedBgs.push(bg);
     save();
     ui();
   }
@@ -1242,11 +1250,11 @@ function buyX2(){
 // NEW: Buy Temp Boost
 function buyTempBoost() {
   const now = Date.now();
- if (now < d.boost.cdEnd) return; // In cooldown
+  if (now < d.boost.cdEnd) return; // In cooldown
   
   if (d.tokens >= 15) {
     d.tokens -= 15;
- d.boost.active = true;
+    d.boost.active = true;
     d.boost.end = now + 32000; // 30+ seconds
     d.boost.cdEnd = now + 6000000;
  // 100 minutes (1h 40m)
@@ -1257,10 +1265,10 @@ function buyTempBoost() {
 
 function setMaxBet() {
   let max = 30;
- if (d.tokens < 30) max = Math.floor(d.tokens);
+  if (d.tokens < 30) max = Math.floor(d.tokens);
   if (max < 1) max = 1;
   betAmount.value = max;
- }
+}
 
 function prepareBet(mult,ch){
  let a=+betAmount.value;
@@ -1285,34 +1293,34 @@ function confirmBet(){
    if(mult === 10) {
      if(!d.wonX10 && globalSkinLimit > 0) {
        d.wonX10 = true;
- // Decrement Global Counter
+       // Decrement Global Counter
        globalSkinLimit--;
        localStorage.setItem("kspt_global_priz_count", globalSkinLimit);
- alert("🎉 UNBELIEVABLE! You won x10!\nSkin 'NUMBER #1!' Unlocked!");
+       alert("🎉 UNBELIEVABLE! You won x10!\nSkin 'NUMBER #1!' Unlocked!");
      }
    }
  }
  save();ui();
- }
+}
 
 function checkPromo() {
   const code = document.getElementById("promoInput").value.trim();
   if(!code) return;
- // Check if used
+  // Check if used
   if(d.usedCodes.includes(code)) {
     alert("This promo code has already been used.");
     return;
- }
+  }
 
   if(code === "ksptshit") {
     if(confirm("Are you sure?")) {
       if(confirm("WARNING: All coins, skins, and progress will be reset. Proceed?")) {
         localStorage.removeItem("kspt");
- location.reload(); 
+        location.reload(); 
       }
     }
     return;
-  }
+ }
   
   // NEW: Result0-0 (Reset Tokens Only)
   if(code === "Result0-0") {
@@ -1329,7 +1337,8 @@ function checkPromo() {
   let valid = false;
  switch(code) {
     case "Skibidi":
-      reward = 1; valid = true; break;
+      reward = 1;
+      valid = true; break;
  case "Brainrot":
       reward = 1; valid = true; break;
  case "Einarald":
@@ -1338,18 +1347,18 @@ function checkPromo() {
       reward = 300; valid = true; break;
  case "OnlyforrRed":
       reward = 5000; valid = true; break;
-    // NEW CODES
+ // NEW CODES
     case "SecEi10":
       reward = 10; valid = true; break;
-    case "KostiaBox":
+ case "KostiaBox":
       // Gives skin, no money reward (or 0)
       if(!d.skins['kostia']) {
         d.skins['kostia'] = 1;
         alert("You found a Secret! Skin 'Special Kostia' Unlocked!");
       }
       reward = 0; 
-      valid = true; 
-      break;
+      valid = true;
+ break;
  default:
       alert("Invalid code");
       return;
@@ -1368,7 +1377,7 @@ function checkPromo() {
 function buyEnergyLimit() {
   if (d.tokens >= 15 && d.maxEnergy < 8000) {
     d.tokens -= 15;
- d.maxEnergy += 500;
+    d.maxEnergy += 500;
     save();
     ui();
   } else if (d.maxEnergy >= 8000) {
@@ -1387,7 +1396,7 @@ function attemptUnban() {
       clickTimes = [];
   } else {
       alert("Invalid Key.");
-  }
+ }
 }
 
 // NEW: Dismiss Warning

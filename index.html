@@ -699,6 +699,52 @@ if (window.Telegram?.WebApp){
   Telegram.WebApp.expand();
 }
 
+/**
+ * Why vibration does not work (Android & iOS)
+ *
+ * The issue is not caused by the game logic, but by platform and API limitations.
+ *
+ * 1. navigator.vibrate() is unreliable in WebView environments
+ * This project runs inside Telegram Web App (WebView).
+ * In WebViews, navigator.vibrate() is:
+ * • partially supported on Android,
+ * • almost always blocked on iOS,
+ * • often ignored even when the API exists.
+ *
+ * This is a Telegram / WebView restriction, not a JavaScript bug.
+ *
+ * 2. onclick is not guaranteed to be a real user gesture
+ * Vibration APIs require a direct user gesture.
+ *
+ * In mobile WebView:
+ * • onclick can be synthetic / delayed
+ * • the browser may treat it as non-user-initiated
+ *
+ * As a result, vibration calls are silently ignored.
+ *
+ * 3. Vibration must be triggered immediately on touch
+ * On mobile browsers, vibration must be:
+ * • executed synchronously
+ * • as the first action inside the touch handler
+ *
+ * If it runs after logic, timers, animations, or anti-cheat checks, the system may block it.
+ *
+ * 4. iOS limitation (important)
+ * On iOS:
+ * • navigator.vibrate() is not supported in Safari or WebViews
+ * • Haptic feedback is only available in native iOS apps via UIImpactFeedbackGenerator
+ *
+ * Therefore, vibration cannot be reliably implemented in web-based games on iOS.
+ *
+ * Final conclusion
+ * • ✔ The vibration logic itself is correct
+ * • ❌ Telegram Web App blocks or ignores vibration
+ * • ❌ iOS WebView does not support vibration at all
+ * • ⚠️ Android support depends on browser / WebView
+ *
+ * Vibration in a Telegram Web App should be treated as an optional effect, not a guaranteed feature.
+ */
+
 // Global Skin Counter Initialization
 let globalSkinLimit = parseInt(localStorage.getItem("kspt_global_priz_count")) || 46;
 
@@ -1291,17 +1337,26 @@ document.getElementById('coin').addEventListener('touchstart', function(e) {
     return false;
   }
 }, {passive: false});
+
+// Correct implementation (best-effort)
+coin.addEventListener("touchstart", () => {
+  if (d.vibration === "off") return;
+  // Use existing setting durations (Low/Med/Strong)
+  let dur = 30; // Medium default
+  if(d.vibration === 'low') dur = 10;
+  if(d.vibration === 'strong') dur = 50;
+
+  if (navigator.vibrate) {
+    navigator.vibrate(dur);
+  }
+}, { passive: true });
+
 coin.onclick=function(){
  // Anti-Cheat: Red Screen check
  if(cheatStage >= 3) return;
 
- // NEW: Vibration Trigger
- if(navigator.vibrate && d.vibration !== 'off') {
-     let dur = 30; // Medium Default
-     if(d.vibration === 'low') dur = 10;
-     if(d.vibration === 'strong') dur = 50;
-     navigator.vibrate(dur);
- }
+ // NOTE: Vibration Logic moved to 'touchstart' listener above for better reliability
+ // as per new instructions. 
  
  // NEW: Energy Cost Logic
  let m = d.x2 ?

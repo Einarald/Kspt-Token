@@ -53,6 +53,15 @@ body{
   opacity:.85;
 }
 
+/* NEW: Close Button Style */
+.close-x {
+  width: 24px !important;
+  height: 24px !important;
+  cursor: pointer;
+  margin-left: auto; /* Pushes to the right */
+  opacity: 0.7;
+}
+
 .balance-main{
   font-size:22px;
   margin:10px 0 5px; 
@@ -143,7 +152,7 @@ body{
 
 .card-img {
   width: 100px;
-  height: 80px; 
+  height: 80px;
   float: right;
   margin-top: 0; 
   margin-left: 10px;
@@ -325,10 +334,33 @@ input{
   border: 1px solid #666;
 }
 
+/* NEW: Toast Notification */
+.toast {
+  position: fixed;
+  top: 15%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.6);
+  padding: 10px 20px;
+  border-radius: 20px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: bold;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s ease;
+  z-index: 11000;
+}
+.toast.show {
+  opacity: 1;
+}
+
 </style>
 </head>
 
 <body>
+
+<div id="toast" class="toast">Purchase successful</div>
 
 <div id="cheatWarningModal" class="warning-modal">
   <h2 style="color:red; font-size: 32px; margin-bottom: 10px;">STOP!</h2>
@@ -384,6 +416,7 @@ input{
   <div class="top-bar">
     <img src="kspt.png">
     <span id="balanceSettings"></span>
+    <img src="iks.png" class="close-x" onclick="openScreen('main')">
   </div>
 
   <div class="card">
@@ -413,7 +446,8 @@ input{
   </div>
 
   <div class="card">
-    <div class="bg-preview" style="background-image: url('ric.png'); border: 2px solid gold;"></div>
+    <div class="bg-preview" style="background-image: url('ric.png');
+    border: 2px solid gold;"></div>
     <div class="card-title" style="color: gold;">KSPT: Rich Edition</div>
     <div class="card-sub">For the elite</div>
     <button id="bg-btn-ric" onclick="buyBackground('ric', 5120)">Buy 5120 KSPT</button>
@@ -426,6 +460,7 @@ input{
   <div class="top-bar">
     <img src="kspt.png">
     <span id="balanceSkins"></span>
+    <img src="iks.png" class="close-x" onclick="openScreen('main')">
   </div>
 
   <div class="card">
@@ -436,7 +471,8 @@ input{
 
   <div class="card">
     <div class="card-title">WHAT IS KSPT</div>
-    <div class="card-sub">Price: 1 KSPT (+1 KSPT/h)</div>
+    <div class="card-sub">Price: 1 KSPT 
+    (+1 KSPT/h)</div>
     <button id="skin-what" onclick="buySkin('what',1)"></button>
   </div>
 
@@ -484,10 +520,36 @@ input{
  id="skin-space" onclick="buySkin('space',1210)">BUY 1210 KSPT</button>
   </div>
   
+  <div class="card">
+    <div class="card-title">Pixel Coin</div>
+    <div class="card-sub">Toggle animation + visual style</div>
+    <div class="card-sub">Price: 3,215 KSPT (+88 KSPT/h)</div>
+    <button id="skin-pixe" onclick="buySkin('pixe',3215)">BUY 3,215 KSPT</button>
+  </div>
+
+  <div class="card">
+    <div class="card-title">Funny Onion</div>
+    <div class="card-sub">Most expensive skin + animation</div>
+    <div class="card-sub">Price: 10,110 KSPT (+120 KSPT/h)</div>
+    <button id="skin-onion" onclick="buySkin('onion',10110)">BUY 10,110 KSPT</button>
+  </div>
+
   <div class="card" id="kostiaSkinCard" style="display:none">
-    <div class="card-title">Special Kostia</div>
+    <div class="card-title">KSPT: Community Edition</div>
     <div class="card-sub">Secret Skin (+3 KSPT/h)</div>
     <button id="skin-kostia" onclick="buySkin('kostia',0)">LOCKED (Use Promo)</button>
+  </div>
+
+  <div class="card" id="metkaSkinCard" style="display:none">
+    <div class="card-title">KSPT & RED Fingers</div>
+    <div class="card-sub">Secret Skin (+5 KSPT/h)</div>
+    <button id="skin-metka" onclick="buySkin('metka',0)">LOCKED (Use Promo)</button>
+  </div>
+
+  <div class="card" id="seriSkinCard" style="display:none">
+    <div class="card-title">KosTiaP Token</div>
+    <div class="card-sub">Secret Skin + Animation (+5 KSPT/h)</div>
+    <button id="skin-seri" onclick="buySkin('seri',0)">LOCKED (Use Promo)</button>
   </div>
 
   <div class="card">
@@ -503,6 +565,7 @@ input{
   <div class="top-bar">
     <img src="kspt.png">
     <span id="balanceOffline"></span>
+    <img src="iks.png" class="close-x" onclick="openScreen('main')">
   </div>
 
   <div class="card">
@@ -513,7 +576,8 @@ input{
     <button id="btn_c1" onclick="buyCard(1)">Buy 25 KSPT</button>
   </div>
 
-  <div class="card" id="card2_container" style="display:none; filter: grayscale(1);">
+  <div class="card" id="card2_container" style="display:none;
+    filter: grayscale(1);">
     <img src="inv.png" class="card-img">
     <div class="card-title">Investors</div>
     <div class="card-lvl" id="c2_lvl">Locked</div>
@@ -521,7 +585,8 @@ input{
     <button id="btn_c2" onclick="buyCard(2)">Locked</button>
   </div>
 
-  <div class="card" id="card3_container" style="display:none; filter: grayscale(1);">
+  <div class="card" id="card3_container" style="display:none;
+    filter: grayscale(1);">
     <img src="offi.png" class="card-img">
     <div class="card-title">Office</div>
     <div class="card-lvl" id="c3_lvl">Locked</div>
@@ -537,7 +602,8 @@ input{
     <button id="btn_c4" onclick="buyCard(4)">Buy 910 KSPT</button>
   </div>
 
-  <div class="card" id="card5_container" style="display:none; filter: grayscale(1);">
+  <div class="card" id="card5_container" style="display:none;
+    filter: grayscale(1);">
     <img src="ite.png" class="card-img">
     <div class="card-title">IT Equipment</div>
     <div class="card-lvl" id="c5_lvl">Locked</div>
@@ -552,6 +618,7 @@ input{
   <div class="top-bar">
     <img src="kspt.png">
     <span id="balanceTech"></span>
+    <img src="iks.png" class="close-x" onclick="openScreen('main')">
   </div>
 
   <div class="card">
@@ -562,9 +629,8 @@ input{
 
   <div class="card">
     <div class="card-title">Temporary Overdrive</div>
-    <div class="card-sub">x10-x20 Taps for 30+ Seconds</div>
-    
- <div class="card-sub" id="tempBoostTimer">Cooldown: Ready</div>
+    <div class="card-sub">x10-x20 Taps for 25+ Seconds</div>
+    <div class="card-sub" id="tempBoostTimer">Cooldown: Ready</div>
     <button id="btnTempBoost" onclick="buyTempBoost()">Buy 15 KSPT</button>
   </div>
 
@@ -573,6 +639,12 @@ input{
     <div class="card-sub">Max: 8000 | +500 Energy</div>
     <div class="card-sub" id="energyInfoText">Current Max: 2500</div>
     <button onclick="buyEnergyLimit()">Buy (+500) 15 KSPT</button>
+  </div>
+  
+  <div class="card">
+    <div class="card-title">Energy regeneration multiplier</div>
+    <div class="card-sub" id="regenInfo">Current: 1x</div>
+    <button id="btnRegen" onclick="buyRegenMult()">Upgrade</button>
   </div>
 
   <div class="card">
@@ -590,7 +662,6 @@ input{
   </div>
 
   <div id="betConfirm" class="card" style="display:none">
- 
     <div id="betText"></div>
     <button class="confirm" onclick="confirmBet()">Confirm</button>
     <button class="cancel" onclick="cancelBet()">Cancel</button>
@@ -658,7 +729,8 @@ if(typeof d.bg === 'undefined') d.bg = "default";
 if(typeof d.ownedBgs === 'undefined') d.ownedBgs = ["default"];
 if(typeof d.boost === 'undefined') d.boost = { active: false, end: 0, cdEnd: 0 };
 if(typeof d.euroVar === 'undefined') d.euroVar = 1; // 1 or 2
-
+// NEW: Regen Multiplier
+if(typeof d.regenMult === 'undefined') d.regenMult = 1;
 let pendingBet=null;
 let lastTapTime = 0;
 // For Energy Regen Pause
@@ -675,7 +747,11 @@ const SKIN_INCOME = {
   priz: 3,
   euro: 27,
   space: 40,
-  kostia: 3 // New Secret Skin Income
+  kostia: 3,
+  pixe: 88,    // NEW
+  onion: 120,  // NEW
+  metka: 5,
+  seri: 5
 };
 const CARDS = {
   1: {
@@ -691,7 +767,7 @@ const CARDS = {
   2: {
     levels: [
       { price: 100, 
- income: 2.5 },
+        income: 2.5 },
       { price: 130, income: 3.8 },
       { price: 170, income: 5.1 },
       { price: 190, income: 6.7 },
@@ -703,8 +779,7 @@ const CARDS = {
     levels: [
       { price: 310, income: 10.2 },
       { price: 390, income: 14.1 },
-      { 
- price: 480, income: 21 },
+      { price: 480, income: 21 },
       { price: 540, income: 28.6 },
       { price: 610, income: 35.8 },
       { price: 760, income: 50.3 }
@@ -716,9 +791,7 @@ const CARDS = {
       { price: 910, income: 16.9 }, /* Base purchase */
       { price: 1110, income: 27.1 },
       { price: 1280, income: 35.7 },
-    
-   
- { price: 1410, income: 48.0 },
+      { price: 1410, income: 48.0 },
       { price: 1670, income: 59.3 },
       { price: 1860, income: 74.2 }
     ]
@@ -730,9 +803,7 @@ const CARDS = {
       { price: 1970, income: 73.4 },
       { price: 2510, income: 86.7 },
       { price: 3120, income: 108.5 },
- 
-    
-   { price: 3510, income: 138.3 },
+      { price: 3510, income: 138.3 },
       { price: 4080, income: 215.4 }
     ]
   }
@@ -743,10 +814,10 @@ const save=()=>localStorage.setItem("kspt",JSON.stringify(d));
 function processOfflineIncome() {
   const now = Date.now();
   const diffMs = now - d.lastLogin;
+  const minutes = diffMs / (1000 * 60);
   const hours = diffMs / (1000 * 60 * 60);
-
   let rate = getHourlyRate();
-// Condition: Only add if hours >= 1
+  // Condition: Only add if hours >= 1
   if (rate > 0 && hours >= 1) {
     let effectiveHours = hours;
     if (effectiveHours > 8) effectiveHours = 8;
@@ -758,10 +829,14 @@ function processOfflineIncome() {
     }
   }
 
-  // Energy Offline Logic
-  if (hours >= 2) {
+  // Energy Offline Logic - NEW LOGIC
+  if (minutes >= 10 && minutes < 20) {
+     d.energy = Math.min(d.energy + 200, d.maxEnergy);
+  } else if (minutes >= 40 && minutes < 60) {
+     d.energy = Math.min(d.energy + 500, d.maxEnergy);
+  } else if (hours >= 2) {
     d.energy = d.maxEnergy;
-// Restore to 100%
+    // Restore to 100%
   } else if (hours >= 1) {
     if(d.energy < d.maxEnergy * 0.5) {
       d.energy = Math.floor(d.maxEnergy * 0.5);
@@ -774,13 +849,13 @@ function processOfflineIncome() {
 
 function getHourlyRate() {
   let rate = 0;
-// Card Income
+  // Card Income
   if(d.cards.c1 >= 0) rate += CARDS[1].levels[d.cards.c1].income;
   if(d.cards.c2 >= 0) rate += CARDS[2].levels[d.cards.c2].income;
   if(d.cards.c3 >= 0) rate += CARDS[3].levels[d.cards.c3].income;
   if(d.cards.c4 >= 0) rate += CARDS[4].levels[d.cards.c4].income;
   if(d.cards.c5 >= 0) rate += CARDS[5].levels[d.cards.c5].income;
-// Skin Stacked Income
+  // Skin Stacked Income
   rate += SKIN_INCOME.default;
   for(let s in d.skins) {
       if(d.skins[s] && SKIN_INCOME[s]) {
@@ -806,17 +881,16 @@ setInterval(() => {
   // Check if player is NOT tapping (wait 1 second after last tap to resume)
   if (now - lastTapTime > 2500) {
      
-     // First tick of 1
+     // First tick of 1 (Multiplied by Regen Mult)
      if (d.energy < d.maxEnergy) {
-       d.energy += 1;
+       d.energy += 1 * d.regenMult;
        if (d.energy > d.maxEnergy) d.energy = d.maxEnergy;
-     }
+  
+    }
 
-   
- 
-   // Second tick of 4 (immediately after logic wise to satisfy "twice every 1.5s")
+     // Second tick of 4 (immediately after logic wise to satisfy "twice every 1.5s")
      if (d.energy < d.maxEnergy) {
-       d.energy += 4;
+       d.energy += 4 * d.regenMult;
        if (d.energy > d.maxEnergy) d.energy = d.maxEnergy;
      }
 
@@ -874,19 +948,25 @@ function ui(){
  else if(d.skin === "tung") imgName = "tung.png";
  else if(d.skin === "euro") {
     imgName = d.euroVar === 2 ? "e2.png" : "e1.png";
-}
+ }
  else if(d.skin === "space") imgName = "sun.png";
  else if(d.skin === "kostia") imgName = "kostia.png";
- // NEW Secret Skin
-
+ // NEW Skins
+ else if(d.skin === "pixe") imgName = "pixe.png";
+ else if(d.skin === "onion") imgName = "onion.png";
+ else if(d.skin === "metka") imgName = "metka.png";
+ else if(d.skin === "seri") imgName = "seri.png";
  // Handling Animations in UI refresh
  if ((d.skin === "tung" && coin.src.includes("tung1.png")) || 
-     (d.skin === "space" && coin.src.includes("moon.png"))) {
+     (d.skin === "space" && coin.src.includes("moon.png")) ||
+     (d.skin === "pixe" && coin.src.includes("pixe1.png")) ||
+     (d.skin === "onion" && (coin.src.includes("onion1.png") || coin.src.includes("onion2.png"))) ||
+     (d.skin === "seri" && coin.src.includes("seri1.png"))) {
     // allow animation frame to persist
  } else {
     // Only update if src changed to avoid flickering reloads
     if(!coin.src.includes(imgName)) coin.src = imgName;
-}
+ }
 
  // Visibility Check for Kostia Skin
  let kostiaCard = document.getElementById("kostiaSkinCard");
@@ -895,8 +975,22 @@ function ui(){
  } else {
      kostiaCard.style.display = "none";
  }
+ // Visibility Check for Metka Skin
+ let metkaCard = document.getElementById("metkaSkinCard");
+ if(d.skins && d.skins['metka']) {
+     metkaCard.style.display = "block";
+ } else {
+     metkaCard.style.display = "none";
+ }
+ // Visibility Check for Seri Skin
+ let seriCard = document.getElementById("seriSkinCard");
+ if(d.skins && d.skins['seri']) {
+     seriCard.style.display = "block";
+ } else {
+     seriCard.style.display = "none";
+ }
 
- ["default", "what","burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia"].forEach(s=>{
+ ["default", "what","burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "metka", "seri"].forEach(s=>{
   let b=document.getElementById("skin-"+s);
   if (!b) return;
 
@@ -908,9 +1002,7 @@ function ui(){
       }
       if(d.wonX10 && globalSkinLimit > 0) {
          b.textContent = "OWNED"; 
-      
- 
-   b.className = "owned";
+         b.className = "owned";
          b.onclick = function(){ buySkin('priz', 0); };
       } else {
          b.textContent = globalSkinLimit <= 0 ? "SOLD OUT" : "LOCKED (Win x10)";
@@ -922,8 +1014,7 @@ function ui(){
 
   if(d.skin===s){
     // If Euro, allow toggling variant
-    if(s === "euro") 
- {
+    if(s === "euro") {
       b.textContent = `ACTIVE (Var ${d.euroVar})`;
     } else {
       b.textContent="ACTIVE";
@@ -935,19 +1026,21 @@ function ui(){
     b.className="owned";
   }
   else{
-    let prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240, euro:780, space:1210, kostia:0};
-    if(s !== "kostia") {
+    let prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240, euro:780, space:1210, kostia:0, pixe:3215, onion:10110, metka:0, seri:0};
+    if(s !== "kostia" && s !== "metka" && s !== "seri") {
        b.textContent=`BUY ${prices[s]} KSPT`;
     } else {
        b.textContent = "LOCKED (Use Code)";
     }
- b.className="";
+    b.className="";
   }
  });
  // Background Settings UI
  if(document.getElementById('settings').classList.contains('active')){
     updateSettingsUI();
  }
+ // Tech UI for Regen
+ updateRegenUI();
 
  updateCardUI();
 }
@@ -962,14 +1055,14 @@ function updateSettingsUI() {
       btn.innerText = "Select";
       btn.className = "";
       btn.onclick = function(){ equipBackground(key);
-}
+    }
     } else {
       // Not owned
       if(key === 'space') {
          btn.innerText = "Locked (Buy Space Skin)";
          btn.className = "owned"; // Greyed out
          btn.onclick = null;
-        } else {
+    } else {
          btn.innerText = `Buy ${price} KSPT`;
          btn.onclick = function(){ buyBackground(key, price); }
       }
@@ -979,12 +1072,11 @@ function updateSettingsUI() {
   setupBgBtn('bg-btn-forest', 'forest', 320);
   setupBgBtn('bg-btn-space', 'space', 0);
   setupBgBtn('bg-btn-ric', 'ric', 5120);
- // NEW Rich BG
 }
 
 function updateTempBoostUI() {
   const btn = document.getElementById("btnTempBoost");
- const txt = document.getElementById("tempBoostTimer");
+  const txt = document.getElementById("tempBoostTimer");
   const now = Date.now();
   if (d.boost.active && now < d.boost.end) {
     let secLeft = Math.ceil((d.boost.end - now) / 1000);
@@ -1007,6 +1099,31 @@ function updateTempBoostUI() {
     btn.className = "";
     btn.onclick = buyTempBoost;
   }
+}
+
+function updateRegenUI() {
+  const btn = document.getElementById("btnRegen");
+  const info = document.getElementById("regenInfo");
+  let m = d.regenMult;
+  
+  if (m === 1) {
+    info.innerText = "Current: 1x";
+    btn.innerText = "Upgrade to 1.5x (40 KSPT)";
+  } else if (m === 1.5) {
+    info.innerText = "Current: 1.5x";
+    btn.innerText = "Upgrade to 2x (70 KSPT)";
+  } else if (m === 2) {
+    info.innerText = "Current: 2x";
+    btn.innerText = "Upgrade to 3x (135 KSPT)";
+  } else {
+    info.innerText = "Current: 3x (MAX)";
+    btn.innerText = "MAXED";
+    btn.className = "owned";
+    btn.onclick = null;
+    return;
+  }
+  btn.className = "";
+  btn.onclick = buyRegenMult;
 }
 
 function updateCardUI() {
@@ -1032,7 +1149,7 @@ function updateCardUI() {
         txtLvl.innerText = "Not Owned";
         txtInc.innerText = "+" + nextInc + " KSPT/h";
         btn.innerText = `Buy ${cost} KSPT`;
-     } else {
+      } else {
         txtLvl.innerText = `Level: ${lvl}`;
         txtInc.innerText = `Current: +${data[lvl].income} -> +${nextInc}`;
         btn.innerText = `Upgrade ${cost} KSPT`;
@@ -1087,6 +1204,15 @@ function updateCardUI() {
   }
 }
 
+function showToast(msg) {
+  const t = document.getElementById("toast");
+  t.innerText = msg;
+  t.classList.add("show");
+  setTimeout(() => {
+    t.classList.remove("show");
+  }, 2000);
+}
+
 function buyCard(id) {
   let key = "c" + id;
   let curLvl = d.cards[key];
@@ -1096,6 +1222,7 @@ function buyCard(id) {
   if(d.tokens >= cost) {
     d.tokens -= cost;
     d.cards[key] = nextLvl;
+    showToast("Purchase Successful");
     save();
     ui();
   }
@@ -1118,24 +1245,32 @@ document.getElementById('coin').addEventListener('touchstart', function(e) {
     return false;
   }
 }, {passive: false});
-coin.onclick=()=>{
+coin.onclick=function(){
  // Anti-Cheat: Red Screen check
  if(cheatStage >= 3) return;
+ 
+ // NEW: Energy Cost Logic
+ let m = d.x2 ? 2 : 1;
+ const now = Date.now();
+ 
+ // Check Temp Boost before Energy calc to ensure cost matches
+ if (d.boost.active && now < d.boost.end) {
+    m *= 10;
+ }
+ 
+ let cost = m; // Cost always equals current tap multiplier
+ if (d.energy < cost) return;
 
- // Energy Check
- if (d.energy <= 0) return;
  // Register Tap Time to pause regen
  lastTapTime = Date.now();
  // Don't allow clicks if warning modal is active
  if(isWarningActive) return;
 
  // Anti-Cheat: Rapid Click Detection
- const now = Date.now();
  clickTimes.push(now);
- clickTimes = clickTimes.filter(t => now - t <= 7000);
+ clickTimes = clickTimes.filter(t => now - t <= 10000);
  if(clickTimes.length > 100) {
     if(cheatStage === 0) {
-        // CHANGED: Show Custom Warning instead of auto-alert
         document.getElementById("cheatWarningModal").style.display = "flex";
         isWarningActive = true;
         clickTimes = []; 
@@ -1151,7 +1286,7 @@ coin.onclick=()=>{
         localStorage.setItem("kspt_cheat_stage", 2);
         clickTimes = [];
         ui();
-     } else if (cheatStage >= 2) {
+    } else if (cheatStage >= 2) {
         cheatStage = 3;
         localStorage.setItem("kspt_cheat_stage", 3);
         document.getElementById("redScreen").style.display = "flex";
@@ -1160,16 +1295,7 @@ coin.onclick=()=>{
  }
 
  // Deduct Energy
- d.energy--;
-
- // Calculate Tap Value
- let m = d.x2 ?
- 2 : 1;
- 
- // Check Temp Boost
- if (d.boost.active && now < d.boost.end) {
-    m *= 10;
- }
+ d.energy -= cost;
 
  d.tokens += 0.01 * m;
 
@@ -1182,6 +1308,28 @@ coin.onclick=()=>{
  if(d.skin === "space") {
     if(coin.src.includes("sun.png")) coin.src = "moon.png";
     else coin.src = "sun.png";
+ }
+ // NEW: Pixel Coin Animation
+ if(d.skin === "pixe") {
+    // Toggle state using dataset
+    if(!coin.dataset.toggle) coin.dataset.toggle = "0";
+    coin.dataset.toggle = coin.dataset.toggle === "0" ? "1" : "0";
+    coin.src = coin.dataset.toggle === "1" ? "pixe1.png" : "pixe.png";
+ }
+ // NEW: Funny Onion Animation
+ if(d.skin === "onion") {
+    let stage = parseInt(coin.dataset.stage || 0);
+    stage = (stage + 1) % 3; // Cycle 0 -> 1 -> 2 -> 0
+    coin.dataset.stage = stage;
+    if(stage === 0) coin.src = "onion.png";
+    if(stage === 1) coin.src = "onion1.png";
+    if(stage === 2) coin.src = "onion2.png";
+ }
+ // NEW: KosTiaP Token Animation
+ if(d.skin === "seri") {
+    if(!coin.dataset.toggle) coin.dataset.toggle = "0";
+    coin.dataset.toggle = coin.dataset.toggle === "0" ? "1" : "0";
+    coin.src = coin.dataset.toggle === "1" ? "seri1.png" : "seri.png";
  }
 
  coin.classList.add('anim');
@@ -1202,10 +1350,10 @@ function buySkin(s,c){
     if(s === "euro") {
        if(d.skin === "euro") {
          d.euroVar = d.euroVar === 1 ?
- 2 : 1;
+            2 : 1;
        }
        d.skin = s;
-     } else {
+    } else {
        d.skin = s;
     }
  }
@@ -1217,6 +1365,7 @@ function buySkin(s,c){
   if(s === "space") {
     if(!d.ownedBgs.includes("space")) d.ownedBgs.push("space");
   }
+  showToast("Purchase successful.");
  }
  save();ui();
 }
@@ -1226,6 +1375,7 @@ function buyBackground(bg, price) {
   if (d.tokens >= price && !d.ownedBgs.includes(bg)) {
     d.tokens -= price;
     d.ownedBgs.push(bg);
+    showToast("Purchase successful.");
     save();
     ui();
   }
@@ -1236,13 +1386,14 @@ function equipBackground(bg) {
     d.bg = bg;
     save();
     ui();
- }
+  }
 }
 
 function buyX2(){
  if(!d.x2 && d.tokens>=5){
   d.tokens-=5;
   d.x2=true;
+  showToast("Purchase successful.");
   save();ui();
  }
 }
@@ -1250,17 +1401,39 @@ function buyX2(){
 // NEW: Buy Temp Boost
 function buyTempBoost() {
   const now = Date.now();
-  if (now < d.boost.cdEnd) return; // In cooldown
+  if (now < d.boost.cdEnd) return;
+  // In cooldown
   
   if (d.tokens >= 15) {
     d.tokens -= 15;
     d.boost.active = true;
-    d.boost.end = now + 32000; // 30+ seconds
+    d.boost.end = now + 27000; // 25+ seconds
     d.boost.cdEnd = now + 6000000;
- // 100 minutes (1h 40m)
+    // 100 minutes (1h 40m)
+    showToast("Purchase successful.");
     save();
     ui();
   }
+}
+
+// NEW: Buy Regen Mult
+function buyRegenMult() {
+  // Logic: 1 -> 1.5 (40) -> 2 (70) -> 3 (135)
+  if (d.regenMult === 1 && d.tokens >= 40) {
+    d.tokens -= 40;
+    d.regenMult = 1.5;
+    showToast("Purchase successful.");
+  } else if (d.regenMult === 1.5 && d.tokens >= 70) {
+    d.tokens -= 70;
+    d.regenMult = 2;
+    showToast("Purchase successful.");
+  } else if (d.regenMult === 2 && d.tokens >= 135) {
+    d.tokens -= 135;
+    d.regenMult = 3;
+    showToast("Purchase successful.");
+  }
+  save();
+  ui();
 }
 
 function setMaxBet() {
@@ -1320,7 +1493,7 @@ function checkPromo() {
       }
     }
     return;
- }
+  }
   
   // NEW: Result0-0 (Reset Tokens Only)
   if(code === "Result0-0") {
@@ -1350,7 +1523,7 @@ function checkPromo() {
  // NEW CODES
     case "SecEi10":
       reward = 10; valid = true; break;
- case "KostiaBox":
+ case "ComunetiMenagir":
       // Gives skin, no money reward (or 0)
       if(!d.skins['kostia']) {
         d.skins['kostia'] = 1;
@@ -1358,8 +1531,33 @@ function checkPromo() {
       }
       reward = 0; 
       valid = true;
- break;
- default:
+      break;
+    case "Onyxin": // NEW
+      reward = 5;
+      alert("Nostalgic...");
+      valid = true;
+      break;
+    case "L1keVideo":
+      reward = 5;
+      valid = true;
+      break;
+    case "RedSEKTA":
+      if(!d.skins['metka']) {
+          d.skins['metka'] = 1;
+          alert("Skin 'KSPT & RED Fingers' Unlocked!");
+      }
+      reward = 0;
+      valid = true;
+      break;
+    case "KostinSerial":
+      if(!d.skins['seri']) {
+          d.skins['seri'] = 1;
+          alert("Secret Skin 'KosTiaP Token' Unlocked!");
+      }
+      reward = 0;
+      valid = true;
+      break;
+    default:
       alert("Invalid code");
       return;
   }
@@ -1367,7 +1565,7 @@ function checkPromo() {
   if(valid) {
     d.tokens += reward;
     d.usedCodes.push(code);
- save();
+    save();
     ui();
     if(reward > 0) alert(`Success! +${reward} KSPT`);
     document.getElementById("promoInput").value = "";
@@ -1378,6 +1576,7 @@ function buyEnergyLimit() {
   if (d.tokens >= 15 && d.maxEnergy < 8000) {
     d.tokens -= 15;
     d.maxEnergy += 500;
+    showToast("Purchase successful.");
     save();
     ui();
   } else if (d.maxEnergy >= 8000) {
@@ -1396,7 +1595,7 @@ function attemptUnban() {
       clickTimes = [];
   } else {
       alert("Invalid Key.");
- }
+  }
 }
 
 // NEW: Dismiss Warning
@@ -1410,4 +1609,3 @@ function dismissWarning() {
 </script>
 </body>
 </html>
-

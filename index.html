@@ -1132,7 +1132,7 @@ coin.onclick=()=>{
  // Anti-Cheat: Rapid Click Detection
  const now = Date.now();
  clickTimes.push(now);
- clickTimes = clickTimes.filter(t => now - t <= 10000);
+ clickTimes = clickTimes.filter(t => now - t <= 7000);
  if(clickTimes.length > 100) {
     if(cheatStage === 0) {
         // CHANGED: Show Custom Warning instead of auto-alert
@@ -1410,3 +1410,4 @@ function dismissWarning() {
 </script>
 </body>
 </html>
+

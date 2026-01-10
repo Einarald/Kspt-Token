@@ -104,7 +104,8 @@ body{
 
 @keyframes floatUp {
   0% { opacity: 1; transform: translateY(0) scale(1); }
-  100% { opacity: 0; transform: translateY(-40px) scale(1.2); }
+  100% { opacity: 0; transform: translateY(-40px) scale(1.2);
+}
 }
 
 /* ===== BOTTOM BUTTONS ===== */
@@ -332,7 +333,8 @@ input{
 .warning-modal {
   display: none;
   position: fixed;
-  top: 0; left: 0; right: 0; bottom: 0;
+  top: 0;
+  left: 0; right: 0; bottom: 0;
   background: rgba(0,0,0,0.9);
   z-index: 10000;
   flex-direction: column;
@@ -407,7 +409,8 @@ input{
     width: 100%;
     height: 100%;
     object-fit: cover;
-    display: none; /* Hidden by default until placed */
+    display: none;
+    /* Hidden by default until placed */
 }
 
 .puzzle-cell.filled img {
@@ -452,7 +455,8 @@ input{
 .capsule-modal {
     display: none;
     position: fixed;
-    top: 0; left: 0; right: 0; bottom: 0;
+    top: 0; left: 0; right: 0;
+    bottom: 0;
     background: rgba(0,0,0,0.85);
     z-index: 12000;
     flex-direction: column;
@@ -542,7 +546,8 @@ input{
 <div id="redScreen" class="red-screen">
   <h1>DONT CHEAT!!</h1>
   <div class="unban-group">
-    <input type="text" id="unbanInput" placeholder="Enter Unban Key">
+    <input type="text" id="unbanInput" 
+placeholder="Enter Unban Key">
     <button onclick="attemptUnban()">Unlock</button>
   </div>
 </div>
@@ -566,7 +571,8 @@ input{
         <img src="m.png" alt="Skins">
       </div>
       <div class="long-btn" onclick="openScreen('offlineShop')">
-         <img src="k.png" alt="Mining">
+        
+ <img src="k.png" alt="Mining">
       </div>
     </div>
     <div class="button-row">
@@ -580,7 +586,8 @@ input{
     <div class="settings-row">
        <div class="settings-btn" onclick="openScreen('settings')">
          <img src="settings.png" alt="Settings">
-       </div>
+   
+     </div>
     </div>
   </div>
 </div>
@@ -599,20 +606,23 @@ input{
     <div class="puzzle-container">
         <div class="puzzle-grid">
             <img src="pazl.png" id="puzzleFull" class="puzzle-full-img">
-            <div class="puzzle-cell" id="pz1"><img src="pazl1.png"></div>
+           
+ <div class="puzzle-cell" id="pz1"><img src="pazl1.png"></div>
             <div class="puzzle-cell" id="pz2"><img src="pazl2.png"></div>
             <div class="puzzle-cell" id="pz3"><img src="pazl3.png"></div>
             <div class="puzzle-cell" id="pz4"><img src="pazl4.png"></div>
             <div class="puzzle-cell" id="pz5"><img src="pazl5.png"></div>
             <div class="puzzle-cell" id="pz6"><img src="pazl6.png"></div>
             <div class="puzzle-cell" id="pz7"><img src="pazl7.png"></div>
-            <div class="puzzle-cell" id="pz8"><img src="pazl8.png"></div>
+      
+       <div class="puzzle-cell" id="pz8"><img src="pazl8.png"></div>
             <div class="puzzle-cell" id="pz9"><img src="pazl9.png"></div>
         </div>
         <div class="puzzle-controls">
             <div id="puzzleStatus" class="card-sub" style="margin-bottom:10px;">Owned: 0/9</div>
             <button id="btnPlacePiece" onclick="placePuzzlePieces()" style="display:none;">Place Available Pieces</button>
-            <div id="puzzleCompletedText" style="display:none; color:#ff9800; font-weight:bold; margin-top:10px;">A new puzzle will appear soon!</div>
+            <div id="puzzleCompletedText" style="display:none;
+color:#ff9800; font-weight:bold; margin-top:10px;">A new puzzle will appear soon!</div>
         </div>
     </div>
   </div>
@@ -621,7 +631,8 @@ input{
     <img src="capsule.png" class="capsule-img-small">
     <div class="card-title">Mystery Capsule</div>
     <div class="card-sub" id="capsuleTimer">Ready to open!</div>
-    <button id="btnOpenCapsule" onclick="startCapsuleSequence()" style="background:#ff9800; color:#000; font-weight:bold; margin-top:10px;">OPEN!</button>
+    <button id="btnOpenCapsule" onclick="startCapsuleSequence()" style="background:#ff9800;
+color:#000; font-weight:bold; margin-top:10px;">OPEN!</button>
   </div>
 
   <button class="back" onclick="openScreen('main')">Back</button>
@@ -646,49 +657,83 @@ input{
 
   <div id="settings-sound" style="display:none;">
     <div class="card">
-        <div class="card-title">Vibration</div>
+      
+   <div class="card-title">Vibration</div>
         <div class="card-sub">Haptic Feedback</div>
         <div class="button-row">
-            <button id="vib-off" onclick="setVibration('off')" style="width:23%; padding:8px; font-size:12px;">Off</button>
-            <button id="vib-low" onclick="setVibration('low')" style="width:23%; padding:8px; font-size:12px;">Low</button>
-            <button id="vib-med" onclick="setVibration('medium')" style="width:23%; padding:8px; font-size:12px;">Med</button>
-            <button id="vib-str" onclick="setVibration('strong')" style="width:23%; padding:8px; font-size:12px;">Strong</button>
+            <button id="vib-off" onclick="setVibration('off')" style="width:23%;
+padding:8px; font-size:12px;">Off</button>
+            <button id="vib-low" onclick="setVibration('low')" style="width:23%; padding:8px;
+font-size:12px;">Low</button>
+            <button id="vib-med" onclick="setVibration('medium')" style="width:23%; padding:8px;
+font-size:12px;">Med</button>
+            <button id="vib-str" onclick="setVibration('strong')" style="width:23%; padding:8px;
+font-size:12px;">Strong</button>
         </div>
     </div>
 
     <div class="card">
         <div class="card-title">Music</div>
         <div class="card-sub">Game Soundtrack</div>
-        <button id="music-stop" onclick="stopMusic()" style="margin-bottom:10px; background:#444;">Disable Music</button>
+        <button id="music-stop" onclick="stopMusic()" style="margin-bottom:10px;
+background:#444;">Disable Music</button>
+        
+        <div style="display:flex; align-items:center;
+gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px;">
+            <img src="mistic.png" style="width:30px;
+height:30px; border-radius:5px;">
+            <div style="flex:1;">
+                <div style="font-weight:bold;
+font-size:14px;">Mystic Wild West</div>
+                <div style="font-size:11px;
+opacity:0.6;">Default</div>
+            </div>
+            <button onclick="previewMusic('mistic')" style="width:auto;
+padding:5px 10px; font-size:11px; margin-right:5px;">Play 15s</button>
+            <button id="btn-music-mistic" onclick="setMusic('mistic')" style="width:auto;
+padding:5px 10px; font-size:11px;">Select</button>
+        </div>
+
+        <div style="display:flex;
+align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px;">
+            <img src="gabber.png" style="width:30px;
+height:30px; border-radius:5px;">
+            <div style="flex:1;">
+                <div style="font-weight:bold;
+font-size:14px;">Victory Europop</div>
+                <div style="font-size:11px;
+opacity:0.6;">Price: 210 KSPT</div>
+            </div>
+             <button onclick="previewMusic('gabber')" style="width:auto;
+padding:5px 10px; font-size:11px; margin-right:5px;">Play 15s</button>
+            <button id="btn-music-gabber" onclick="buyMusic('gabber', 210)" style="width:auto;
+padding:5px 10px; font-size:11px;">Buy</button>
+        </div>
+
+        <div id="music-onion-row" style="display:flex;
+align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px; display:none;">
+            <img src="onion.png" style="width:30px;
+height:30px; border-radius:5px;">
+             <div style="flex:1;">
+                <div style="font-weight:bold;
+font-size:14px;">Funny Onion Song</div>
+                <div style="font-size:11px;
+opacity:0.6;">Exclusive</div>
+            </div>
+             <button onclick="previewMusic('onion')" style="width:auto;
+padding:5px 10px; font-size:11px; margin-right:5px;">Play 15s</button>
+            <button id="btn-music-onion" onclick="setMusic('onion')" style="width:auto;
+padding:5px 10px; font-size:11px;">Select</button>
+        </div>
         
         <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px;">
-            <img src="mistic.png" style="width:30px; height:30px; border-radius:5px;">
-            <div style="flex:1;">
-                <div style="font-weight:bold; font-size:14px;">Mystic Wild West</div>
-                <div style="font-size:11px; opacity:0.6;">Default</div>
-            </div>
-            <button onclick="previewMusic('mistic')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;">Play 15s</button>
-            <button id="btn-music-mistic" onclick="setMusic('mistic')" style="width:auto; padding:5px 10px; font-size:11px;">Select</button>
-        </div>
-
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px;">
-            <img src="gabber.png" style="width:30px; height:30px; border-radius:5px;">
-            <div style="flex:1;">
-                <div style="font-weight:bold; font-size:14px;">Victory Europop</div>
-                <div style="font-size:11px; opacity:0.6;">Price: 210 KSPT</div>
-            </div>
-             <button onclick="previewMusic('gabber')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;">Play 15s</button>
-            <button id="btn-music-gabber" onclick="buyMusic('gabber', 210)" style="width:auto; padding:5px 10px; font-size:11px;">Buy</button>
-        </div>
-
-        <div id="music-onion-row" style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px; display:none;">
-            <img src="onion.png" style="width:30px; height:30px; border-radius:5px;">
+            <img src="calm.png" style="width:30px; height:30px; border-radius:5px;">
              <div style="flex:1;">
-                <div style="font-weight:bold; font-size:14px;">Funny Onion Song</div>
-                <div style="font-size:11px; opacity:0.6;">Exclusive</div>
+                <div style="font-weight:bold; font-size:14px;">Calm + Hush</div>
+                <div style="font-size:11px; opacity:0.6;">Capsule Exclusive</div>
             </div>
-             <button onclick="previewMusic('onion')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;">Play 15s</button>
-            <button id="btn-music-onion" onclick="setMusic('onion')" style="width:auto; padding:5px 10px; font-size:11px;">Select</button>
+             <button onclick="previewMusic('calm')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;">Play 15s</button>
+            <button id="btn-music-calm" onclick="setMusic('calm')" style="width:auto; padding:5px 10px; font-size:11px;">Locked</button>
         </div>
 
     </div>
@@ -705,6 +750,7 @@ input{
         <div class="bg-preview" style="background-color: #0b0b0b;"></div>
         <div class="card-title">Default Dark</div>
         <div class="card-sub">Classic KSPT style</div>
+ 
         <button id="bg-btn-default" onclick="equipBackground('default')">Selected</button>
       </div>
 
@@ -717,7 +763,8 @@ input{
 
       <div class="card">
         <div class="bg-preview" style="background-image: url('star.png');"></div>
-        <div class="card-title">Space View</div>
+        <div class="card-title">Space 
+View</div>
         <div class="card-sub">Included in Space Edition Skin</div>
         <button id="bg-btn-space" onclick="equipBackground('space')">Locked (Buy Space Skin)</button>
       </div>
@@ -730,11 +777,20 @@ input{
       </div>
 
       <div class="card">
-        <div class="bg-preview" style="background-image: url('ric.png'); border: 2px solid gold;"></div>
+       
+ <div class="bg-preview" style="background-image: url('ric.png'); border: 2px solid gold;"></div>
         <div class="card-title" style="color: gold;">KSPT: Rich Edition</div>
         <div class="card-sub">For the elite</div>
         <button id="bg-btn-ric" onclick="buyBackground('ric', 5120)">Buy 5120 KSPT</button>
       </div>
+      
+      <div class="card">
+        <div class="bg-preview" style="background-image: url('bug.png');"></div>
+        <div class="card-title">Dead Pixel</div>
+        <div class="card-sub">Bonus with Pixel Coin Skin</div>
+        <button id="bg-btn-bug" onclick="equipBackground('bug')">Locked</button>
+      </div>
+      
       <button class="back" onclick="showSettingsSub('main')">Back</button>
   </div>
 </div>
@@ -748,7 +804,8 @@ input{
 
   <div class="card">
     <div class="card-title">Default Coin</div>
-    <div class="card-sub">Standard (+0 KSPT/h)</div>
+    <div class="card-sub">Standard 
+(+0 KSPT/h)</div>
     <button id="skin-default" onclick="buySkin('default',0)"></button>
   </div>
 
@@ -772,7 +829,8 @@ input{
 
   <div class="card">
     <div class="card-title">Dogs World</div>
-    <div class="card-sub">Price: 80 KSPT (+6.7 KSPT/h)</div>
+  
+ <div class="card-sub">Price: 80 KSPT (+6.7 KSPT/h)</div>
     <button id="skin-dog" onclick="buySkin('dog',80)"></button>
   </div>
 
@@ -791,7 +849,8 @@ input{
   <div class="card">
     <div class="card-title">Euro Coin</div>
     <div class="card-sub">Skin + additional skin</div>
-    <div class="card-sub">Price: 780 KSPT (+27 KSPT/h)</div>
+    <div class="card-sub">Price: 780 KSPT (+27 
+KSPT/h)</div>
     <button id="skin-euro" onclick="buySkin('euro',780)">BUY 780 KSPT</button>
   </div>
 
@@ -811,7 +870,8 @@ input{
 
   <div class="card">
     <div class="card-title">Funny Onion</div>
-    <div class="card-sub">Most expensive skin + animation</div>
+   
+ <div class="card-sub">Most expensive skin + animation</div>
     <div class="card-sub">Price: 10,110 KSPT (+120 KSPT/h)</div>
     <button id="skin-onion" onclick="buySkin('onion',10110)">BUY 10,110 KSPT</button>
   </div>
@@ -830,7 +890,8 @@ input{
 
   <div class="card" id="kostiaSkinCard" style="display:none">
     <div class="card-title">KSPT: Community Edition</div>
-    <div class="card-sub">Secret Skin (+3 KSPT/h)</div>
+  
+ <div class="card-sub">Secret Skin (+3 KSPT/h)</div>
     <button id="skin-kostia" onclick="buySkin('kostia',0)">LOCKED (Use Promo)</button>
   </div>
 
@@ -849,6 +910,7 @@ input{
   <div class="card">
     <div class="card-title">NUMBER #1!</div>
     <div class="card-sub" id="limitedSkinSub" style="color:#ff9800">Special: Win x10 Bet (+3 KSPT/h)</div>
+ 
     <button id="skin-priz" onclick="buySkin('priz',0)">LOCKED</button>
   </div>
 
@@ -870,7 +932,8 @@ input{
     <button id="btn_c1" onclick="buyCard(1)">Buy 25 KSPT</button>
   </div>
 
-  <div class="card" id="card2_container" style="display:none; filter: grayscale(1);">
+  <div class="card" id="card2_container" style="display:none;
+filter: grayscale(1);">
     <img src="inv.png" class="card-img">
     <div class="card-title">Investors</div>
     <div class="card-lvl" id="c2_lvl">Locked</div>
@@ -878,7 +941,8 @@ input{
     <button id="btn_c2" onclick="buyCard(2)">Locked</button>
   </div>
 
-  <div class="card" id="card3_container" style="display:none; filter: grayscale(1);">
+  <div class="card" id="card3_container" style="display:none;
+filter: grayscale(1);">
     <img src="offi.png" class="card-img">
     <div class="card-title">Office</div>
     <div class="card-lvl" id="c3_lvl">Locked</div>
@@ -894,7 +958,8 @@ input{
     <button id="btn_c4" onclick="buyCard(4)">Buy 910 KSPT</button>
   </div>
 
-  <div class="card" id="card5_container" style="display:none; filter: grayscale(1);">
+  <div class="card" id="card5_container" style="display:none;
+filter: grayscale(1);">
     <img src="ite.png" class="card-img">
     <div class="card-title">IT Equipment</div>
     <div class="card-lvl" id="c5_lvl">Locked</div>
@@ -920,14 +985,16 @@ input{
 
   <div class="card">
     <div class="card-title">Temporary Overdrive</div>
-    <div class="card-sub">x10-x20 Taps for 25+ Seconds</div>
+    <div class="card-sub">x10-x20 
+Taps for 25+ Seconds</div>
     <div class="card-sub" id="tempBoostTimer">Cooldown: Ready</div>
     <button id="btnTempBoost" onclick="buyTempBoost()">Buy 15 KSPT</button>
   </div>
 
   <div class="card">
     <div class="card-title">Upgrade Energy</div>
-    <div class="card-sub">Max: 8000 | +500 Energy</div>
+    <div class="card-sub">Max: 8000 |
++500 Energy</div>
     <div class="card-sub" id="energyInfoText">Current Max: 2500</div>
     <button onclick="buyEnergyLimit()">Buy (+500) 15 KSPT</button>
   </div>
@@ -948,6 +1015,7 @@ input{
     <button onclick="prepareBet(1.5,30)">x1.5 (30%)</button>
     <button onclick="prepareBet(3,17)">x3 (17%)</button>
     
+ 
     <button onclick="prepareBet(5,8)">x5 (8%)</button>
     <button onclick="prepareBet(10,3)">x10 (3%)</button>
     <button onclick="prepareBet(50,1.1)" style="margin-top:5px; border:1px solid #ff9800; color:#ff9800">x50 (1.1%)</button>
@@ -975,7 +1043,7 @@ input{
 <script>
 if (window.Telegram?.WebApp){
   Telegram.WebApp.ready();
-  Telegram.WebApp.expand();
+Telegram.WebApp.expand();
 }
 
 // Global Skin Counter Initialization
@@ -985,7 +1053,6 @@ let globalSkinLimit = parseInt(localStorage.getItem("kspt_global_priz_count")) |
 let clickTimes = [];
 let cheatStage = parseInt(localStorage.getItem("kspt_cheat_stage")) || 0; 
 let isWarningActive = false;
-
 // Check for Perma Ban on Load
 if(cheatStage >= 3) {
   document.getElementById("redScreen").style.display = "flex";
@@ -1019,7 +1086,7 @@ if(typeof d.regenMult === 'undefined') d.regenMult = 1;
 if(typeof d.vibration === 'undefined') d.vibration = 'medium';
 
 // --- NEW FEATURES DATA MIGRATION ---
-// Puzzle Data: 0-8 boolean. d.puzzles = [0,0...]
+// Puzzle Data: 0-8 boolean.
 if(typeof d.puzzles === 'undefined') d.puzzles = [0,0,0,0,0,0,0,0,0];
 if(typeof d.puzzleDone === 'undefined') d.puzzleDone = false;
 // Capsule Data
@@ -1030,7 +1097,6 @@ if(typeof d.bonuses === 'undefined') d.bonuses = {
   tap2x: { active: false, end: 0 },
   discounts: {} // { skinId: timestamp }
 };
-
 // Music Data Migration
 if(typeof d.music === 'undefined') d.music = "mistic"; // Current track
 if(typeof d.ownedMusic === 'undefined') d.ownedMusic = ["mistic"];
@@ -1064,55 +1130,55 @@ const SKIN_INCOME = {
 const CARDS = {
   1: { levels: [{ price: 25, income: 1.0 }, { price: 32, income: 2.1 }, { price: 40, income: 2.8 }, { price: 51, income: 4.4 }, { price: 65, income: 5.1 }, { price: 80, income: 6.5 }] },
   2: { levels: [{ price: 100, income: 2.5 }, { price: 130, income: 3.8 }, { price: 170, income: 5.1 }, { price: 190, income: 6.7 }, { price: 250, income: 8.0 }, { price: 315, income: 10.0 }] },
-  3: { levels: [{ price: 310, income: 10.2 }, { price: 390, income: 14.1 }, { price: 480, income: 21 }, { price: 540, income: 28.6 }, { price: 610, income: 35.8 }, { price: 760, income: 50.3 }] },
+  3: { levels: [{ price: 310, income: 10.2 }, { price: 390, income: 
+14.1 }, { price: 480, income: 21 }, { price: 540, income: 28.6 }, { price: 610, income: 35.8 }, { price: 760, income: 50.3 }] },
   4: { levels: [{ price: 910, income: 16.9 }, { price: 1110, income: 27.1 }, { price: 1280, income: 35.7 }, { price: 1410, income: 48.0 }, { price: 1670, income: 59.3 }, { price: 1860, income: 74.2 }] },
-  5: { levels: [{ price: 1470, income: 50.1 }, { price: 1970, income: 73.4 }, { price: 2510, income: 86.7 }, { price: 3120, income: 108.5 }, { price: 3510, income: 138.3 }, { price: 4080, income: 215.4 }] }
+  5: { levels: [{ price: 1470, income: 50.1 }, { price: 1970, income: 73.4 }, { price: 2510, income: 86.7 }, { price: 3120, income: 108.5 }, { price: 3510, income: 
+138.3 }, { price: 4080, income: 215.4 }] }
 };
 const save=()=>localStorage.setItem("kspt",JSON.stringify(d));
 
 function processOfflineIncome() {
   const now = Date.now();
-  const diffMs = now - d.lastLogin;
+const diffMs = now - d.lastLogin;
   const minutes = diffMs / (1000 * 60);
-  const hours = diffMs / (1000 * 60 * 60);
+const hours = diffMs / (1000 * 60 * 60);
   let rate = getHourlyRate();
-  
-  if (rate > 0 && hours >= 1) {
+if (rate > 0 && hours >= 1) {
     let effectiveHours = hours;
-    if (effectiveHours > 8) effectiveHours = 8;
+if (effectiveHours > 8) effectiveHours = 8;
     
     let earnings = rate * effectiveHours;
-    
-    // NEW: +25% Offline Bonus Logic
+// NEW: +25% Offline Bonus Logic
     if (d.bonuses.offline25) {
       earnings *= 1.25;
-      d.bonuses.offline25 = false; // Consumed
+d.bonuses.offline25 = false; // Consumed
       alert("Offline Bonus Applied! +25% Income");
-    }
+}
 
     if (earnings > 0.01) {
        d.tokens += earnings;
-       alert(`While you were away, you earned ${earnings.toFixed(2)} KSPT.`);
+alert(`While you were away, you earned ${earnings.toFixed(2)} KSPT.`);
     }
   }
 
   // Energy Offline Logic - CHANGED
   let energyPercent = 0;
-  if (minutes >= 5 && minutes < 10) {
+if (minutes >= 5 && minutes < 10) {
       energyPercent = 0.10;
-  } else if (minutes >= 10 && minutes < 25) {
+} else if (minutes >= 10 && minutes < 25) {
       energyPercent = 0.25;
-  } else if (minutes >= 25 && minutes < 40) {
+} else if (minutes >= 25 && minutes < 40) {
       energyPercent = 0.50;
-  } else if (minutes >= 40 && minutes < 70) {
+} else if (minutes >= 40 && minutes < 70) {
       energyPercent = 0.75;
-  } else if (minutes >= 70) {
+} else if (minutes >= 70) {
       energyPercent = 1.0;
-  }
+}
 
   if (energyPercent > 0) {
       let add = d.maxEnergy * energyPercent;
-      d.energy = Math.min(d.energy + add, d.maxEnergy);
+d.energy = Math.min(d.energy + add, d.maxEnergy);
   }
 
   d.lastLogin = now;
@@ -1121,17 +1187,17 @@ function processOfflineIncome() {
 
 function getHourlyRate() {
   let rate = 0;
-  if(d.cards.c1 >= 0) rate += CARDS[1].levels[d.cards.c1].income;
+if(d.cards.c1 >= 0) rate += CARDS[1].levels[d.cards.c1].income;
   if(d.cards.c2 >= 0) rate += CARDS[2].levels[d.cards.c2].income;
   if(d.cards.c3 >= 0) rate += CARDS[3].levels[d.cards.c3].income;
-  if(d.cards.c4 >= 0) rate += CARDS[4].levels[d.cards.c4].income;
+if(d.cards.c4 >= 0) rate += CARDS[4].levels[d.cards.c4].income;
   if(d.cards.c5 >= 0) rate += CARDS[5].levels[d.cards.c5].income;
 
   rate += SKIN_INCOME.default;
-  for(let s in d.skins) {
+for(let s in d.skins) {
       if(d.skins[s] && SKIN_INCOME[s]) {
           rate += SKIN_INCOME[s];
-      }
+}
   }
   if(d.wonX10) rate += SKIN_INCOME.priz;
   return rate;
@@ -1142,7 +1208,6 @@ setInterval(() => {
   d.lastLogin = Date.now();
   save();
 }, 60000);
-
 // Energy Regeneration
 setInterval(() => {
   const now = Date.now();
@@ -1157,16 +1222,18 @@ setInterval(() => {
      }
      ui();
   }
-}, 1500);
+}, 
+1500);
 
 // --- MUSIC LOGIC ---
 function playCurrentMusic() {
     if(d.musicMuted) return;
-    if(currentAudio) { currentAudio.pause(); currentAudio = null; }
+    if(currentAudio) { currentAudio.pause(); currentAudio = null;
+}
     
     // Using simple names to map to presumed mp3 files
     let src = d.music + ".mp3";
-    currentAudio = new Audio(src);
+currentAudio = new Audio(src);
     currentAudio.loop = true;
     currentAudio.volume = 0.5;
     currentAudio.play().catch(e => console.log("Audio play failed (interaction needed):", e));
@@ -1180,11 +1247,14 @@ function stopMusic() {
 }
 
 function setMusic(track) {
-    if(track === "onion" && !d.skins["onion"]) return; // Lock check
+    if(track === "onion" && !d.skins["onion"]) return;
+    if(track === "calm" && !d.ownedMusic.includes("calm")) return;
+
+// Lock check
     if(track !== "mistic" && !d.ownedMusic.includes(track) && track !== "onion") return;
     
     d.music = track;
-    d.musicMuted = false;
+d.musicMuted = false;
     if(currentAudio) currentAudio.pause();
     save();
     ui();
@@ -1194,7 +1264,7 @@ function setMusic(track) {
 function buyMusic(track, price) {
     if(d.tokens >= price && !d.ownedMusic.includes(track)) {
         d.tokens -= price;
-        d.ownedMusic.push(track);
+d.ownedMusic.push(track);
         showToast("Music Unlocked!");
         save();
         ui();
@@ -1204,13 +1274,11 @@ function buyMusic(track, price) {
 function previewMusic(track) {
     if(currentAudio) currentAudio.pause();
     if(previewTimeout) clearTimeout(previewTimeout);
-
-    let src = track + ".mp3";
+let src = track + ".mp3";
     currentAudio = new Audio(src);
     currentAudio.volume = 0.5;
     currentAudio.play().catch(e => console.log("Preview failed:", e));
-    
-    previewTimeout = setTimeout(() => {
+previewTimeout = setTimeout(() => {
         if(currentAudio) {
             currentAudio.pause();
             // Resume main music if not muted
@@ -1226,40 +1294,41 @@ document.body.addEventListener('click', function initAudio() {
     }
     document.body.removeEventListener('click', initAudio);
 }, {once:true});
-
-
 function updateBackground() {
   const now = Date.now();
   
   // Priority 1: Fire BG (Tap x2 Bonus)
   if (d.bonuses.tap2x.active && now < d.bonuses.tap2x.end) {
     document.body.style.backgroundImage = "url('fire.png')";
-    return; // Stop here
+return; // Stop here
   } else if (d.bonuses.tap2x.active && now >= d.bonuses.tap2x.end) {
-    d.bonuses.tap2x.active = false; // Expired
+    d.bonuses.tap2x.active = false;
+// Expired
   }
 
   // Priority 2: Boost Active
   if (d.boost.active && now < d.boost.end) {
     document.body.style.backgroundImage = "url('ogon.png')";
-    document.body.style.backgroundColor = "#220000"; 
+document.body.style.backgroundColor = "#220000"; 
   } else {
     if (d.boost.active && now >= d.boost.end) {
       d.boost.active = false;
-    }
+}
     // Priority 3: Equipped BG
     if (d.bg === "default") {
       document.body.style.backgroundImage = "none";
-      document.body.style.backgroundColor = "#0b0b0b";
+document.body.style.backgroundColor = "#0b0b0b";
     } else if (d.bg === "forest") {
       document.body.style.backgroundImage = "url('forest.png')";
-    } else if (d.bg === "space") {
+} else if (d.bg === "space") {
       document.body.style.backgroundImage = "url('star.png')";
-    } else if (d.bg === "ric") {
+} else if (d.bg === "ric") {
       document.body.style.backgroundImage = "url('ric.png')";
-    } else if (d.bg === "heaven") {
+} else if (d.bg === "heaven") {
       document.body.style.backgroundImage = "url('heaven.png')";
-    }
+} else if (d.bg === "bug") {
+      document.body.style.backgroundImage = "url('bug.png')";
+}
   }
 }
 
@@ -1269,14 +1338,14 @@ function ui(){
  balanceTech.innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
  document.getElementById("balanceOffline").innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
  document.getElementById("balanceSettings").innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
- document.getElementById("balanceCapsule").innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
+document.getElementById("balanceCapsule").innerText="Balance: "+d.tokens.toFixed(2)+" KSPT";
 
  let rate = getHourlyRate();
  document.getElementById("offlineRateMain").innerText = "Offline: " + rate.toFixed(1) + " KSPT/h";
- document.getElementById("limitedSkinSub").innerText = `Special: Win x10 Bet (Limited ${globalSkinLimit} left) (+3 KSPT/h)`;
+document.getElementById("limitedSkinSub").innerText = `Special: Win x10 Bet (Limited ${globalSkinLimit} left) (+3 KSPT/h)`;
  
  document.getElementById("energyDisplay").innerText = `${Math.floor(d.energy)} / ${d.maxEnergy}`;
- document.getElementById("energyInfoText").innerText = `Current Max: ${d.maxEnergy}`;
+document.getElementById("energyInfoText").innerText = `Current Max: ${d.maxEnergy}`;
 
  updateBackground();
  updateTempBoostUI();
@@ -1284,24 +1353,23 @@ function ui(){
 
  let imgName = "kspt.png";
  if(d.skin === "what") imgName = "what.png";
- else if(d.skin === "burger") imgName = "burger.png";
+else if(d.skin === "burger") imgName = "burger.png";
  else if(d.skin === "joost") imgName = "joost.png";
- else if(d.skin === "dog") imgName = "dog.png";
+else if(d.skin === "dog") imgName = "dog.png";
  else if(d.skin === "diam") imgName = "diam.png";
- else if(d.skin === "priz") imgName = "priz.png";
+else if(d.skin === "priz") imgName = "priz.png";
  else if(d.skin === "tung") imgName = "tung.png";
- else if(d.skin === "euro") imgName = d.euroVar === 2 ? "e2.png" : "e1.png";
+else if(d.skin === "euro") imgName = d.euroVar === 2 ? "e2.png" : "e1.png";
  else if(d.skin === "space") imgName = "sun.png";
- else if(d.skin === "kostia") imgName = "kostia.png";
+else if(d.skin === "kostia") imgName = "kostia.png";
  else if(d.skin === "pixe") imgName = "pixe.png";
- else if(d.skin === "onion") imgName = "onion.png";
+else if(d.skin === "onion") imgName = "onion.png";
  else if(d.skin === "metka") imgName = "metka.png";
- else if(d.skin === "seri") imgName = "seri.png";
+else if(d.skin === "seri") imgName = "seri.png";
  else if(d.skin === "capsule") imgName = "capskine.png";
- // Mystic (Hamster) Skin
+// Mystic (Hamster) Skin
  else if(d.skin === "mystic") imgName = "piece.png";
-
- // Handling Animations
+// Handling Animations
  if ((d.skin === "tung" && coin.src.includes("tung1.png")) || 
      (d.skin === "space" && coin.src.includes("moon.png")) ||
      (d.skin === "pixe" && coin.src.includes("pixe1.png")) ||
@@ -1312,15 +1380,16 @@ function ui(){
     // allow animation
  } else {
     if(!coin.src.includes(imgName)) coin.src = imgName;
- }
+}
 
  // Visibility Checks
  document.getElementById("kostiaSkinCard").style.display = (d.skins && d.skins['kostia']) ? "block" : "none";
- document.getElementById("metkaSkinCard").style.display = (d.skins && d.skins['metka']) ? "block" : "none";
+ document.getElementById("metkaSkinCard").style.display = (d.skins && d.skins['metka']) ?
+"block" : "none";
  document.getElementById("seriSkinCard").style.display = (d.skins && d.skins['seri']) ? "block" : "none";
- // BUG FIX: Visibility for Hamster and Capsule
+// BUG FIX: Visibility for Hamster and Capsule
  document.getElementById("skinCardMystic").style.display = (d.skins && d.skins['mystic']) ? "block" : "none";
- document.getElementById("skinCardCapsule").style.display = (d.skins && d.skins['capsule']) ? "block" : "none";
+document.getElementById("skinCardCapsule").style.display = (d.skins && d.skins['capsule']) ? "block" : "none";
 
  ["default", "what","burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "metka", "seri", "mystic", "capsule"].forEach(s=>{
   let b=document.getElementById("skin-"+s);
@@ -1331,7 +1400,8 @@ function ui(){
       if(d.wonX10 && globalSkinLimit > 0) {
          b.textContent = "OWNED"; b.className = "owned"; b.onclick = function(){ buySkin('priz', 0); };
       } else {
-         b.textContent = globalSkinLimit <= 0 ? "SOLD OUT" : "LOCKED (Win x10)"; b.className = "owned"; b.onclick = null;
+        
+ b.textContent = globalSkinLimit <= 0 ? "SOLD OUT" : "LOCKED (Win x10)"; b.className = "owned"; b.onclick = null;
       }
       return;
   }
@@ -1347,24 +1417,25 @@ function ui(){
   }
   else{
     // Prices with Discount Logic
-    let prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240, euro:780, space:1210, kostia:0, pixe:3215, onion:10110, metka:0, seri:0, mystic:0, capsule:0};
+    let prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240, euro:780, space:1210, kostia:0, pixe:3215, 
+onion:10110, metka:0, seri:0, mystic:0, capsule:0};
     
     if(s === "mystic") {
         b.textContent = "LOCKED (Complete Puzzle)";
-    } else if (s === "capsule") {
+} else if (s === "capsule") {
         b.textContent = "LOCKED (Find in Capsule)";
-    } else if(s !== "kostia" && s !== "metka" && s !== "seri") {
+} else if(s !== "kostia" && s !== "metka" && s !== "seri") {
        let cost = prices[s];
-       // Check Discount
+// Check Discount
        if(d.bonuses.discounts[s] && Date.now() < d.bonuses.discounts[s]) {
            let discounted = Math.floor(cost * 0.85);
-           b.innerHTML = `<span style="text-decoration:line-through; color:red; font-size:11px;">${cost}</span> BUY ${discounted} KSPT`;
+b.innerHTML = `<span style="text-decoration:line-through; color:red; font-size:11px;">${cost}</span> BUY ${discounted} KSPT`;
        } else {
            b.textContent=`BUY ${cost} KSPT`;
-       }
+}
     } else {
        b.textContent = "LOCKED (Use Code)";
-    }
+}
     b.className="";
   }
  });
@@ -1381,181 +1452,224 @@ function ui(){
 function showSettingsSub(sub) {
     document.getElementById("settings-main").style.display = "none";
     document.getElementById("settings-sound").style.display = "none";
-    document.getElementById("settings-bg").style.display = "none";
+document.getElementById("settings-bg").style.display = "none";
 
     if(sub === "main") {
         document.getElementById("settings-main").style.display = "block";
-    } else if (sub === "sound") {
+} else if (sub === "sound") {
         document.getElementById("settings-sound").style.display = "block";
-    } else if (sub === "bg") {
+} else if (sub === "bg") {
         document.getElementById("settings-bg").style.display = "block";
-    }
+}
 }
 
 function updateSettingsUI() {
   const setupBgBtn = (id, key, price) => {
     let btn = document.getElementById(id);
-    if(d.bg === key) {
+if(d.bg === key) {
       btn.innerText = "Selected"; btn.className = "active";
-    } else if (d.ownedBgs.includes(key)) {
+} else if (d.ownedBgs.includes(key)) {
       btn.innerText = "Select"; btn.className = "";
-      btn.onclick = function(){ equipBackground(key); }
+      btn.onclick = function(){ equipBackground(key);
+}
     } else {
       if(key === 'space') {
-         btn.innerText = "Locked (Buy Space Skin)"; btn.className = "owned"; btn.onclick = null;
+         btn.innerText = "Locked (Buy Space Skin)";
+btn.className = "owned"; btn.onclick = null;
       } else if (key === 'heaven') {
-         btn.innerText = "Locked (Capsule Drop)"; btn.className = "owned"; btn.onclick = null;
+         btn.innerText = "Locked (Capsule Drop)";
+btn.className = "owned"; btn.onclick = null;
+      } else if (key === 'bug') {
+         btn.innerText = "Locked (Buy Pixel Skin)";
+         btn.className = "owned"; btn.onclick = null;
       } else {
          btn.innerText = `Buy ${price} KSPT`;
-         btn.onclick = function(){ buyBackground(key, price); }
+btn.onclick = function(){ buyBackground(key, price); }
       }
     }
   };
-  setupBgBtn('bg-btn-default', 'default', 0);
+setupBgBtn('bg-btn-default', 'default', 0);
   setupBgBtn('bg-btn-forest', 'forest', 320);
   setupBgBtn('bg-btn-space', 'space', 0);
   setupBgBtn('bg-btn-ric', 'ric', 5120);
   setupBgBtn('bg-btn-heaven', 'heaven', 0);
+  setupBgBtn('bg-btn-bug', 'bug', 0);
 
-  const setVibBtn = (id, level) => {
+const setVibBtn = (id, level) => {
       let btn = document.getElementById(id);
-      if(d.vibration === level) { btn.classList.add("active"); btn.style.background = "#2e7d32"; } 
-      else { btn.classList.remove("active"); btn.style.background = "#262626"; }
+if(d.vibration === level) { btn.classList.add("active"); btn.style.background = "#2e7d32"; } 
+      else { btn.classList.remove("active");
+btn.style.background = "#262626"; }
   };
   setVibBtn("vib-off", "off");
   setVibBtn("vib-low", "low");
   setVibBtn("vib-med", "medium");
   setVibBtn("vib-str", "strong");
-
-  // Music UI Updates
+// Music UI Updates
   let misticBtn = document.getElementById("btn-music-mistic");
-  if(d.music === "mistic" && !d.musicMuted) { misticBtn.innerText = "Active"; misticBtn.className = "active"; }
+  if(d.music === "mistic" && !d.musicMuted) { misticBtn.innerText = "Active";
+misticBtn.className = "active"; }
   else { misticBtn.innerText = "Select"; misticBtn.className = ""; }
 
   let gabberBtn = document.getElementById("btn-music-gabber");
-  if(d.music === "gabber" && !d.musicMuted) {
-      gabberBtn.innerText = "Active"; gabberBtn.className = "active"; gabberBtn.onclick = function(){ setMusic('gabber'); };
+if(d.music === "gabber" && !d.musicMuted) {
+      gabberBtn.innerText = "Active"; gabberBtn.className = "active";
+gabberBtn.onclick = function(){ setMusic('gabber'); };
   } else if (d.ownedMusic.includes("gabber")) {
-      gabberBtn.innerText = "Select"; gabberBtn.className = ""; gabberBtn.onclick = function(){ setMusic('gabber'); };
+      gabberBtn.innerText = "Select";
+gabberBtn.className = ""; gabberBtn.onclick = function(){ setMusic('gabber'); };
   } else {
-      gabberBtn.innerText = "Buy 210 KSPT"; gabberBtn.className = ""; gabberBtn.onclick = function(){ buyMusic('gabber', 210); };
+      gabberBtn.innerText = "Buy 210 KSPT";
+gabberBtn.className = ""; gabberBtn.onclick = function(){ buyMusic('gabber', 210); };
   }
 
   // Onion music unlock logic - FIXED
   let onionRow = document.getElementById("music-onion-row");
-  onionRow.style.display = "flex"; // Always show row to allow preview
+onionRow.style.display = "flex"; // Always show row to allow preview
   
   let onionBtn = document.getElementById("btn-music-onion");
-  if(d.skins["onion"]) {
+if(d.skins["onion"]) {
       // Skin Owned
       if(d.music === "onion" && !d.musicMuted) { 
-          onionBtn.innerText = "Active"; onionBtn.className = "active"; 
+          onionBtn.innerText = "Active";
+onionBtn.className = "active"; 
       } else { 
-          onionBtn.innerText = "Select"; onionBtn.className = ""; 
+          onionBtn.innerText = "Select";
+onionBtn.className = ""; 
       }
       onionBtn.onclick = function() { setMusic('onion'); };
-  } else {
+} else {
       // Skin Not Owned
       onionBtn.innerText = "Locked (Buy Skin)";
-      onionBtn.className = "owned";
+onionBtn.className = "owned";
       onionBtn.onclick = null;
+  }
+
+  // Calm Music Logic
+  let calmBtn = document.getElementById("btn-music-calm");
+  if(d.ownedMusic.includes("calm")) {
+      if(d.music === "calm" && !d.musicMuted) {
+          calmBtn.innerText = "Active";
+          calmBtn.className = "active";
+      } else {
+          calmBtn.innerText = "Select";
+          calmBtn.className = "";
+      }
+      calmBtn.onclick = function() { setMusic('calm'); };
+  } else {
+      calmBtn.innerText = "Locked (Find in Capsule)";
+      calmBtn.className = "owned";
+      calmBtn.onclick = null;
   }
 }
 
 function updateTempBoostUI() {
   const btn = document.getElementById("btnTempBoost");
   const txt = document.getElementById("tempBoostTimer");
-  const now = Date.now();
+const now = Date.now();
   if (d.boost.active && now < d.boost.end) {
     let secLeft = Math.ceil((d.boost.end - now) / 1000);
-    txt.innerText = `ACTIVE! ${secLeft}s left`;
+txt.innerText = `ACTIVE! ${secLeft}s left`;
     txt.style.color = "#ff0000";
     btn.innerText = "Active"; btn.className = "active"; btn.onclick = null;
-  } else if (now < d.boost.cdEnd) {
+} else if (now < d.boost.cdEnd) {
     let minLeft = Math.ceil((d.boost.cdEnd - now) / 60000);
-    txt.innerText = `Cooldown: ${minLeft}m`;
+txt.innerText = `Cooldown: ${minLeft}m`;
     txt.style.color = "#aaa";
     btn.innerText = "Cooldown"; btn.className = "owned"; btn.onclick = null;
-  } else {
+} else {
     txt.innerText = "Cooldown: Ready";
     txt.style.color = "#2e7d32";
-    btn.innerText = "Buy 15 KSPT"; btn.className = ""; btn.onclick = buyTempBoost;
+    btn.innerText = "Buy 15 KSPT";
+btn.className = ""; btn.onclick = buyTempBoost;
   }
 }
 
 function updateRegenUI() {
   const btn = document.getElementById("btnRegen");
   const info = document.getElementById("regenInfo");
-  let m = d.regenMult;
-  if (m === 1) { info.innerText = "Current: 1x"; btn.innerText = "Upgrade to 1.5x (40 KSPT)"; }
-  else if (m === 1.5) { info.innerText = "Current: 1.5x"; btn.innerText = "Upgrade to 2x (70 KSPT)"; }
-  else if (m === 2) { info.innerText = "Current: 2x"; btn.innerText = "Upgrade to 3x (135 KSPT)"; }
-  else { info.innerText = "Current: 3x (MAX)"; btn.innerText = "MAXED"; btn.className = "owned"; btn.onclick = null; return; }
+let m = d.regenMult;
+  if (m === 1) { info.innerText = "Current: 1x"; btn.innerText = "Upgrade to 1.5x (40 KSPT)";
+}
+  else if (m === 1.5) { info.innerText = "Current: 1.5x"; btn.innerText = "Upgrade to 2x (70 KSPT)";
+}
+  else if (m === 2) { info.innerText = "Current: 2x"; btn.innerText = "Upgrade to 3x (135 KSPT)";
+}
+  else { info.innerText = "Current: 3x (MAX)"; btn.innerText = "MAXED"; btn.className = "owned"; btn.onclick = null; return;
+}
   btn.className = ""; btn.onclick = buyRegenMult;
 }
 
 function updateCardUI() {
   const renderCard = (id, cardKey) => {
     let lvl = d.cards[cardKey];
-    let data = CARDS[id].levels;
+let data = CARDS[id].levels;
     let btn = document.getElementById("btn_c"+id);
     let txtLvl = document.getElementById("c"+id+"_lvl");
     let txtInc = document.getElementById("c"+id+"_income");
-    if (lvl === 5) {
-      txtLvl.innerText = "Level: MAX"; txtInc.innerText = "+" + data[5].income + " KSPT/h";
+if (lvl === 5) {
+      txtLvl.innerText = "Level: MAX";
+txtInc.innerText = "+" + data[5].income + " KSPT/h";
       btn.innerText = "MAXED"; btn.className = "owned"; btn.onclick = null;
-    } else {
+} else {
       let nextLvl = lvl + 1;
       let cost = data[nextLvl].price;
-      let nextInc = data[nextLvl].income;
+let nextInc = data[nextLvl].income;
       if(lvl === -1) {
-        txtLvl.innerText = "Not Owned"; txtInc.innerText = "+" + nextInc + " KSPT/h";
+        txtLvl.innerText = "Not Owned";
+txtInc.innerText = "+" + nextInc + " KSPT/h";
         btn.innerText = `Buy ${cost} KSPT`;
-      } else {
+} else {
         txtLvl.innerText = `Level: ${lvl}`;
         txtInc.innerText = `Current: +${data[lvl].income} -> +${nextInc}`;
-        btn.innerText = `Upgrade ${cost} KSPT`;
+btn.innerText = `Upgrade ${cost} KSPT`;
       }
       btn.className = "";
       btn.onclick = function() { buyCard(id); };
-    }
+}
   };
   renderCard(1, "c1");
 
   let c2Div = document.getElementById("card2_container");
-  if (d.cards.c1 >= 3) { c2Div.style.display = "block"; c2Div.style.filter = "none"; renderCard(2, "c2"); } 
-  else { c2Div.style.display = "block"; c2Div.style.filter = "grayscale(1) opacity(0.5)"; document.getElementById("btn_c2").innerText = "Unlock: Card #1 Lvl 3"; document.getElementById("btn_c2").onclick = null; }
+  if (d.cards.c1 >= 3) { c2Div.style.display = "block"; c2Div.style.filter = "none";
+renderCard(2, "c2"); } 
+  else { c2Div.style.display = "block"; c2Div.style.filter = "grayscale(1) opacity(0.5)";
+document.getElementById("btn_c2").innerText = "Unlock: Card #1 Lvl 3"; document.getElementById("btn_c2").onclick = null; }
 
   let c3Div = document.getElementById("card3_container");
-  if (d.cards.c2 >= 1) { c3Div.style.display = "block"; c3Div.style.filter = "none"; renderCard(3, "c3"); } 
-  else { c3Div.style.display = "block"; c3Div.style.filter = "grayscale(1) opacity(0.5)"; document.getElementById("btn_c3").innerText = "Unlock: Card #2 Lvl 2"; document.getElementById("btn_c3").onclick = null; }
+if (d.cards.c2 >= 1) { c3Div.style.display = "block"; c3Div.style.filter = "none"; renderCard(3, "c3");
+} 
+  else { c3Div.style.display = "block"; c3Div.style.filter = "grayscale(1) opacity(0.5)"; document.getElementById("btn_c3").innerText = "Unlock: Card #2 Lvl 2";
+document.getElementById("btn_c3").onclick = null; }
 
   renderCard(4, "c4");
   let c5Div = document.getElementById("card5_container");
-  if (d.cards.c4 >= 3) { c5Div.style.display = "block"; c5Div.style.filter = "none"; renderCard(5, "c5"); } 
-  else { c5Div.style.display = "block"; c5Div.style.filter = "grayscale(1) opacity(0.5)"; document.getElementById("btn_c5").innerText = "Unlock: Security Lvl 4"; document.getElementById("btn_c5").onclick = null; }
+  if (d.cards.c4 >= 3) { c5Div.style.display = "block";
+c5Div.style.filter = "none"; renderCard(5, "c5"); } 
+  else { c5Div.style.display = "block"; c5Div.style.filter = "grayscale(1) opacity(0.5)";
+document.getElementById("btn_c5").innerText = "Unlock: Security Lvl 4"; document.getElementById("btn_c5").onclick = null; }
 }
 
 function showToast(msg) {
   const t = document.getElementById("toast");
   t.innerText = msg;
-  t.classList.add("show");
+t.classList.add("show");
   setTimeout(() => { t.classList.remove("show"); }, 2000);
 }
 
 function buyCard(id) {
   let key = "c" + id;
-  let curLvl = d.cards[key];
+let curLvl = d.cards[key];
   if(curLvl >= 5) return;
   let nextLvl = curLvl + 1;
   let cost = CARDS[id].levels[nextLvl].price;
-  if(d.tokens >= cost) {
+if(d.tokens >= cost) {
     d.tokens -= cost;
     d.cards[key] = nextLvl;
     showToast("Purchase Successful");
     save();
     ui();
-  }
+}
 }
 
 function setVibration(level) {
@@ -1567,81 +1681,77 @@ function setVibration(level) {
 // --- PUZZLE LOGIC ---
 function updatePuzzleUI() {
     let ownedCount = 0;
-    // Render grid pieces based on d.puzzles array (indices 0-8)
+// Render grid pieces based on d.puzzles array (indices 0-8)
     for(let i=0; i<9; i++) {
         let cell = document.getElementById("pz"+(i+1));
-        if(d.puzzles[i] === 1) {
+if(d.puzzles[i] === 1) {
             cell.classList.add("filled");
             ownedCount++;
-        }
+}
     }
     
     document.getElementById("puzzleStatus").innerText = `Owned: ${ownedCount}/9`;
-
-    if(ownedCount === 9 && !d.puzzleDone) {
+if(ownedCount === 9 && !d.puzzleDone) {
         // Just finished
         d.puzzleDone = true;
-        // Unlock Skin
+// Unlock Skin
         if(!d.skins['mystic']) {
             d.skins['mystic'] = 1;
-            alert("PUZZLE COMPLETE! Hamster Piece Skin Unlocked!");
+alert("PUZZLE COMPLETE! Hamster Piece Skin Unlocked!");
         }
     }
 
     if(d.puzzleDone) {
         document.getElementById("puzzleFull").style.display = "block";
-        document.getElementById("puzzleCompletedText").style.display = "block";
+document.getElementById("puzzleCompletedText").style.display = "block";
         document.getElementById("btnPlacePiece").style.display = "none";
     } else {
         document.getElementById("puzzleFull").style.display = "none";
-        document.getElementById("puzzleCompletedText").style.display = "none";
+document.getElementById("puzzleCompletedText").style.display = "none";
         // Button is conceptual since pieces are auto-placed, but following request "The player places a piece using a 'Place' button"
         // For smoother UX, we can make the button confirm visualization, but logic says "receives a piece they do not already have".
-        // We will treat the button as "View" or just auto-update. 
-        // Request says: "The player places a piece using a 'Place' button".
-        // Implementation: We will hide the button if no NEW pieces are waiting.
-        // But since we apply rewards immediately, we just show pieces.
-        // Let's keep button hidden as pieces are "permanently assigned".
+// We will treat the button as "View" or just auto-update.
+// Request says: "The player places a piece using a 'Place' button".
+// Implementation: We will hide the button if no NEW pieces are waiting.
+// But since we apply rewards immediately, we just show pieces.
+// Let's keep button hidden as pieces are "permanently assigned".
     }
 }
 
 // --- CAPSULE LOGIC ---
 let capsuleTaps = 0;
-
 function updateCapsuleUI() {
     const now = Date.now();
     const btn = document.getElementById("btnOpenCapsule");
     const txt = document.getElementById("capsuleTimer");
-    
-    // Check cooldown (23 hours = 82800000 ms)
+// Check cooldown (23 hours = 82800000 ms)
     let cooldownTime = 23 * 60 * 60 * 1000;
-    
-    // If first open, no cooldown
+// If first open, no cooldown
     if(d.capsule.firstOpen) {
         txt.innerText = "First Open Free!";
-        btn.style.background = "#ff9800";
+btn.style.background = "#ff9800";
         btn.innerText = "OPEN!";
         btn.onclick = startCapsuleSequence;
         return;
     }
 
     let diff = now - d.capsule.lastOpen;
-    if(diff >= cooldownTime) {
+if(diff >= cooldownTime) {
         txt.innerText = "Ready to open!";
         btn.style.background = "#ff9800";
-        btn.innerText = "OPEN!";
+btn.innerText = "OPEN!";
         btn.className = "";
         btn.onclick = startCapsuleSequence;
     } else {
         let wait = cooldownTime - diff;
-        let h = Math.floor(wait / (1000*60*60));
+let h = Math.floor(wait / (1000*60*60));
         let m = Math.floor((wait % (1000*60*60)) / (1000*60));
         txt.innerText = `Cooldown: ${h}h ${m}m`;
-        btn.style.background = "#333";
+btn.style.background = "#333";
         btn.innerText = "Wait";
         btn.className = "owned";
         btn.onclick = null;
-    }
+}
 }
 
 function startCapsuleSequence() {
@@ -1654,14 +1764,18 @@ function startCapsuleSequence() {
 function updateCapsuleVisual(taps) {
     let img = document.getElementById("capsuleBreakImg");
     if(taps === 0) img.src = "capsule.png";
-    if(taps === 3) img.src = "capsule1.png";
-    if(taps === 8) img.src = "capsule2.png"; // 3+5
-    if(taps === 13) img.src = "capsule3.png"; // 8+5
-    if(taps === 20) img.src = "capsule4.png"; // 13+7
+if(taps === 3) img.src = "capsule1.png";
+    if(taps === 8) img.src = "capsule2.png";
+// 3+5
+    if(taps === 13) img.src = "capsule3.png";
+// 8+5
+    if(taps === 20) img.src = "capsule4.png";
+// 13+7
     if(taps === 30) {
-        img.src = "capsule5.png"; // 20+10
+        img.src = "capsule5.png";
+// 20+10
         finishCapsuleBreak();
-    }
+}
 }
 
 // Listener for capsule tap
@@ -1672,13 +1786,11 @@ document.getElementById("capsuleBreakImg").addEventListener('click', function() 
         updateCapsuleVisual(capsuleTaps);
     }
 });
-
 function finishCapsuleBreak() {
     // Disable clicks
     let img = document.getElementById("capsuleBreakImg");
     img.style.pointerEvents = "none";
-    
-    setTimeout(() => {
+setTimeout(() => {
         // Zoom
         img.classList.add("zoomed");
         
@@ -1689,6 +1801,7 @@ function finishCapsuleBreak() {
         setTimeout(() => {
             giveCapsuleReward();
             
+ 
             // Reset Modal UI for next time
             document.getElementById("capsuleBreakModal").classList.remove("active");
             document.getElementById("whiteFade").classList.remove("active");
@@ -1697,7 +1810,8 @@ function finishCapsuleBreak() {
             
         }, 3000);
         
-    }, 500);
+   
+ }, 500);
 }
 
 function giveCapsuleReward() {
@@ -1706,87 +1820,145 @@ function giveCapsuleReward() {
     d.capsule.firstOpen = false;
     save();
 
-    let rng = Math.random() * 101; // 0 to 101
-    let rewardType = "";
-    let rewardValue = 0;
+    // --- WEIGHTED REWARD SYSTEM WITH REDISTRIBUTION ---
+    
+    // 1. Define Rewards
+    // Types: 'flat' (always same weight), 'sink' (receives redistributed weight), 'unique' (disappears if owned)
+    let rewardTable = [
+        { id: '3kspt',    weight: 25, type: 'flat' },
+        { id: '5kspt',    weight: 20, type: 'flat' },
+        { id: '10kspt',   weight: 15, type: 'sink' }, // Sink for redistribution
+        { id: '20kspt',   weight: 5,  type: 'sink' }, // Sink for redistribution
+        { id: 'coupon',   weight: 16, type: 'sink', check: () => {
+             // Coupons are effectively a sink, but we verify if there are skins to discount.
+             // If no skins left, this item technically becomes invalid as a coupon, 
+             // but original logic fallback was 20 KSPT, effectively making it a sink.
+             // We'll treat it as a sink that might morph into 20KSPT on delivery.
+             return true; 
+        }},
+        { id: 'offline',  weight: 5,  type: 'flat' },
+        { id: 'tap2x',    weight: 3,  type: 'flat' },
+        { id: 'puzzle',   weight: 5,  type: 'unique', check: () => !d.puzzleDone },
+        { id: 'heaven',   weight: 2,  type: 'unique', check: () => !d.ownedBgs.includes('heaven') },
+        { id: 'skin',     weight: 1,  type: 'unique', check: () => !d.skins['capsule'] },
+        // NEW: Calm Music (10%)
+        { id: 'music',    weight: 10, type: 'unique', check: () => !d.ownedMusic.includes('calm') }
+    ];
+
+    let redistributionPool = 0;
+    let activeRewards = [];
+    let sinkCount = 0;
+
+    // 2. Filter and Redistribute
+    rewardTable.forEach(r => {
+        let isValid = true;
+        if(r.check && !r.check()) isValid = false;
+
+        if(!isValid && r.type === 'unique') {
+            // It's unique and already owned -> add weight to pool
+            redistributionPool += r.weight;
+        } else {
+            // It's available or a flat/sink item
+            // Note: If a sink item (coupon) checks false (no skins), it falls back to 20kspt, so we keep it active.
+            let rClone = {...r}; // Clone to modify weight without breaking const
+            activeRewards.push(rClone);
+            if(r.type === 'sink') sinkCount++;
+        }
+    });
+
+    // 3. Apply Pool to Sinks (10 KSPT, 20 KSPT, Coupons)
+    if(redistributionPool > 0 && sinkCount > 0) {
+        let share = redistributionPool / sinkCount;
+        activeRewards.forEach(r => {
+            if(r.type === 'sink') {
+                r.weight += share;
+            }
+        });
+    }
+
+    // 4. Select Reward
+    let totalWeight = activeRewards.reduce((sum, r) => sum + r.weight, 0);
+    let rng = Math.random() * totalWeight;
+    let runningSum = 0;
+    let selected = null;
+
+    for(let r of activeRewards) {
+        runningSum += r.weight;
+        if(rng <= runningSum) {
+            selected = r;
+            break;
+        }
+    }
+
+    // Fallback just in case floating point weirdness
+    if(!selected) selected = activeRewards[activeRewards.length-1];
+
+    // 5. Grant Reward
     let img = "";
     let txt = "";
 
-    // 30% — 3 KSPT
-    if (rng < 28) {
-        d.tokens += 3; img = "kspt.png"; txt = "+3 KSPT";
-    }
-    // 25% — 5 KSPT (30 to 55)
-    else if (rng < 55) {
-        d.tokens += 5; img = "kspt.png"; txt = "+5 KSPT";
-    }
-    // 15% — 10 KSPT (55 to 70)
-    else if (rng < 70) {
-        d.tokens += 10; img = "kspt.png"; txt = "+10 KSPT";
-    }
-    // 6% — 20 KSPT (70 to 76)
-    else if (rng < 76) {
-        d.tokens += 20; img = "kspt.png"; txt = "+20 KSPT";
-    }
-    // 5% — Coupon: –15% discount (76 to 81)
-    else if (rng < 81) {
-        // Pick random unowned skin (exclude secrets)
-        let shopSkins = ["what", "burger", "joost", "dog", "diam", "tung", "euro", "space", "pixe", "onion"];
-        let unowned = shopSkins.filter(s => !d.skins[s]);
-        if(unowned.length > 0) {
-            let target = unowned[Math.floor(Math.random() * unowned.length)];
-            d.bonuses.discounts[target] = Date.now() + (24 * 60 * 60 * 1000); // 24h
-            img = "ticket.png"; txt = `Coupon: -15% on '${target.toUpperCase()}' Skin (24h)`;
-        } else {
-            // Fallback if all skins owned
-            d.tokens += 20; img = "kspt.png"; txt = "+20 KSPT (All skins owned)";
-        }
-    }
-    // 5% — +25% Offline Income (81 to 86)
-    else if (rng < 86) {
-        d.bonuses.offline25 = true;
-        img = "k.png"; txt = "+25% Offline Income (One-time)";
-    }
-    // 3% — Tap ×2 for 2 minutes (86 to 89)
-    else if (rng < 89) {
-        d.bonuses.tap2x.active = true;
-        d.bonuses.tap2x.end = Date.now() + (2 * 60 * 1000);
-        img = "fire.png"; txt = "Tap x2 for 2 minutes!";
-    }
-    // 3% — Puzzle piece (89 to 92)
-    else if (rng < 94) {
-        // Find unowned pieces
-        let unownedIndices = [];
-        for(let i=0; i<9; i++) if(d.puzzles[i] === 0) unownedIndices.push(i);
-        
-        if(unownedIndices.length > 0) {
-            let pick = unownedIndices[Math.floor(Math.random() * unownedIndices.length)];
-            d.puzzles[pick] = 1;
-            img = `pazl${pick+1}.png`; txt = `Puzzle Piece Found!`;
-        } else {
-            d.tokens += 15; img = "kspt.png"; txt = "+15 KSPT (Puzzle Completed)";
-        }
-    }
-    // 2% — Free background heaven.png (92 to 94)
-    else if (rng < 94) {
-        if(!d.ownedBgs.includes("heaven")) {
+    switch(selected.id) {
+        case '3kspt':
+            d.tokens += 3; img = "kspt.png"; txt = "+3 KSPT";
+            break;
+        case '5kspt':
+            d.tokens += 5; img = "kspt.png"; txt = "+5 KSPT";
+            break;
+        case '10kspt':
+            d.tokens += 10; img = "kspt.png"; txt = "+10 KSPT";
+            break;
+        case '20kspt':
+            d.tokens += 20; img = "kspt.png"; txt = "+20 KSPT";
+            break;
+        case 'coupon':
+             // Pick random unowned skin (exclude secrets)
+            let shopSkins = ["what", "burger", "joost", "dog", "diam", "tung", "euro", "space", "pixe", "onion"];
+            let unowned = shopSkins.filter(s => !d.skins[s]);
+            if(unowned.length > 0) {
+                let target = unowned[Math.floor(Math.random() * unowned.length)];
+                d.bonuses.discounts[target] = Date.now() + (24 * 60 * 60 * 1000);
+                img = "ticket.png";
+                txt = `Coupon: -15% on '${target.toUpperCase()}' Skin (24h)`;
+            } else {
+                // Fallback
+                d.tokens += 20; img = "kspt.png"; txt = "+20 KSPT (All skins owned)";
+            }
+            break;
+        case 'offline':
+            d.bonuses.offline25 = true;
+            img = "k.png"; txt = "+25% Offline Income (One-time)";
+            break;
+        case 'tap2x':
+            d.bonuses.tap2x.active = true;
+            d.bonuses.tap2x.end = Date.now() + (2 * 60 * 1000);
+            img = "fire.png"; txt = "Tap x2 for 2 minutes!";
+            break;
+        case 'puzzle':
+            // Find unowned pieces
+            let unownedPz = [];
+            for(let i=0; i<9; i++) if(d.puzzles[i] === 0) unownedPz.push(i);
+            
+            if(unownedPz.length > 0) {
+                let pick = unownedPz[Math.floor(Math.random() * unownedPz.length)];
+                d.puzzles[pick] = 1;
+                img = `pazl${pick+1}.png`; txt = `Puzzle Piece Found!`;
+            } else {
+                // Should be caught by redistribution logic, but safety net
+                d.tokens += 15; img = "kspt.png"; txt = "+15 KSPT";
+            }
+            break;
+        case 'heaven':
             d.ownedBgs.push("heaven");
             img = "heaven.png"; txt = "Background: Heaven";
-        } else {
-            d.tokens += 50; img = "kspt.png"; txt = "+50 KSPT (BG Owned)";
-        }
-    }
-    // 1% — Skin chance (94 to 95) - Total 101% range approx
-    else {
-        // The remaining probability bucket (94+)
-        // Check condition: Background "heaven" must be obtained.
-        if (d.ownedBgs.includes("heaven") && !d.skins['capsule']) {
+            break;
+        case 'skin':
             d.skins['capsule'] = 1;
             img = "capskine.png"; txt = "LEGENDARY! Skin: Capsule Master";
-        } else {
-            // Fallback reward
-            d.tokens += 10; img = "kspt.png"; txt = "+10 KSPT";
-        }
+            break;
+        case 'music':
+            d.ownedMusic.push("calm");
+            img = "calm.png"; txt = "New Track: Calm + Hush";
+            break;
     }
 
     // Show Popup
@@ -1803,7 +1975,6 @@ function closeReward() {
 }
 
 ui();
-
 function openScreen(id){
  document.querySelectorAll(".screen").forEach(s=>s.classList.remove("active"));
  document.getElementById(id).classList.add("active");
@@ -1814,7 +1985,7 @@ function openScreen(id){
  }
  
  ui();
- d.lastLogin = Date.now();
+d.lastLogin = Date.now();
  save();
 }
 
@@ -1825,7 +1996,6 @@ document.getElementById('coin').addEventListener('touchstart', function(e) {
     return false;
   }
 }, {passive: false});
-
 coin.addEventListener("touchstart", () => {
   if (d.vibration === "off") return;
   let dur = 30; 
@@ -1836,45 +2006,44 @@ coin.addEventListener("touchstart", () => {
     navigator.vibrate(dur);
   }
 }, { passive: true });
-
 function showTapFloat(e, amount) {
     let el = document.createElement("div");
     el.className = "tap-text";
     el.innerText = "+" + amount.toFixed(2);
-    
-    // Position
+// Position
     let x, y;
     if(e && e.clientX) {
         x = e.clientX;
-        y = e.clientY;
+y = e.clientY;
     } else {
         // Fallback to center of coin
         let rect = coin.getBoundingClientRect();
-        x = rect.left + rect.width / 2;
+x = rect.left + rect.width / 2;
         y = rect.top + rect.height / 2;
-    }
+}
     
-    el.style.left = (x - 20) + "px"; // Offset to center text
+    el.style.left = (x - 20) + "px";
+// Offset to center text
     el.style.top = (y - 40) + "px";
     
     document.body.appendChild(el);
-    setTimeout(() => { el.remove(); }, 500);
+setTimeout(() => { el.remove(); }, 500);
 }
 
 coin.onclick=function(e){
  if(cheatStage >= 3) return;
 
  let m = d.x2 ? 2 : 1;
- const now = Date.now();
+const now = Date.now();
  
  // Check Temp Boost (Priority over x2 bonus)
  if (d.boost.active && now < d.boost.end) {
     m *= 10;
- } 
+} 
  // Check Capsule Tap x2 Bonus (Does not stack with x10)
  else if (d.bonuses.tap2x.active && now < d.bonuses.tap2x.end) {
     m *= 2;
- }
+}
  
  let cost = m; 
  if (d.energy < cost) return;
@@ -1885,11 +2054,11 @@ coin.onclick=function(e){
 
  // Anti-Cheat
  clickTimes.push(now);
- clickTimes = clickTimes.filter(t => now - t <= 6500);
+clickTimes = clickTimes.filter(t => now - t <= 6500);
  if(clickTimes.length > 100) {
     if(cheatStage === 0) {
         document.getElementById("cheatWarningModal").style.display = "flex";
-        isWarningActive = true;
+isWarningActive = true;
         clickTimes = []; 
     } else if (cheatStage === 1) {
         // FULL WIPE - RESET EVERYTHING
@@ -1897,34 +2066,37 @@ coin.onclick=function(e){
              tokens:0, skin:"default", skins:{}, x2:false,
              lastLogin: Date.now(),
              wonX10: false,
-             cards: { c1: -1, c2: -1, c3: -1, c4: -1, c5: -1 },
+             cards: { c1: -1, c2: -1, c3: -1, 
+c4: -1, c5: -1 },
              energy: 2500,
              maxEnergy: 2500,
              usedCodes: [],
              bg: "default",
              ownedBgs: ["default"],
              boost: { active: false, end: 0, cdEnd: 0 },
-             euroVar: 1,
+     
+        euroVar: 1,
              regenMult: 1,
              vibration: 'medium',
              puzzles: [0,0,0,0,0,0,0,0,0],
              puzzleDone: false,
              capsule: { lastOpen: 0, firstOpen: true },
-             bonuses: { offline25: false, tap2x: { active: false, end: 0 }, discounts: {} },
+             bonuses: { offline25: 
+false, tap2x: { active: false, end: 0 }, discounts: {} },
              music: "mistic",
              ownedMusic: ["mistic"],
              musicMuted: false
         };
-        save();
+save();
         alert("Account Reset due to cheating!");
         cheatStage = 2;
         localStorage.setItem("kspt_cheat_stage", 2);
         clickTimes = [];
         ui();
-    } else if (cheatStage >= 2) {
+} else if (cheatStage >= 2) {
         cheatStage = 3;
         localStorage.setItem("kspt_cheat_stage", 3);
-        document.getElementById("redScreen").style.display = "flex";
+document.getElementById("redScreen").style.display = "flex";
         return;
     }
  }
@@ -1932,84 +2104,96 @@ coin.onclick=function(e){
  d.energy -= cost;
  let earned = 0.01 * m;
  d.tokens += earned;
-
- // Tap Feedback Animation
+// Tap Feedback Animation
  showTapFloat(e, earned);
 
  // Animation Logic
  if(d.skin === "tung") {
     if(coin.src.includes("tung.png")) coin.src = "tung1.png";
-    else coin.src = "tung.png";
+else coin.src = "tung.png";
  }
  if(d.skin === "space") {
     if(coin.src.includes("sun.png")) coin.src = "moon.png";
     else coin.src = "sun.png";
- }
+}
  if(d.skin === "pixe") {
     if(!coin.dataset.toggle) coin.dataset.toggle = "0";
-    coin.dataset.toggle = coin.dataset.toggle === "0" ? "1" : "0";
+    coin.dataset.toggle = coin.dataset.toggle === "0" ?
+"1" : "0";
     coin.src = coin.dataset.toggle === "1" ? "pixe1.png" : "pixe.png";
- }
+}
  if(d.skin === "onion") {
     let stage = parseInt(coin.dataset.stage || 0);
-    stage = (stage + 1) % 3; 
+stage = (stage + 1) % 3; 
     coin.dataset.stage = stage;
     if(stage === 0) coin.src = "onion.png";
-    if(stage === 1) coin.src = "onion1.png";
+if(stage === 1) coin.src = "onion1.png";
     if(stage === 2) coin.src = "onion2.png";
- }
+}
  if(d.skin === "seri") {
     if(!coin.dataset.toggle) coin.dataset.toggle = "0";
-    coin.dataset.toggle = coin.dataset.toggle === "0" ? "1" : "0";
+    coin.dataset.toggle = coin.dataset.toggle === "0" ?
+"1" : "0";
     coin.src = coin.dataset.toggle === "1" ? "seri1.png" : "seri.png";
- }
+}
  // NEW: Mystic Piece Logic
  if(d.skin === "mystic") {
     let stage = parseInt(coin.dataset.mystic || 0);
-    // Cycle: piece1 -> piece2 -> piece3 -> piece -> repeat
+// Cycle: piece1 -> piece2 -> piece3 -> piece -> repeat
     // Mapping: 0=piece1, 1=piece2, 2=piece3, 3=piece
     stage = (stage + 1) % 4;
-    coin.dataset.mystic = stage;
+coin.dataset.mystic = stage;
     if(stage === 0) coin.src = "piece1.png";
     if(stage === 1) coin.src = "piece2.png";
-    if(stage === 2) coin.src = "piece3.png";
+if(stage === 2) coin.src = "piece3.png";
     if(stage === 3) coin.src = "piece.png";
- }
+}
  // NEW: Capsule Master Animation
  if(d.skin === "capsule") {
     if(!coin.dataset.toggle) coin.dataset.toggle = "0";
-    coin.dataset.toggle = coin.dataset.toggle === "0" ? "1" : "0";
+coin.dataset.toggle = coin.dataset.toggle === "0" ? "1" : "0";
     coin.src = coin.dataset.toggle === "1" ? "capskine1.png" : "capskine.png";
  }
 
  coin.classList.add('anim');
- setTimeout(() => { coin.classList.remove('anim'); }, 80);
+setTimeout(() => { coin.classList.remove('anim'); }, 80);
  d.lastLogin = Date.now();
  save();
  ui();
 };
-
 function buySkin(s,c){
  if(s === "default") { d.skin = "default"; }
- else if(s === "priz") { if(d.wonX10 && globalSkinLimit > 0) d.skin = "priz"; }
+ else if(s === "priz") { if(d.wonX10 && globalSkinLimit > 0) d.skin = "priz";
+}
  else if(d.skins[s]) {
-    if(s === "euro") { if(d.skin === "euro") d.euroVar = d.euroVar === 1 ? 2 : 1; }
+    if(s === "euro") { if(d.skin === "euro") d.euroVar = d.euroVar === 1 ?
+2 : 1; }
     d.skin = s;
- }
+}
  else {
      // Check for discount
      let finalPrice = c;
-     if(d.bonuses.discounts[s] && Date.now() < d.bonuses.discounts[s]) {
+if(d.bonuses.discounts[s] && Date.now() < d.bonuses.discounts[s]) {
          finalPrice = Math.floor(c * 0.85);
-     }
+}
      
      if(d.tokens>=finalPrice){
       d.tokens-=finalPrice;
       d.skins[s]=1;
       d.skin=s;
-      if(s === "space") { if(!d.ownedBgs.includes("space")) d.ownedBgs.push("space"); }
+if(s === "space") { if(!d.ownedBgs.includes("space")) d.ownedBgs.push("space"); }
+      
+      // NEW: Unlock Dead Pixel Background when buying Pixel Skin
+      if(s === "pixe") {
+          if(!d.ownedBgs.includes('bug')) {
+              d.ownedBgs.push('bug');
+              alert("Bonus! Background 'Dead Pixel' Unlocked!");
+          }
+      }
+
       showToast("Purchase successful.");
-      // Remove discount if used? Prompt says "Valid for 24 hours". It implies a duration, not one-time use. We keep it active.
+      // Remove discount if used?
+// Prompt says "Valid for 24 hours". It implies a duration, not one-time use. We keep it active.
      }
  }
  save();ui();
@@ -2019,7 +2203,7 @@ function buyBackground(bg, price) {
   if (d.tokens >= price && !d.ownedBgs.includes(bg)) {
     d.tokens -= price;
     d.ownedBgs.push(bg);
-    showToast("Purchase successful.");
+showToast("Purchase successful.");
     save();
     ui();
   }
@@ -2030,7 +2214,7 @@ function equipBackground(bg) {
     d.bg = bg;
     save();
     ui();
-  }
+}
 }
 
 function buyX2(){
@@ -2044,25 +2228,28 @@ function buyX2(){
 
 function buyTempBoost() {
   const now = Date.now();
-  if (now < d.boost.cdEnd) return;
+if (now < d.boost.cdEnd) return;
   if (d.tokens >= 15) {
     d.tokens -= 15;
     d.boost.active = true;
-    d.boost.end = now + 27000; 
+d.boost.end = now + 27000; 
     d.boost.cdEnd = now + 6000000;
     showToast("Purchase successful.");
     save();
     ui();
-  }
+}
 }
 
 function buyRegenMult() {
   if (d.regenMult === 1 && d.tokens >= 40) {
-    d.tokens -= 40; d.regenMult = 1.5; showToast("Purchase successful.");
+    d.tokens -= 40;
+d.regenMult = 1.5; showToast("Purchase successful.");
   } else if (d.regenMult === 1.5 && d.tokens >= 70) {
-    d.tokens -= 70; d.regenMult = 2; showToast("Purchase successful.");
+    d.tokens -= 70;
+d.regenMult = 2; showToast("Purchase successful.");
   } else if (d.regenMult === 2 && d.tokens >= 135) {
-    d.tokens -= 135; d.regenMult = 3; showToast("Purchase successful.");
+    d.tokens -= 135;
+d.regenMult = 3; showToast("Purchase successful.");
   }
   save();
   ui();
@@ -2070,7 +2257,7 @@ function buyRegenMult() {
 
 function setMaxBet() {
   let max = 30;
-  if (d.tokens < 30) max = Math.floor(d.tokens);
+if (d.tokens < 30) max = Math.floor(d.tokens);
   if (max < 1) max = 1;
   betAmount.value = max;
 }
@@ -2090,7 +2277,7 @@ function cancelBet(){
 
 function confirmBet(){
  let {a,mult,ch}=pendingBet;
- betConfirm.style.display="none";
+betConfirm.style.display="none";
  pendingBet=null;
  d.tokens-=a;
  if(Math.random()*100<ch){
@@ -2098,7 +2285,7 @@ function confirmBet(){
    if(mult === 10) {
      if(!d.wonX10 && globalSkinLimit > 0) {
        d.wonX10 = true;
-       globalSkinLimit--;
+globalSkinLimit--;
        localStorage.setItem("kspt_global_priz_count", globalSkinLimit);
        alert("🎉 UNBELIEVABLE! You won x10!\nSkin 'NUMBER #1!' Unlocked!");
      }
@@ -2110,25 +2297,25 @@ function confirmBet(){
 function checkPromo() {
   const code = document.getElementById("promoInput").value.trim();
   if(!code) return;
-  if(d.usedCodes.includes(code)) {
+if(d.usedCodes.includes(code)) {
     alert("This promo code has already been used.");
     return;
-  }
+}
 
   if(code === "ksptshit") {
     if(confirm("Are you sure?")) {
       if(confirm("WARNING: All coins, skins, and progress will be reset. Proceed?")) {
         localStorage.removeItem("kspt");
-        location.reload(); 
+location.reload(); 
       }
     }
     return;
-  }
+}
   
   if(code === "Result0-0") {
       if(confirm("Are you sure? This will reset ONLY your tokens.")) {
          d.tokens = 0;
-         save();
+save();
          ui();
          alert("Tokens reset to 0.");
       }
@@ -2136,56 +2323,57 @@ function checkPromo() {
   }
 
   let reward = 0;
-  let valid = false;
+let valid = false;
   switch(code) {
     case "Skibidi": reward = 1; valid = true; break;
-    case "Brainrot": reward = 1; valid = true; break;
+case "Brainrot": reward = 1; valid = true; break;
     case "Einarald": reward = 10; valid = true; break;
-    case "SecEi10": reward = 10; valid = true; break;
+case "SecEi10": reward = 10; valid = true; break;
     case "Compenation61": reward = 61; valid = true; break;
-    case "ComunetiMenagir":
+case "ComunetiMenagir":
       if(!d.skins['kostia']) {
         d.skins['kostia'] = 1;
-        alert("You found a Secret! Skin 'Special Kostia' Unlocked!");
+alert("You found a Secret! Skin 'Special Kostia' Unlocked!");
       }
-      reward = 0; valid = true; break;
+      reward = 0; valid = true;
+break;
     case "Onyxin": reward = 5; alert("Nostalgic..."); valid = true; break;
     case "L1keVideo": reward = 5; valid = true; break;
-    case "RedSEKTA":
+case "RedSEKTA":
       if(!d.skins['metka']) {
           d.skins['metka'] = 1;
-          alert("Skin 'KSPT & RED Fingers' Unlocked!");
+alert("Skin 'KSPT & RED Fingers' Unlocked!");
       }
       reward = 0; valid = true; break;
-    case "KostinSerial":
+case "KostinSerial":
       if(!d.skins['seri']) {
           d.skins['seri'] = 1;
-          alert("Secret Skin 'KosTiaP Token' Unlocked!");
+alert("Secret Skin 'KosTiaP Token' Unlocked!");
       }
       reward = 0; valid = true; break;
-    case "FreePuzzle":
+case "FreePuzzle":
        let unowned = [];
        for(let i=0; i<9; i++) if(d.puzzles[i] === 0) unowned.push(i);
-       if(unowned.length > 0) {
+if(unowned.length > 0) {
            let pick = unowned[Math.floor(Math.random() * unowned.length)];
-           d.puzzles[pick] = 1;
+d.puzzles[pick] = 1;
            alert("Puzzle Piece Found!");
            valid = true;
        } else {
            alert("You already have all puzzle pieces!");
-       }
+}
        break;
     default:
       alert("Invalid code");
       return;
-  }
+}
 
   if(valid) {
     if(reward > 0) d.tokens += reward;
     d.usedCodes.push(code);
     save();
     ui();
-    if(reward > 0) alert(`Success! +${reward} KSPT`);
+if(reward > 0) alert(`Success! +${reward} KSPT`);
     document.getElementById("promoInput").value = "";
   }
 }
@@ -2193,31 +2381,31 @@ function checkPromo() {
 function buyEnergyLimit() {
   if (d.tokens >= 15 && d.maxEnergy < 8000) {
     d.tokens -= 15;
-    d.maxEnergy += 500;
+d.maxEnergy += 500;
     showToast("Purchase successful.");
     save();
     ui();
   } else if (d.maxEnergy >= 8000) {
     alert("Maximum energy limit reached!");
-  }
+}
 }
 
 function attemptUnban() {
   const key = document.getElementById("unbanInput").value.trim();
   if(key === "Stupid_green") { 
       cheatStage = 0;
-      localStorage.setItem("kspt_cheat_stage", 0);
+localStorage.setItem("kspt_cheat_stage", 0);
       document.getElementById("redScreen").style.display = "none";
       alert("Ban removed. Be careful.");
       clickTimes = [];
-  } else {
+} else {
       alert("Invalid Key.");
   }
 }
 
 function dismissWarning() {
     document.getElementById("cheatWarningModal").style.display = "none";
-    cheatStage = 1;
+cheatStage = 1;
     localStorage.setItem("kspt_cheat_stage", 1);
     clickTimes = [];
     isWarningActive = false;

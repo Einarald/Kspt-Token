@@ -1168,6 +1168,8 @@ let isWarningActive = false;
 let currentMarketView = 'main';
 let selectedToken = null;
 let marketUpdateInterval = null;
+let lastMarketBuyTime = 0; // New variable for trade cooldown
+let tradeInputValue = ''; // Store trade input value to prevent flickering
 
 // Проверка на перманентный бан при загрузке
 if(cheatStage >= 3) {
@@ -1373,7 +1375,7 @@ function processOfflineMarket(minutes) {
     
     let newPrice = d.market.ksptToken.price + (change * sign);
     if(newPrice < 0.10) newPrice = 0.10;
-    if(newPrice > 4.00) newPrice = 4.00;
+    if(newPrice > 2.80) newPrice = 2.80; // Changed from 4.00 to 2.80
     
     d.market.ksptToken.price = newPrice;
     d.market.ksptToken.history.push(newPrice);
@@ -1396,7 +1398,7 @@ function processOfflineMarket(minutes) {
       else if(banxRange === 3) banxChange = (Math.random() * 0.0003) + 0.0006;
       
       let newBanxPrice = d.market.banxToken.price + (banxChange * banxSign);
-      if(newBanxPrice < 0.0001) newBanxPrice = 0.0001;
+      if(newBanxPrice < 0.0007) newBanxPrice = 0.0007; // Changed from 0.0001 to 0.0007
       if(newBanxPrice > 0.01) newBanxPrice = 0.01;
       
       d.market.banxToken.price = newBanxPrice;
@@ -2045,6 +2047,7 @@ function updateMusicUI() {
   }
 }
 
+// FIXED: Update market UI without full re-render
 function updateMarketUI() {
   if (!document.getElementById("market")?.classList.contains("active")) return;
   
@@ -2086,7 +2089,8 @@ function updateMarketUI() {
       `;
     }
     
-    container.innerHTML = `
+    // Only update innerHTML if the container content is different
+    const newHTML = `
       <div class="account-box">
         <div class="acc-header">
           <div>
@@ -2144,11 +2148,160 @@ function updateMarketUI() {
       </div>
       ` : ''}
     `;
+    
+    if (container.innerHTML !== newHTML) {
+      container.innerHTML = newHTML;
+    }
   } else if (currentMarketView === 'trade') {
     renderTradeView();
+  } else if (currentMarketView === 'createToken') {
+    renderTokenCreationForm();
   }
 }
 
+// NEW: Render token creation form with image upload
+function renderTokenCreationForm() {
+  const container = document.getElementById("marketContainer");
+  if (!container) return;
+  
+  container.innerHTML = `
+    <div class="top-bar">
+      <img src="what.png">
+      <span style="font-weight:bold">Create Personal Token</span>
+      <img src="iks.png" class="close-x" onclick="closeTokenCreation()">
+    </div>
+    
+    <div class="card">
+      <div class="card-title">Token Details</div>
+      <div class="card-sub">Create your own cryptocurrency token</div>
+      
+      <div style="margin-bottom: 10px;">
+        <div style="font-size: 13px; margin-bottom: 5px; color: #aaa;">Ticker (3-5 characters)</div>
+        <input type="text" id="tokenTicker" placeholder="PERS" maxlength="5">
+      </div>
+      
+      <div style="margin-bottom: 10px;">
+        <div style="font-size: 13px; margin-bottom: 5px; color: #aaa;">Name (max 20 characters)</div>
+        <input type="text" id="tokenName" placeholder="My Personal Token" maxlength="20">
+      </div>
+      
+      <div style="margin-bottom: 10px;">
+        <div style="font-size: 13px; margin-bottom: 5px; color: #aaa;">Description (10-250 characters)</div>
+        <input type="text" id="tokenDesc" placeholder="A personal token created by me">
+      </div>
+      
+      <div style="margin-bottom: 10px;">
+        <div style="font-size: 13px; margin-bottom: 5px; color: #aaa;">Supply (100-99999)</div>
+        <input type="number" id="tokenSupply" placeholder="1000" min="100" max="99999">
+      </div>
+      
+      <div style="margin-bottom: 15px;">
+        <div style="font-size: 13px; margin-bottom: 5px; color: #aaa;">Token Icon (Optional)</div>
+        <div id="tokenImagePreview" style="width: 60px; height: 60px; background: #222; border-radius: 50%; margin-bottom: 10px; background-size: cover; background-position: center; background-image: url('what.png');"></div>
+        <input type="file" id="tokenImageUpload" accept="image/*" style="display: none;">
+        <button onclick="document.getElementById('tokenImageUpload').click()" style="width: auto; padding: 8px 15px; background: #444; margin-bottom: 10px;">Upload Image</button>
+        <div style="font-size: 11px; color: #666;">If no image is uploaded, default icon will be used</div>
+      </div>
+      
+      <div style="border-top: 1px solid #333; padding-top: 15px; margin-top: 15px;">
+        <div style="font-size: 13px; margin-bottom: 10px; color: #aaa;">Creation Cost: <span style="color: #ff9800;">899 KSPT</span></div>
+        <button onclick="confirmTokenCreation()" style="background: #ff9800; color: #000; font-weight: bold;">Create Token</button>
+        <button onclick="closeTokenCreation()" style="margin-top: 8px; background: #444;">Cancel</button>
+      </div>
+    </div>
+  `;
+  
+  // Set up image upload handler
+  const fileInput = document.getElementById('tokenImageUpload');
+  if (fileInput) {
+    fileInput.onchange = function(e) {
+      const file = e.target.files[0];
+      if (file) {
+        const reader = new FileReader();
+        reader.onload = function(event) {
+          const preview = document.getElementById('tokenImagePreview');
+          if (preview) {
+            preview.style.backgroundImage = `url('${event.target.result}')`;
+            preview.dataset.imageData = event.target.result; // Store data URL
+          }
+        };
+        reader.readAsDataURL(file);
+      }
+    };
+  }
+}
+
+function closeTokenCreation() {
+  currentMarketView = 'main';
+  updateMarketUI();
+}
+
+function confirmTokenCreation() {
+  const ticker = document.getElementById('tokenTicker')?.value.trim().toUpperCase();
+  const name = document.getElementById('tokenName')?.value.trim();
+  const description = document.getElementById('tokenDesc')?.value.trim();
+  const supply = parseInt(document.getElementById('tokenSupply')?.value);
+  
+  if (!ticker || ticker.length < 3 || ticker.length > 5) {
+    showToast("Ticker must be 3-5 characters!");
+    return;
+  }
+  
+  if (!name || name.length > 20) {
+    showToast("Name must be 1-20 characters!");
+    return;
+  }
+  
+  if (!description || description.length < 10 || description.length > 250) {
+    showToast("Description must be 10-250 characters!");
+    return;
+  }
+  
+  if (!supply || supply < 100 || supply > 99999) {
+    showToast("Supply must be between 100 and 99999!");
+    return;
+  }
+  
+  if (d.tokens < 899) {
+    showToast("Need 899 KSPT to create a personal token!");
+    return;
+  }
+  
+  // Get uploaded image or use default
+  let icon = 'what.png';
+  const preview = document.getElementById('tokenImagePreview');
+  if (preview && preview.dataset.imageData) {
+    icon = preview.dataset.imageData; // Store data URL
+  }
+  
+  const initialPrice = 899 / supply;
+  
+  if (confirm(`Create token?\n\nTicker: ${ticker}\nName: ${name}\nSupply: ${supply}\nInitial Price: ${initialPrice.toFixed(4)} KSPT\nCost: 899 KSPT`)) {
+    d.tokens -= 899;
+    d.market.personalToken = {
+      ticker: ticker,
+      name: name,
+      description: description,
+      creatorName: d.market.account.name,
+      supply: supply,
+      owned: 0,
+      lastBuyTime: 0,
+      price: initialPrice,
+      history: Array(5).fill(initialPrice),
+      lastUpdate: Date.now(),
+      icon: icon,
+      createdAt: Date.now()
+    };
+    
+    showToast("Personal Token Created!");
+    save();
+    currentMarketView = 'main';
+    updateMarketUI();
+    ui();
+  }
+}
+
+// FIXED: Render trade view without full re-render
 function renderTradeView() {
   const container = document.getElementById("marketContainer");
   if (!container) return;
@@ -2167,6 +2320,12 @@ function renderTradeView() {
     tokenData = d.market.personalToken;
     tokenName = tokenData.ticker || 'PERS';
     tokenIcon = tokenData.icon || 'what.png';
+    // Check if icon is a data URL
+    if (tokenIcon.startsWith('data:')) {
+      // It's a data URL, use it directly
+    } else {
+      // It's a filename, use as is
+    }
   } else {
     return;
   }
@@ -2176,9 +2335,13 @@ function renderTradeView() {
   const colorClass = diff >= 0 ? "price-up" : "price-down";
   const arrow = diff >= 0 ? "▲" : "▼";
   
-  container.innerHTML = `
+  // Check if we need to update or create
+  const newHTML = `
     <div class="top-bar">
-      <img src="${tokenIcon}" onerror="this.src='kspt.png'">
+      ${tokenIcon.startsWith('data:') ? 
+        `<img src="${tokenIcon}" style="width:32px;height:32px;border-radius:50%;" onerror="this.src='kspt.png'">` :
+        `<img src="${tokenIcon}" onerror="this.src='kspt.png'">`
+      }
       <span style="font-weight:bold">${tokenName}</span>
       <img src="iks.png" class="close-x" onclick="closeTrade()">
     </div>
@@ -2204,7 +2367,7 @@ function renderTradeView() {
       </div>
       
       <div class="input-group">
-        <input type="number" id="tradeAmount" placeholder="Amount">
+        <input type="number" id="tradeAmount" placeholder="Amount" value="${tradeInputValue}">
       </div>
       
       <div class="button-row">
@@ -2214,10 +2377,36 @@ function renderTradeView() {
       <div style="text-align:center; font-size:11px; color:#666; margin-top:5px;">
         Buy Limit: ${selectedToken === 'ksptToken' ? '5 - 200' : selectedToken === 'banxToken' ? '0.01 - 50' : '0.1 - 100'} KSPT | Sell Cooldown: 2m
       </div>
+      <div id="buyCooldownInfo" style="text-align:center; font-size:11px; color:#666; margin-top:5px;"></div>
     </div>
   `;
   
+  if (container.innerHTML !== newHTML) {
+    container.innerHTML = newHTML;
+  }
+  
   setTimeout(drawChart, 50);
+  
+  // Update cooldown info
+  updateBuyCooldownInfo();
+}
+
+// NEW: Update buy cooldown info
+function updateBuyCooldownInfo() {
+  const now = Date.now();
+  const timeSinceLastBuy = now - lastMarketBuyTime;
+  const cooldownRemaining = 10000 - timeSinceLastBuy;
+  
+  const cooldownElem = document.getElementById("buyCooldownInfo");
+  if (cooldownElem) {
+    if (cooldownRemaining > 0) {
+      cooldownElem.textContent = `Buy Cooldown: ${(cooldownRemaining/1000).toFixed(1)}s`;
+      cooldownElem.style.color = "#d32f2f";
+    } else {
+      cooldownElem.textContent = "Buy Cooldown: Ready";
+      cooldownElem.style.color = "#2e7d32";
+    }
+  }
 }
 
 // ==========================================
@@ -3083,68 +3272,12 @@ function editAccount() {
   updateMarketUI();
 }
 
+// UPDATED: Create personal token with image upload
 function createPersonalToken() {
-  if (d.market.personalToken) {
-    showToast("You already have a personal token!");
-    return;
-  }
-  
-  if (d.tokens < 899) {
-    showToast("Need 899 KSPT to create a personal token!");
-    return;
-  }
-  
-  let ticker = prompt("Enter token ticker (3-5 characters):", "PERS");
-  if (!ticker || ticker.length < 3 || ticker.length > 5) {
-    showToast("Ticker must be 3-5 characters!");
-    return;
-  }
-  
-  let name = prompt("Enter token name (max 20 characters):", "My Personal Token");
-  if (!name || name.length > 20) {
-    showToast("Name must be 1-20 characters!");
-    return;
-  }
-  
-  let description = prompt("Enter description (10-250 characters):", "A personal token created by me");
-  if (!description || description.length < 10 || description.length > 250) {
-    showToast("Description must be 10-250 characters!");
-    return;
-  }
-  
-  let supply = parseInt(prompt("Enter supply (100-99999):", "1000"));
-  if (!supply || supply < 100 || supply > 99999) {
-    showToast("Supply must be between 100 and 99999!");
-    return;
-  }
-  
-  let initialPrice = 899 / supply;
-  
-  if (confirm(`Create token?\n\nTicker: ${ticker}\nName: ${name}\nSupply: ${supply}\nInitial Price: ${initialPrice.toFixed(4)} KSPT\nCost: 899 KSPT`)) {
-    d.tokens -= 899;
-    d.market.personalToken = {
-      ticker: ticker,
-      name: name,
-      description: description,
-      creatorName: d.market.account.name,
-      supply: supply,
-      owned: 0,
-      lastBuyTime: 0,
-      price: initialPrice,
-      history: Array(5).fill(initialPrice),
-      lastUpdate: Date.now(),
-      icon: "what.png",
-      createdAt: Date.now() // Добавляем время создания
-    };
-    
-    showToast("Personal Token Created!");
-    save();
-    updateMarketUI();
-    ui();
-  }
+  currentMarketView = 'createToken';
+  updateMarketUI();
 }
 
-// Функция удаления персонального токена
 function deletePersonalToken() {
   if (!d.market.personalToken) return;
   
@@ -3184,12 +3317,18 @@ function deletePersonalToken() {
 function openTrade(token) {
   selectedToken = token;
   currentMarketView = 'trade';
+  // Store current input value to prevent flickering
+  const tradeInput = document.getElementById("tradeAmount");
+  if (tradeInput) {
+    tradeInputValue = tradeInput.value;
+  }
   updateMarketUI();
 }
 
 function closeTrade() {
   currentMarketView = 'main';
   selectedToken = null;
+  tradeInputValue = '';
   updateMarketUI();
 }
 
@@ -3275,7 +3414,18 @@ function drawChart() {
   };
 }
 
+// UPDATED: Buy token with 10-second cooldown
 function buyToken() {
+  const now = Date.now();
+  const timeSinceLastBuy = now - lastMarketBuyTime;
+  
+  // Check 10-second cooldown
+  if (timeSinceLastBuy < 10000) {
+    showToast(`Wait ${(10 - timeSinceLastBuy/1000).toFixed(1)} seconds before buying again.`);
+    updateBuyCooldownInfo();
+    return;
+  }
+  
   const input = document.getElementById("tradeAmount");
   if (!input) return;
   
@@ -3311,7 +3461,8 @@ function buyToken() {
   d.tokens -= amountKSPT;
   let tokensBought = amountKSPT / tokenData.price;
   tokenData.owned += tokensBought;
-  tokenData.lastBuyTime = Date.now();
+  tokenData.lastBuyTime = now;
+  lastMarketBuyTime = now; // Set global buy cooldown
   
   let tokenName = selectedToken === 'ksptToken' ? 'KSP Tokens' : selectedToken === 'banxToken' ? 'BANX' : d.market.personalToken.ticker;
   showToast(`Bought ${tokensBought.toFixed(2)} ${tokenName}`);
@@ -3370,6 +3521,7 @@ function sellToken() {
 // ФИКС ОБНОВЛЕНИЯ ЦЕН НА РЫНКЕ
 // ==========================================
 
+// FIXED: Update market prices without causing flickering
 function updateMarketPrices() {
   if (!document.getElementById("market")?.classList.contains("active")) {
     return;
@@ -3377,9 +3529,19 @@ function updateMarketPrices() {
   
   const now = Date.now();
   
-  // Обновляем цены без перерисовки всего экрана
+  // Store input value before updates to prevent reset
+  const tradeInput = document.getElementById("tradeAmount");
+  if (tradeInput) {
+    tradeInputValue = tradeInput.value;
+  }
+  
+  // Update buy cooldown info if in trade view
+  if (currentMarketView === 'trade') {
+    updateBuyCooldownInfo();
+  }
+  
+  // If in main view, update only the price elements
   if (currentMarketView === 'main') {
-    // Обновляем только цену в главном меню
     const ksptPriceElem = document.getElementById("price-ksptToken-value");
     const banxPriceElem = document.getElementById("price-banxToken-value");
     const personalPriceElem = document.getElementById("price-personalToken-value");
@@ -3390,7 +3552,7 @@ function updateMarketPrices() {
       personalPriceElem.textContent = d.market.personalToken.price.toFixed(4);
     }
   } else if (currentMarketView === 'trade' && selectedToken) {
-    // Обновляем только цену в режиме торговли
+    // Update only the price in trade view without full re-render
     let tokenData;
     if (selectedToken === 'ksptToken') {
       tokenData = d.market.ksptToken;
@@ -3413,15 +3575,21 @@ function updateMarketPrices() {
         priceValueElem.textContent = selectedToken === 'ksptToken' ? 
           tokenData.price.toFixed(2) : tokenData.price.toFixed(4);
         
-        // Обновляем класс цвета
+        // Update color class
         priceElem.className = colorClass;
         
-        // Обновляем стрелку в тексте
-        priceElem.innerHTML = `<span id="trade-price-value-${selectedToken}">${selectedToken === 'ksptToken' ? tokenData.price.toFixed(2) : tokenData.price.toFixed(4)}</span> KSPT <span style="font-size:16px">${arrow}</span>`;
+        // Update arrow
+        const arrowSpan = priceElem.querySelector('span[style*="font-size:16px"]');
+        if (arrowSpan) {
+          arrowSpan.textContent = arrow;
+        }
       }
       
-      // Перерисовываем график
-      drawChart();
+      // Redraw chart if it exists
+      const canvas = document.getElementById("priceChart");
+      if (canvas) {
+        drawChart();
+      }
     }
   }
 }
@@ -3445,16 +3613,11 @@ function marketTicker() {
     
     let newPrice = d.market.ksptToken.price + (change * sign);
     if (newPrice < 0.10) newPrice = 0.10;
-    if (newPrice > 4.00) newPrice = 4.00;
+    if (newPrice > 2.80) newPrice = 2.80; // Changed from 4.00 to 2.80
     
     d.market.ksptToken.price = newPrice;
     d.market.ksptToken.history.push(newPrice);
     if (d.market.ksptToken.history.length > 20) d.market.ksptToken.history.shift();
-    
-    // Триггерим обновление UI если рынок открыт
-    if (document.getElementById("market")?.classList.contains("active")) {
-      updateMarketPrices();
-    }
   }
   
   // BANX Token - каждые 20 секунд
@@ -3471,16 +3634,12 @@ function marketTicker() {
     }
     
     let newBanxPrice = d.market.banxToken.price + (banxChange * banxSign);
-    if (newBanxPrice < 0.0001) newBanxPrice = 0.0001;
+    if (newBanxPrice < 0.0007) newBanxPrice = 0.0007; // Changed from 0.0001 to 0.0007
     if (newBanxPrice > 0.01) newBanxPrice = 0.01;
     
     d.market.banxToken.price = newBanxPrice;
     d.market.banxToken.history.push(newBanxPrice);
     if (d.market.banxToken.history.length > 20) d.market.banxToken.history.shift();
-    
-    if (document.getElementById("market")?.classList.contains("active")) {
-      updateMarketPrices();
-    }
   }
   
   // Personal Token - каждые 15-25 секунд
@@ -3505,10 +3664,6 @@ function marketTicker() {
     d.market.personalToken.price = newPersonalPrice;
     d.market.personalToken.history.push(newPersonalPrice);
     if (d.market.personalToken.history.length > 20) d.market.personalToken.history.shift();
-    
-    if (document.getElementById("market")?.classList.contains("active")) {
-      updateMarketPrices();
-    }
   }
 }
 

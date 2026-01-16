@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+d<!DOCTYPE html>
 <html lang="en">
 <head>
 <meta charset="UTF-8">
@@ -101,7 +101,6 @@ body{
   color: #fff;
   font-weight: bold;
   font-size: 24px;
-  pointer-events: none;
   text-shadow: 0 0 3px #000;
   animation: floatUp 0.5s ease-out forwards;
   z-index: 9999;
@@ -1426,6 +1425,14 @@ input:checked + .toggle-slider:before {
        <button id="bg-btn-chrisp" onclick="equipBackground('chrisp')" data-lang-key="locked_buy">Locked (Buy Crypto Cookie Skin)</button>
       </div>
       
+      <!-- NEW: Bandit X Fone background -->
+      <div class="settings-section">
+        <div class="bg-preview" style="background-image: url('xfone.png');"></div>
+        <div class="card-title">Bandit X Fone</div>
+        <div class="card-sub">Unlocks after buying Bandit X skin</div>
+        <button id="bg-btn-xfone" onclick="equipBackground('xfone')">Locked</button>
+      </div>
+      
       <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
   </div>
 </div>
@@ -1527,6 +1534,28 @@ input:checked + .toggle-slider:before {
     <div class="card-title">Crypto Cookie</div>
     <div id="skin-sub-cookie" class="card-sub"></div>
     <button id="skin-cookie" onclick="buySkin('cookie',40780)" data-lang-key="buy">BUY 40,780 KSPT</button>
+  </div>
+
+  <!-- NEW SKINS ADDED HERE -->
+  <div class="card">
+    <img id="skin-img-ruka" src="dontwhat.png" class="card-img">
+    <div class="card-title">Scary palm</div>
+    <div id="skin-sub-ruka" class="card-sub">Clench it into a fist!</div>
+    <button id="skin-ruka" onclick="buySkin('ruka',172080)" data-lang-key="buy">BUY 172,080 KSPT</button>
+  </div>
+
+  <div class="card">
+    <img id="skin-img-banditx" src="dontwhat.png" class="card-img">
+    <div class="card-title">BANX: Bandit X</div>
+    <div id="skin-sub-banditx" class="card-sub">Scary Bandit + Animation + Fone</div>
+    <button id="skin-banditx" onclick="buySkin('banditx',542123)" data-lang-key="buy">BUY 542,123 KSPT</button>
+  </div>
+
+  <div class="card">
+    <img id="skin-img-goldcoin" src="dontwhat.png" class="card-img">
+    <div class="card-title">Default Gold Coin</div>
+    <div id="skin-sub-goldcoin" class="card-sub">the MOST EXSPENSIVE coin in the KSPT.</div>
+    <button id="skin-goldcoin" onclick="buySkin('goldcoin',1120000)" data-lang-key="buy">BUY 1,120,000 KSPT</button>
   </div>
 
   <div class="card" id="skinCardMystic" style="display:none">
@@ -1866,7 +1895,7 @@ const translations = {
     'sell_token': 'Sell ({0})',
     'amount': 'Amount',
     'buy_limit': 'Buy limit: {0} KSPT',
-    'sell_cooldown': 'Sell cooldown: 2m',
+    'sell_cooldown': 'Sell cooldown: 40s',
     'buy_cooldown': 'Buy cooldown: {0}s',
     'buy_cooldown_ready': 'Buy cooldown: Ready',
     'wait_buy': 'Wait {0}s before next buy',
@@ -2101,7 +2130,7 @@ const translations = {
     'sell_token': 'Продать ({0})',
     'amount': 'Количество',
     'buy_limit': 'Лимит покупки: {0} KSPT',
-    'sell_cooldown': 'Перезарядка продажи: 2м',
+    'sell_cooldown': 'Перезарядка продажи: 40с',
     'buy_cooldown': 'Перезарядка покупки: {0}с',
     'buy_cooldown_ready': 'Перезарядка покупки: Готово',
     'wait_buy': 'Подождите {0}с до следующей покупки',
@@ -2246,7 +2275,10 @@ function updateSkinTexts() {
     'space': 1210,
     'pixe': 3215,
     'onion': 10110,
-    'cookie': 40780
+    'cookie': 40780,
+    'ruka': 172080,
+    'banditx': 542123,
+    'goldcoin': 1120000
   };
   
   for (let skinId in skinPrice) {
@@ -2391,10 +2423,30 @@ if (window.Telegram?.WebApp){
   Telegram.WebApp.expand();
 }
 
-// Global audio object for music
-window.appMusic = new Audio();
+// BUG FIX 1: Music autoplay - Create persistent audio element with proper initialization
+window.appMusic = window.appMusic || new Audio();
 window.appMusic.loop = true;
-window.appMusic.volume = 0.5;
+window.appMusic.preload = 'auto';
+window.appMusic.volume = 0.6;
+
+function ensureMusicPlays() {
+  try {
+    const audioFile = musicMap[d.music] || musicMap['mistic'];
+    if (window.appMusic.src.indexOf(audioFile) === -1) window.appMusic.src = audioFile;
+    if (!d.musicMuted) {
+      window.appMusic.play().catch(() => {
+        // user gesture required — resume on first tap/click
+        const resume = () => {
+          window.appMusic.play().catch(()=>{});
+          document.removeEventListener('click', resume);
+          document.removeEventListener('touchstart', resume);
+        };
+        document.addEventListener('click', resume, { once: true });
+        document.addEventListener('touchstart', resume, { once: true });
+      });
+    }
+  } catch(e) { console.warn('ensureMusicPlays:', e); }
+}
 
 // NEW: Separate audio object for previews
 window.previewAudio = new Audio();
@@ -2737,7 +2789,11 @@ const SKIN_INCOME = {
   seri: 5,
   mystic: 15,
   capsule: 10,
-  artem: 5
+  artem: 5,
+  // NEW SKINS INCOMES
+  ruka: 170,
+  banditx: 210,
+  goldcoin: 250
 };
 
 // Card data - UPDATED WITH EXACT VALUES
@@ -2813,14 +2869,8 @@ function processOfflineIncome() {
     d.lastLogin = now;
     save();
     
-    // Auto-play music after offline
-    if (!d.musicMuted && d.music && window.appMusic) {
-      const audioFile = musicMap[d.music];
-      if (audioFile) {
-        window.appMusic.src = audioFile;
-        window.appMusic.play().catch(e => console.log("Audio autoplay after offline:", e));
-      }
-    }
+    // BUG FIX 1: Use ensureMusicPlays instead of direct play
+    ensureMusicPlays();
   } catch(e) {
     console.error("Offline Process Error", e);
   }
@@ -3094,7 +3144,11 @@ function getSkinImage(skinId, euroVar = 1, artemVar = 0) {
     'seri': 'seri.png',
     'capsule': 'capskine.png',
     'mystic': 'piece.png',
-    'artem': artemVar === 1 ? 'artem1.png' : 'artem.png'
+    'artem': artemVar === 1 ? 'artem1.png' : 'artem.png',
+    // NEW SKINS IMAGES
+    'ruka': 'ruka.png',
+    'banditx': 'banditx.png',
+    'goldcoin': 'goldcoin.png'
   };
   return skinImages[skinId] || 'kspt.png';
 }
@@ -3128,7 +3182,7 @@ function applySkin(skinId, variant = null) {
   // Check if skin is owned
   if (skinId !== 'default' && !d.skins[skinId]) {
     // Skin not owned, try to buy it
-    const prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240, euro:780, space:1210, kostia:0, pixe:3215, onion:10110, cookie:40780, metka:0, seri:0, mystic:0, capsule:0, artem:0};
+    const prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240, euro:780, space:1210, kostia:0, pixe:3215, onion:10110, cookie:40780, metka:0, seri:0, mystic:0, capsule:0, artem:0, ruka:172080, banditx:542123, goldcoin:1120000};
     const price = prices[skinId] || 0;
     
     if (price > 0 && d.tokens >= price) {
@@ -3182,6 +3236,12 @@ function applySkin(skinId, variant = null) {
     d.ownedBgs.push('bug');
   }
   
+  // FIX 4: Auto-unlock xfone background for banditx skin
+  if (skinId === 'banditx' && !d.ownedBgs.includes('xfone')) {
+    d.ownedBgs.push('xfone');
+    showToast('xfone.png background unlocked!');
+  }
+  
   save();
   ui();
 }
@@ -3191,11 +3251,11 @@ function switchVariant(skinId) {
   if (skinId === 'euro') {
     d.euroVar = d.euroVar === 1 ? 2 : 1;
     applySkin('euro', d.euroVar);
-    showToast(`Euro Coin variant ${d.euroVar} selected`);
+    // FIX 2: Removed toast message
   } else if (skinId === 'artem') {
     d.artemVar = d.artemVar === 0 ? 1 : 0;
     applySkin('artem', d.artemVar);
-    showToast(`Artem variant ${d.artemVar + 1} selected`);
+    // FIX 2: Removed toast message
   }
   save();
   ui();
@@ -3253,6 +3313,7 @@ function handleSkinAnimation() {
       else if (cstage === 1) coin.src = "cook1.png";
       else if (cstage === 2) coin.src = "cook2.png";
       break;
+    // BUG FIX 2: Add cases for euro and artem
     case "artem":
       coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
       coin.src = coin.dataset.toggle === "1" ? "artem1.png" : "artem.png";
@@ -3260,6 +3321,15 @@ function handleSkinAnimation() {
     case "euro":
       coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
       coin.src = coin.dataset.toggle === "1" ? "e2.png" : "e1.png";
+      break;
+    // NEW SKINS ANIMATIONS
+    case "ruka":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "ruka1.png" : "ruka.png";
+      break;
+    case "banditx":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "banditx1.png" : "banditx.png";
       break;
     default:
       break;
@@ -3283,7 +3353,7 @@ function updateSkinButtons() {
     }
   }
   
-  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "artem"];
+  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "artem", "ruka", "banditx", "goldcoin"];
   
   skins.forEach(s => {
     const button = document.getElementById("skin-" + s);
@@ -3327,7 +3397,7 @@ function updateSkinButtons() {
       button.className = "";
       button.onclick = () => applySkin(s);
     } else {
-      const prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240, euro:780, space:1210, kostia:0, pixe:3215, onion:10110, cookie:40780, metka:0, seri:0, mystic:0, capsule:0, artem:0};
+      const prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240, euro:780, space:1210, kostia:0, pixe:3215, onion:10110, cookie:40780, metka:0, seri:0, mystic:0, capsule:0, artem:0, ruka:172080, banditx:542123, goldcoin:1120000};
       
       if (s === "mystic") {
         button.textContent = d.puzzleDone ? t('select') : t('locked_complete');
@@ -3379,7 +3449,11 @@ function updateSkinPreviews() {
     'kostia': 'kostia.png',
     'metka': 'metka.png',
     'seri': 'seri.png',
-    'artem': 'artem.png'
+    'artem': 'artem.png',
+    // NEW SKINS PREVIEWS
+    'ruka': 'ruka.png',
+    'banditx': 'banditx.png',
+    'goldcoin': 'goldcoin.png'
   };
   
   for (const [skin, img] of Object.entries(skinImageMap)) {
@@ -3454,6 +3528,11 @@ function updateBackground() {
         break;
       case "chrisp":
         body.style.backgroundImage = "url('chrisp.png')";
+        body.style.backgroundColor = "transparent";
+        break;
+      // NEW BACKGROUND: xfone.png for banditx skin
+      case "xfone":
+        body.style.backgroundImage = "url('xfone.png')";
         body.style.backgroundColor = "transparent";
         break;
       default:
@@ -3895,7 +3974,9 @@ function updatePuzzleUI() {
   }
   
   const statusElem = document.getElementById("puzzleStatus");
-  if (statusElem) statusElem.textContent = formatTemplate(t('owned'), [ownedCount, 9]);
+  // FIX 1: Use formatTemplate for placeholder
+  const ownedText = t('owned'); // This returns "Owned: {0}/9"
+  if (statusElem) statusElem.textContent = ownedText.replace('{0}', ownedCount);
   
   const fullImg = document.getElementById("puzzleFull");
   const completedText = document.getElementById("puzzleCompletedText");
@@ -3976,6 +4057,7 @@ function updateSettingsUI() {
     buttonVibToggle.checked = d.settings.vibration.buttonsEnabled;
   }
   
+  // FIX 4: Added xfone to bgButtons array
   const bgButtons = [
     {id: 'bg-btn-default', key: 'default', price: 0},
     {id: 'bg-btn-forest', key: 'forest', price: 320},
@@ -3983,7 +4065,8 @@ function updateSettingsUI() {
     {id: 'bg-btn-ric', key: 'ric', price: 5120},
     {id: 'bg-btn-heaven', key: 'heaven', price: 0},
     {id: 'bg-btn-bug', key: 'bug', price: 0},
-    {id: 'bg-btn-chrisp', key: 'chrisp', price: 0}
+    {id: 'bg-btn-chrisp', key: 'chrisp', price: 0},
+    {id: 'bg-btn-xfone', key: 'xfone', price: 0}
   ];
   
   bgButtons.forEach(bg => {
@@ -4024,6 +4107,22 @@ function updateSettingsUI() {
           }
         } else {
           btn.textContent = t('locked_buy_cookie');
+          btn.className = "owned";
+          btn.onclick = null;
+        }
+      } else if (bg.key === 'xfone') {
+        if (d.skins && d.skins['banditx']) {
+          if (d.bg === 'xfone') {
+            btn.textContent = t('selected');
+            btn.className = "active";
+            btn.onclick = null;
+          } else {
+            btn.textContent = t('select');
+            btn.className = "";
+            btn.onclick = () => equipBackground('xfone');
+          }
+        } else {
+          btn.textContent = 'Locked (Buy Bandit X Skin)';
           btn.className = "owned";
           btn.onclick = null;
         }
@@ -4545,7 +4644,7 @@ function renderTradeView() {
         <button style="background:#d32f2f" onclick="sellToken()">${sellButtonText}</button>
       </div>
       <div style="text-align:center; font-size:11px; color:#666; margin-top:5px;">
-        ${formatTemplate(t('buy_limit'), [selectedToken === 'ksptToken' ? '5 - 200' : selectedToken === 'banxToken' ? '0.01 - 50' : selectedToken === 'jvmToken' ? '5 - 250' : '0.1 - 100'])} | ${t('sell_cooldown')} 2m
+        ${formatTemplate(t('buy_limit'), [selectedToken === 'ksptToken' ? '5 - 200' : selectedToken === 'banxToken' ? '0.01 - 50' : selectedToken === 'jvmToken' ? '5 - 250' : '0.1 - 100'])} | ${t('sell_cooldown')}
       </div>
       <div id="buyCooldownInfo" style="text-align:center; font-size:11px; color:#666; margin-top:5px;"></div>
     </div>
@@ -5194,7 +5293,8 @@ function buyToken() {
 
 function sellToken() {
   const now = Date.now();
-  const cooldown = 2 * 60 * 1000;
+  // FIX 6: Changed from 2 minutes (120000) to 40 seconds (40000)
+  const cooldown = 40000;
   
   let tokenData = getTokenData();
   if (!tokenData) return;
@@ -5436,6 +5536,13 @@ document.getElementById('coin')?.addEventListener('touchstart', function(e) {
 
 const coin = document.getElementById('coin');
 if (coin) {
+  // FIX 2 & 3: Remove/disable variant switching on main coin
+  // remove/disable variant switching on main coin
+  // coin.addEventListener('click', () => {
+  //   if (d.skin === 'euro') switchVariant('euro');
+  //   else if (d.skin === 'artem') switchVariant('artem');
+  // });
+  
   coin.addEventListener("touchstart", () => {
     if (d.vibration === "off") return;
     if (d.settings && d.settings.vibration && !d.settings.vibration.tapsEnabled) return;
@@ -5627,6 +5734,15 @@ function buySkin(s, cost) {
     return;
   }
   
+  // SPECIAL HANDLING FOR BANDITX SKIN
+  if (s === 'banditx') {
+    const banxOwned = d.market?.banxToken?.owned || 0;
+    if (banxOwned < 10000) {
+      showToast("You need at least 10,000 BANX to buy this skin");
+      return;
+    }
+  }
+  
   // Handle discounts
   let actualCost = cost;
   if (d.bonuses.discounts && d.bonuses.discounts[s] && Date.now() < d.bonuses.discounts[s]) {
@@ -5656,6 +5772,11 @@ function buySkin(s, cost) {
   if (s === 'pixe' && !d.ownedBgs.includes('bug')) {
     d.ownedBgs.push('bug');
     showToast(t('bonus_bg_pixel'));
+  }
+  // FIX 4: Auto-unlock xfone background for banditx skin
+  if (s === 'banditx' && !d.ownedBgs.includes('xfone')) {
+    d.ownedBgs.push('xfone');
+    showToast('xfone.png background unlocked!');
   }
   
   showToast(t('purchase_success'));
@@ -5737,8 +5858,9 @@ function buySportCard(index) {
   ui();
 }
 
+// FIX 7: Fixed buyGameCard function parameter issue
 function buyGameCard(index) {
-  const key = "g" + index;
+  const key = "g" + index; // Fixed: use index parameter instead of undefined variable i
   const lvl = d.cards[key];
   const data = CARDS[key].levels;
   
@@ -5982,7 +6104,7 @@ function checkPromo() {
     }
     d.capsule.lastOpen = 0;
     d.bonuses.usedFuse = true;
-    message = t('promo_fuse');
+    message = t('promo_skipfuse');
   } else if (code === "kostia") {
     if (!d.skins.kostia) {
       d.skins.kostia = 1;
@@ -5998,7 +6120,7 @@ function checkPromo() {
       d.skins.seri = 1;
       message = "Seri skin unlocked!";
     }
-  } else if (code === "artem") {
+  } else if (code === "artem" || code === "arteshaurm" || code === "arteshaurm2025" || code === "artes") {
     if (!d.skins.artem) {
       d.skins.artem = 1;
       message = "Artem skin unlocked!";
@@ -6454,14 +6576,8 @@ function initGame() {
     }
   });
 
-  // Start playing music if not muted
-  if (!d.musicMuted && d.music) {
-    const audioFile = musicMap[d.music];
-    if (audioFile) {
-      window.appMusic.src = audioFile;
-      window.appMusic.play().catch(e => console.log("Audio play failed (user gesture required):", e));
-    }
-  }
+  // BUG FIX 1: Use ensureMusicPlays instead of direct play
+  ensureMusicPlays();
 
   // Auto-save every 30 seconds
   setInterval(save, 30000);

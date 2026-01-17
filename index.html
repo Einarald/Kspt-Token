@@ -2240,6 +2240,7 @@ function updateAllTexts() {
   
   // Update card texts
   updateCardTexts();
+  updateCardUI();
   
   // Update bet button texts
   updateBetButtonsText();
@@ -2350,7 +2351,9 @@ function updateCardTexts() {
   // Company cards
   for (let i = 1; i <= 5; i++) {
     const key = "c" + i;
-    const lvl = d.cards[key];
+    const rawLvl = d.cards ? d.cards[key] : undefined;
+    let lvl = Number(rawLvl);
+    if (isNaN(lvl)) lvl = -1;
     const data = CARDS[i].levels;
     
     const txtLvl = document.getElementById("c" + i + "_lvl");
@@ -2725,6 +2728,9 @@ function migrateData(oldData, defaultData) {
   if (!merged.bonuses) merged.bonuses = defaultData.bonuses;
   if (!merged.market) merged.market = defaultData.market;
   if (!merged.settings) merged.settings = defaultData.settings;
+  
+  if (!merged.cards) merged.cards = {};
+
   if (!merged.cards.s1) merged.cards.s1 = -1;
   if (!merged.cards.s2) merged.cards.s2 = -1;
   if (!merged.cards.s3) merged.cards.s3 = -1;
@@ -2733,6 +2739,12 @@ function migrateData(oldData, defaultData) {
   if (!merged.cards.g1) merged.cards.g1 = -1;
   if (!merged.cards.g2) merged.cards.g2 = -1;
   if (!merged.cards.g3) merged.cards.g3 = -1;
+  if (!merged.cards.c1) merged.cards.c1 = -1;
+  if (!merged.cards.c2) merged.cards.c2 = -1;
+  if (!merged.cards.c3) merged.cards.c3 = -1;
+  if (!merged.cards.c4) merged.cards.c4 = -1;
+  if (!merged.cards.c5) merged.cards.c5 = -1;
+
   if (!merged.lang) merged.lang = 'en';
   
   if (merged.market.ksptToken && !merged.market.ksptToken.lastUserBuyPrice) {
@@ -3749,13 +3761,18 @@ function showCardTab(tab) {
   
   // Render cards for this tab
   renderCardsTab(tab);
+  updateCardTexts();
+  updateCardUI();
+
 }
 
 function updateCardUI() {
   // Company cards
   for (let i = 1; i <= 5; i++) {
     const key = "c" + i;
-    const lvl = d.cards[key];
+    const rawLvl = d.cards ? d.cards[key] : undefined;
+    let lvl = Number(rawLvl);
+    if (isNaN(lvl)) lvl = -1;
     const data = CARDS[i].levels;
     const btn = document.getElementById("btn_c" + i);
     const txtLvl = document.getElementById("c" + i + "_lvl");
@@ -6596,3 +6613,6 @@ initGame();
 </script>
 </body>
 </html>
+
+
+

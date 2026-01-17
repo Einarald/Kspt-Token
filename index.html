@@ -1539,7 +1539,7 @@ input:checked + .toggle-slider:before {
   <!-- NEW SKINS ADDED HERE -->
   <div class="card">
     <img id="skin-img-ruka" src="dontwhat.png" class="card-img">
-    <div class="card-title">Scary palm</div>
+    <div class="card-title">Scary Palm</div>
     <div id="skin-sub-ruka" class="card-sub">Clench it into a fist!</div>
     <button id="skin-ruka" onclick="buySkin('ruka',172080)" data-lang-key="buy">BUY 172,080 KSPT</button>
   </div>
@@ -1671,7 +1671,7 @@ input:checked + .toggle-slider:before {
   <div class="card">
     <div class="card-title" data-lang-key="bet">Bet</div>
     <div class="input-group">
-      <input id="betAmount" type="number" placeholder="1–30" readonly>
+      <input id="betAmount" type="number" placeholder="1–30" readonly onfocus="showCustomKeyboard(this)">
       <button class="max-btn" onclick="setMaxBet()" data-lang-key="max">MAX</button>
     </div>
     
@@ -1860,7 +1860,8 @@ const translations = {
     // Capsule
     'ancient_puzzle': 'Ancient Puzzle',
     'puzzle_desc': 'Collect all 9 pieces to unlock Hamster Piece Skin!',
-    'owned': 'Owned: {0}/9',
+    'owned_progress': 'Owned: {0}/9',
+    'owned_simple': 'Owned',
     'place_pieces': 'Place Available Pieces',
     'puzzle_completed': 'A new puzzle will appear soon!',
     'mystery_capsule': 'Mystery Capsule',
@@ -3974,10 +3975,8 @@ function updatePuzzleUI() {
   }
   
   const statusElem = document.getElementById("puzzleStatus");
-  // FIX 1: Use formatTemplate for placeholder
-  const ownedText = t('owned'); // This returns "Owned: {0}/9"
-  if (statusElem) statusElem.textContent = ownedText.replace('{0}', ownedCount);
-  
+  if (statusElem) statusElem.textContent = formatTemplate(t('owned_progress'), [ownedCount]);
+
   const fullImg = document.getElementById("puzzleFull");
   const completedText = document.getElementById("puzzleCompletedText");
   const placeBtn = document.getElementById("btnPlacePiece");
@@ -4631,7 +4630,7 @@ function renderTradeView() {
     <div class="card">
       <div class="card-title">${t('your_holdings')}</div>
       <div class="button-row" style="margin-bottom:10px; border-bottom:1px solid #333; padding-bottom:10px;">
-        <div>${t('owned')}: <span style="color:#ff9800">${tokenData.owned.toFixed(2)}</span></div>
+        <div>${t('owned_simple')}: <span style="color:#ff9800">${tokenData.owned.toFixed(2)}</span></div>
         <div>${t('value')}: ${(tokenData.owned * tokenData.price).toFixed(2)} KSPT</div>
       </div>
       
@@ -6585,7 +6584,7 @@ function initGame() {
   // Auto-update energy based on regeneration multiplier
   setInterval(() => {
     if (d.energy < d.maxEnergy) {
-      const regenRate = 0.1 * d.regenMult; // Base 0.1 per second * multiplier
+      const regenRate = 0.7 * d.regenMult; // Base 0.7 per second * multiplier
       d.energy = Math.min(d.maxEnergy, d.energy + regenRate);
       ui();
     }
@@ -6597,4 +6596,3 @@ initGame();
 </script>
 </body>
 </html>
-

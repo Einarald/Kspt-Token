@@ -6082,27 +6082,34 @@ function cancelBet() {
 function checkPromo() {
   const input = document.getElementById("promoInput");
   if (!input) return;
-  
+
   const code = input.value.trim().toLowerCase();
-  
+
+  // защита от отсутствия массивов/объектов
+  if (!d.usedCodes) d.usedCodes = [];
+  if (!d.bonuses) d.bonuses = {};
+  if (!d.skins) d.skins = {};
+  if (!d.capsule) d.capsule = {};
+
   if (d.usedCodes.includes(code)) {
     showToast(t('promo_already_used'));
     input.value = "";
     return;
   }
-  
+
   let reward = 0;
   let message = "";
-  
-  if (code === "bezbags") {
-    if (d.bonuses.usedBezBags) {
+
+  if (code === "einarald") {
+    if (d.bonuses.usedEinarald) {
       showToast(t('promo_already_used'));
       input.value = "";
       return;
     }
-    reward = 50;
-    d.bonuses.usedBezBags = true;
+    reward = 10;
+    d.bonuses.usedEinarald = true;
     message = `+${reward} KSPT!`;
+
   } else if (code === "skipfuse") {
     if (d.bonuses.usedSkipFuse) {
       showToast(t('promo_already_used'));
@@ -6112,6 +6119,7 @@ function checkPromo() {
     d.capsule.lastOpen = 0;
     d.bonuses.usedSkipFuse = true;
     message = t('promo_skipfuse');
+
   } else if (code === "fuse") {
     if (d.bonuses.usedFuse) {
       showToast(t('promo_already_used'));
@@ -6121,57 +6129,87 @@ function checkPromo() {
     d.capsule.lastOpen = 0;
     d.bonuses.usedFuse = true;
     message = t('promo_skipfuse');
+
   } else if (code === "kostia") {
     if (!d.skins.kostia) {
       d.skins.kostia = 1;
       message = "Kostia skin unlocked!";
+    } else {
+      showToast(t('promo_already_used'));
+      input.value = "";
+      return;
     }
+
   } else if (code === "metka") {
     if (!d.skins.metka) {
       d.skins.metka = 1;
       message = "Metka skin unlocked!";
+    } else {
+      showToast(t('promo_already_used'));
+      input.value = "";
+      return;
     }
+
   } else if (code === "seri") {
     if (!d.skins.seri) {
       d.skins.seri = 1;
       message = "Seri skin unlocked!";
+    } else {
+      showToast(t('promo_already_used'));
+      input.value = "";
+      return;
     }
+
   } else if (code === "artem" || code === "arteshaurm" || code === "arteshaurm2025" || code === "artes") {
     if (!d.skins.artem) {
       d.skins.artem = 1;
       message = "Artem skin unlocked!";
+    } else {
+      showToast(t('promo_already_used'));
+      input.value = "";
+      return;
     }
+
   } else if (code === "25off") {
     d.bonuses.offline25 = true;
     message = "+25% next offline bonus!";
+
   } else if (code === "discount15") {
-    const skins = ["what", "burger", "joost", "dog", "diam", "tung", "euro", "space", "pixe", "onion", "cookie"];
+    const skins = ["what", "burger"];
+    if (!d.bonuses.discounts) d.bonuses.discounts = {};
     skins.forEach(s => {
       d.bonuses.discounts[s] = Date.now() + 24 * 60 * 60 * 1000;
     });
     message = "15% discount on all skins for 24h!";
+
   } else if (code === "energyx2") {
     d.bonuses.tap2x = { active: true, end: Date.now() + 2 * 60 * 60 * 1000 };
     message = "x2 tap boost for 2 hours!";
+
   } else if (code === "tap2x") {
     d.bonuses.tap2x = { active: true, end: Date.now() + 30 * 60 * 1000 };
     message = "x2 tap boost for 30 minutes!";
+
   } else {
     showToast("Invalid code");
     input.value = "";
     return;
   }
-  
-  d.tokens += reward;
+
+  // apply reward if any
+  if (reward && typeof reward === "number" && reward > 0) {
+    d.tokens = (d.tokens || 0) + reward;
+  }
+
   d.usedCodes.push(code);
-  
+
   showToast(message);
   input.value = "";
   save();
   ui();
 }
 
-// ==========================================
+ // ==========================================
 // CAPSULE FUNCTIONS - UPDATED WITH FIXES
 // ==========================================
 
@@ -6613,6 +6651,5 @@ initGame();
 </script>
 </body>
 </html>
-
 
 

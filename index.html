@@ -130,7 +130,7 @@
   <div class="top-bar">
     <img src="kspt.png">
     <span id="balanceCapsule"></span>
-    <img src="iks.png" class="close-x" onclick="openScreen('game')">
+    <img src="iks.png" class="close-x" onclick="openScreen('main')">
   </div>
 
   <div class="card">
@@ -157,6 +157,42 @@
         </div>
     </div>
   </div>
+
+<!-- Второй (кошачий) пазл: скрыт по умолчанию -->
+<div class="card" id="secondPuzzleCard" style="display:none;">
+  <div class="card-title" data-lang-key="cat_puzzle">Cat Puzzle</div>
+  <div class="card-sub" data-lang-key="cat_puzzle_desc">
+    Collect all 9 pieces to unlock the Cat: KSPT skin!
+  </div>
+  <div class="puzzle-container">
+    <div class="puzzle-grid">
+      <img src="pazlik.png" id="puzzleFull2" class="puzzle-full-img" style="display:none;">
+      <!-- части пазла 11–19 -->
+      <div class="puzzle-cell" id="pz2_1"><img src="pazl11.png" onerror="this.src='dontwhat.png'"></div>
+      <div class="puzzle-cell" id="pz2_2"><img src="pazl12.png" onerror="this.src='dontwhat.png'"></div>
+      <div class="puzzle-cell" id="pz2_3"><img src="pazl13.png" onerror="this.src='dontwhat.png'"></div>
+      <div class="puzzle-cell" id="pz2_4"><img src="pazl14.png" onerror="this.src='dontwhat.png'"></div>
+      <div class="puzzle-cell" id="pz2_5"><img src="pazl15.png" onerror="this.src='dontwhat.png'"></div>
+      <div class="puzzle-cell" id="pz2_6"><img src="pazl16.png" onerror="this.src='dontwhat.png'"></div>
+      <div class="puzzle-cell" id="pz2_7"><img src="pazl17.png" onerror="this.src='dontwhat.png'"></div>
+      <div class="puzzle-cell" id="pz2_8"><img src="pazl18.png" onerror="this.src='dontwhat.png'"></div>
+      <div class="puzzle-cell" id="pz2_9"><img src="pazl19.png" onerror="this.src='dontwhat.png'"></div>
+    </div>
+    <div class="puzzle-controls">
+      <div id="puzzleStatus2" class="card-sub" style="margin-bottom:10px;"
+           data-lang-key="owned_progress">Owned: 0/9</div>
+      <button id="btnPlacePiece2" onclick="placePuzzlePieces2()"
+              style="display:none;" data-lang-key="place_pieces">
+        Place Available Pieces
+      </button>
+      <div id="puzzleCompletedText2"
+           style="display:none; color:#ff9800; font-weight:bold; margin-top:10px;"
+           data-lang-key="puzzle_completed2">
+        More puzzles coming soon!
+      </div>
+    </div>
+  </div>
+</div>
 
   <div class="card capsule-info">
     <img src="capsule.png" class="capsule-img-small">
@@ -247,7 +283,7 @@
             <button id="vib-med" onclick="setVibration('medium')" style="width:23%; padding:8px; font-size:12px;" data-lang-key="medium">Med</button>
             <button id="vib-str" onclick="setVibration('strong')" style="width:23%; padding:8px; font-size:12px;" data-lang-key="strong">Strong</button>
         </div>
-        
+
         <div class="settings-checkbox" style="margin-top:15px;">
           <div style="flex:1;">
             <label for="toggleTapVib" data-lang-key="tap_vibration">Tap vibration</label>
@@ -276,46 +312,71 @@
         <div class="card-sub" data-lang-key="game_soundtrack">Game Soundtrack</div>
         <button id="music-stop" onclick="stopMusic()" style="margin-bottom:10px; background:#444;" data-lang-key="disable_music">Disable Music</button>
         
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px;">
-            <img src="mistic.png" style="width:30px; height:30px; border-radius:5px;">
-            <div style="flex:1;">
-                <div style="font-weight:bold; font-size:14px;">Mystic Wild West</div>
-                <div style="font-size:11px; opacity:0.6;" data-lang-key="default">Default</div>
-            </div>
-            <button onclick="previewMusic('mistic')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;" data-lang-key="preview">Play 15s</button>
-            <button id="btn-music-mistic" onclick="setMusic('mistic')" style="width:auto; padding:5px 10px; font-size:11px;" data-lang-key="select">Select</button>
-        </div>
+        <!-- Блок для Mystic Wild West -->
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px;">
+    <img src="mistic.png" style="width:30px; height:30px; border-radius:5px;">
+    <div style="flex:1;">
+        <div style="font-weight:bold; font-size:14px;">Mystic Wild West</div>
+        <div style="font-size:11px; opacity:0.6;" data-lang-key="default">Default</div>
+    </div>
+    <button onclick="previewMusic('mistic')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;" data-lang-key="preview">Play 15s</button>
+    <button id="btn-music-mistic" style="width:auto; padding:5px 10px; font-size:11px;">Select</button>
+</div>
 
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px;">
-            <img src="gabber.png" style="width:30px; height:30px; border-radius:5px;">
-            <div style="flex:1;">
-                <div style="font-weight:bold; font-size:14px;">Victory Europop</div>
-                <div style="font-size:11px; opacity:0.6;" data-lang-key="price">Price: 210 KSPT</div>
-            </div>
-             <button onclick="previewMusic('gabber')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;" data-lang-key="preview">Play 15s</button>
-            <button id="btn-music-gabber" onclick="buyMusic('gabber', 210)" style="width:auto; padding:5px 10px; font-size:11px;" data-lang-key="buy">Buy</button>
-        </div>
+<!-- Блок для Victory Europop -->
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px;">
+  <img src="gabber.png" style="width:30px; height:30px; border-radius:5px;">
+  <div style="flex:1;">
+    <div style="font-weight:bold; font-size:14px;">Victory Europop</div>
+    <div style="font-size:11px; opacity:0.6;" data-lang-key="price">Price: 210 KSPT</div>
+  </div>
+  <button onclick="previewMusic('gabber')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;" data-lang-key="preview">Play 15s</button>
+  <button id="btn-music-gabber" onclick="buyMusic('gabber', 210)" style="width:auto; padding:5px 10px; font-size:11px;" data-lang-key="buy">Buy</button>
+</div>
 
-        <div id="music-onion-row" style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px; display:none;">
-            <img src="onion.png" style="width:30px; height:30px; border-radius:5px;">
-             <div style="flex:1;">
-                <div style="font-weight:bold; font-size:14px;">Funny Onion Song</div>
-                <div style="font-size:11px; opacity:0.6;" data-lang-key="exclusive">Exclusive</div>
-            </div>
-             <button onclick="previewMusic('onion')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;" data-lang-key="preview">Play 15s</button>
-            <button id="btn-music-onion" onclick="setMusic('onion')" style="width:auto; padding:5px 10px; font-size:11px;" data-lang-key="select">Select</button>
-        </div>
-        
-        <div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px;">
-            <img src="calm.png" style="width:30px; height:30px; border-radius:5px;">
-             <div style="flex:1;">
-                <div style="font-weight:bold; font-size:14px;">Calm + Hush</div>
-                <div style="font-size:11px; opacity:0.6;" data-lang-key="capsule_exclusive">Capsule Exclusive</div>
-            </div>
-             <button onclick="previewMusic('calm')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;" data-lang-key="preview">Play 15s</button>
-            <button id="btn-music-calm" onclick="setMusic('calm')" style="width:auto; padding:5px 10px; font-size:11px;" data-lang-key="locked">Locked</button>
-        </div>
+<div id="music-onion-row" style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px; display:none;">
+  <img src="onion.png" style="width:30px; height:30px; border-radius:5px;">
+   <div style="flex:1;">
+    <div style="font-weight:bold; font-size:14px;">Funny Onion Song</div>
+    <div style="font-size:11px; opacity:0.6;" data-lang-key="exclusive">Exclusive</div>
+  </div>
+   <button onclick="previewMusic('onion')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;" data-lang-key="preview">Play 15s</button>
+  <button id="btn-music-onion" onclick="setMusic('onion')" style="width:auto; padding:5px 10px; font-size:11px;" data-lang-key="select">Select</button>
+</div>
 
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px;">
+  <img src="calm.png" style="width:30px; height:30px; border-radius:5px;">
+   <div style="flex:1;">
+    <div style="font-weight:bold; font-size:14px;">Calm + Hush</div>
+    <div style="font-size:11px; opacity:0.6;" data-lang-key="capsule_exclusive">Capsule Exclusive</div>
+  </div>
+   <button onclick="previewMusic('calm')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;" data-lang-key="preview">Play 15s</button>
+  <button id="btn-music-calm" onclick="setMusic('calm')" style="width:auto; padding:5px 10px; font-size:11px;" data-lang-key="locked">Locked</button>
+</div>
+
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px;">
+  <img src="siulaisong.png" style="width:30px; height:30px; border-radius:5px;">
+  <div style="flex:1;">
+    <div style="font-weight:bold; font-size:14px;">Cat's Yarn</div>
+    <div style="font-size:11px; opacity:0.6;" data-lang-key="locked">Locked</div>
+  </div>
+  <button onclick="previewMusic('siulai')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;"
+          data-lang-key="preview">Play 15s</button>
+  <button id="btn-music-siulai" onclick="setMusic('siulai')"
+          style="width:auto; padding:5px 10px; font-size:11px;"
+          data-lang-key="select">Select</button>
+</div>
+
+<!-- Блок для LOL Song (теперь самый последний) -->
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px;">
+  <img src="funny.png" style="width:30px; height:30px; border-radius:5px;">
+  <div style="flex:1;">
+    <div style="font-weight:bold; font-size:14px;" data-lang-key="lol_song">LOL Song</div>
+    <div style="font-size:11px; opacity:0.6;" data-lang-key="capsule_exclusive">Capsule Exclusive</div>
+  </div>
+  <button onclick="previewMusic('funny')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;" data-lang-key="preview">Play 15s</button>
+  <button id="btn-music-funny" class="owned" style="width:auto; padding:5px 10px; font-size:11px;">Locked</button>
+</div>
     </div>
     <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
   </div>
@@ -382,6 +443,21 @@
         <div class="card-sub">Unlocks after buying Bandit X skin</div>
         <button id="bg-btn-xfone" onclick="equipBackground('xfone')">Locked</button>
       </div>
+
+<!-- вставить рядом с другими bg-кнопками -->
+<div class="settings-section">
+  <div class="bg-preview" style="background-image: url('hell.png');"></div>
+  <div class="card-title">Hell</div>
+  <div class="card-sub">Exclusive: Secret Gold Capsule only</div>
+  <button id="bg-btn-hell" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
+</div>
+
+<div class="settings-section">
+  <div class="bg-preview" style="background-image: url('math.png');"></div>
+  <div class="card-title">Crazy Math</div>
+  <div class="card-sub">Exclusive: Secret Gold Capsule only</div>
+  <button id="bg-btn-math" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
+</div>
       
       <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
   </div>
@@ -515,7 +591,7 @@
     <button id="skin-mystic" onclick="applySkin('mystic')" data-lang-key="locked_complete">LOCKED (Complete Puzzle)</button>
   </div>
 
-  <div class="card" id="skinCardCapsule" style="display:none">
+    <div class="card" id="skinCardCapsule" style="display:none">
     <img id="skin-img-capsule" src="knowdont.png" class="card-img">
     <div class="card-title">Capsule Master</div>
     <div class="card-sub" data-lang-key="price_income">Ultra Rare Capsule Drop (+10 KSPT/h)</div>
@@ -560,6 +636,14 @@
   </div>
 
   <button class="back" onclick="openScreen('main')" data-lang-key="back">Back</button>
+</div>
+
+<div id="capsuleBreakModal" class="modal">
+  <div class="modal-content">
+    <img id="capsuleBreakImg" src="cagold.png" alt="cagold">
+    <div id="capsuleHint"></div>
+    <div id="whiteFade" style="display:none;"></div>
+  </div>
 </div>
 
 <div id="offlineShop" class="screen">
@@ -675,4 +759,3 @@ document.addEventListener('DOMContentLoaded', function() {
 </script>
 </body>
 </html>
-

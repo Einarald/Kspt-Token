@@ -390,6 +390,13 @@ input{
     position: relative;
 }
 
+#puzzleTimer {
+  color: #ff9800;
+  font-weight: bold;
+  margin-top: 10px;
+  text-align: center;
+}
+
 .puzzle-cell {
     width: 80px;
     height: 80px;
@@ -972,6 +979,14 @@ input:checked + .toggle-slider:before {
   margin-bottom: 4px;
 }
 
+/* прячем модал по умолчанию, показываем только если .active */
+#capsuleBreakModal { display: none; position: fixed; inset: 0; align-items: center; justify-content: center; z-index: 9999; }
+#capsuleBreakModal.active { display: flex; }
+/* ограничиваем размер изображения капсулы */
+#capsuleBreakImg { max-width: 520px; width: 60%; height: auto; object-fit: contain; transition: transform .15s ease; }
+/* если картинка позиционируется низом страницы — центрируем её и даём margin */
+#capsuleBreakModal .capsule-center { display:flex; flex-direction:column; align-items:center; justify-content:center; }
+
 .card-item-price {
   font-size: 12px;
   color: #aaa;
@@ -1038,6 +1053,24 @@ input:checked + .toggle-slider:before {
   z-index: 1000;
 }
 
+/* Правильный рендер превью фонов — не сжимать, а центр-кроп (как у Bandit X) */
+.bg-preview, .background-card .card-img {
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+  height: 110px;            /* подбери высоту карточки */
+  width: 100%;
+  display: block;
+  object-fit: cover;        /* на случай, если используется <img> */
+}
+
+/* если используется <img class="card-img"> — не даём ей растягиваться вертикально */
+.background-card img.card-img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+}
+
 .lang-btn {
   padding: 4px 8px;
   background: #333;
@@ -1047,6 +1080,59 @@ input:checked + .toggle-slider:before {
   font-size: 12px;
   cursor: pointer;
 }
+
+/* Исправление отображения превью фонов */
+.bg-preview {
+  background-size: cover !important;
+  background-position: center center !important;
+  background-repeat: no-repeat !important;
+  height: 110px;
+  width: 100%;
+  display: block;
+  object-fit: cover;
+}
+
+.background-card img.card-img {
+  width: 100%;
+  height: 110px;
+  object-fit: cover;
+}
+
+/* Убрать старые стили для hell/math */
+.bg-option {
+  display: none;
+}
+
+/* Золотая капсула - размер как у обычной */
+.gold-capsule {
+  width: 180px !important;
+  height: auto !important;
+}
+
+/* Для модального окна капсулы */
+#capsuleBreakImg {
+    width: 200px; /* или нужный вам размер */
+    height: 200px;
+    object-fit: contain;
+    transition: all 0.2s ease;
+}
+
+/* Для золотой капсулы */
+#capsuleBreakImg.gold-capsule {
+    width: 200px; /* такой же размер как у обычной */
+    height: 200px;
+}
+
+/* Анимация тапа */
+#capsuleBreakImg.tap-anim {
+    transform: scale(0.95);
+}
+
+/* Анимация увеличения при открытии */
+#capsuleBreakImg.zoomed {
+    transform: scale(1.1);
+}
+
 </style>
 </head>
 

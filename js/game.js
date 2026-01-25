@@ -121,7 +121,7 @@ const translations = {
     'current_upgrade': 'Current: +{0}/h → Upgrade: +{1}/h',
     
     // Tech
-    'permanent_x2': 'Permanent x2',
+    'permanent_x2': 'Permanent x2 (Price 5 KSPT)',
     'temporary_overdrive': 'Temporary Overdrive',
     'overdrive_desc': 'x10-x20 Taps for 25+ Seconds',
     'upgrade_energy': 'Upgrade Energy',
@@ -154,7 +154,19 @@ const translations = {
     'open': 'OPEN!',
     'first_open_free': 'First open is free!',
     'wait': 'Wait',
-    
+    'cat_puzzle': 'Cat Puzzle',
+    'cat_puzzle_desc': 'Collect all 9 pieces to unlock the Cat: KSPT skin!',
+    'puzzle_completed2': 'Puzzle complete! Cat: KSPT skin unlocked!',
+    'owned_progress': 'Owned: {0}/9',
+    'gold_capsule_obtained': 'Secret Gold Capsule obtained!',
+    'gold_capsule_name': 'Secret Gold Capsule',
+    'gold_capsule_desc': 'Exclusive one-time capsule. Unlock rare items!',
+    'lol_song': "LOL Song",
+    'bg_hell': 'Hell',
+    'bg_math': 'Crazy Math',
+    'gold_skin_unlocked': 'Gold KSPT unlocked!',
+    'cyber_skin_unlocked': 'KSPT: Cyber Android unlocked!',
+     
     // Market
     'balance': 'Balance: ',
     'offline_rate': 'Offline: {0} KSPT/h',
@@ -357,7 +369,7 @@ const translations = {
     'current_upgrade': 'Текущий: +{0}/ч → Улучшить: +{1}/ч',
     
     // Tech
-    'permanent_x2': 'Постоянное x2',
+    'permanent_x2': 'Постоянное x2 (Цена 5 КСПТ)',
     'temporary_overdrive': 'Временный овердрайв',
     'overdrive_desc': 'x10-x20 тапов на 25+ секунд',
     'upgrade_energy': 'Улучшить энергию',
@@ -380,15 +392,27 @@ const translations = {
     
     // Capsule
     'ancient_puzzle': 'Древний пазл',
-    'puzzle_desc': 'Соберите все 9 частей чтобы разблокировать скин Hamster Piece!',
+    'puzzle_desc': 'Соберите все 9 частей чтобы разблокировать скин «Hamster Piece»!',
     'owned': 'Получено: {0}/9',
     'place_pieces': 'Разместить доступные части',
     'puzzle_completed': 'Скоро появится новый пазл!',
     'mystery_capsule': 'Таинственная капсула',
     'ready': 'Готово к открытию!',
     'open': 'ОТКРЫТЬ!',
-    'first_open_free': 'Первое открытие бесплатно!',
-    'wait': 'Ждать',
+    'first_open_free': 'Первое открытие бесплатно! :3',
+    'wait': 'Ожидайте...',
+    'cat_puzzle': 'Кошачий пазл',
+    'cat_puzzle_desc': 'Соберите все 9 частей, чтобы разблокировать скин «Cat: KSPT»!',
+    'puzzle_completed2': 'Пазл завершен! Скин «Cat: KSPT» разблокирован!',
+    'owned_progress': 'В наличии: {0}/9',
+    'gold_capsule_obtained': 'Золотая капсула получена!',
+    'gold_capsule_name': 'Золотая капсула (Secret Gold)',
+    'gold_capsule_desc': 'Эксклюзивная одноразовая капсула. Открой редкие предметы!',
+    'lol_song': 'РОФЛ Песня',
+    'bg_hell': 'Ад',
+    'bg_math': 'Сумасшедшая математика',
+    'gold_skin_unlocked': 'Скин Gold KSPT разблокирован!',
+    'cyber_skin_unlocked': 'Скин KSPT: Кибер Андроид разблокирован!',
     
     // Market
     'balance': 'Баланс: ',
@@ -747,7 +771,9 @@ const musicMap = {
   'mistic': 'mistic.mp3',
   'gabber': 'gabber.mp3',
   'onion': 'onion.mp3',
-  'calm': 'calm.mp3'
+  'calm': 'calm.mp3',
+  'siulai': 'siulai.mp3',
+  'funny': 'funny.mp3'
 };
 
 // Global variables
@@ -908,6 +934,10 @@ const defaultData = {
   vibration: 'medium',
   puzzles: [0,0,0,0,0,0,0,0,0],
   puzzleDone: false,
+  puzzles2: [0,0,0,0,0,0,0,0,0],
+  puzzle2Done: false,
+  puzzleDoneTime: 0,
+  unbanUsed: false,
   capsule: { lastOpen: 0, firstOpen: true },
   bonuses: { 
     offline25: false, 
@@ -916,6 +946,12 @@ const defaultData = {
     usedBezBags: false,
     usedSkipFuse: false,
     usedFuse: false
+  },
+  goldCapsule: {
+  obtained: false,   // true после ввода промокода
+  opened: false,     // true после открытия
+  taps: 0,           // сколько тапов уже сделано (для продолжения сессии)
+  lastOpen: 0        // время получения/открытия (если нужно)
   },
   music: "mistic",
   ownedMusic: ["mistic"],
@@ -1091,7 +1127,9 @@ const SKIN_INCOME = {
   // NEW SKINS INCOMES
   ruka: 170,
   banditx: 210,
-  goldcoin: 250
+  goldcoin: 250,
+  'gkspt': 10,           
+  'cyber_android': 15
 };
 
 // Card data - UPDATED WITH EXACT VALUES
@@ -1371,6 +1409,7 @@ function ui() {
   updateRegenUI();
   updateCardUI();
   updatePuzzleUI();
+  updateSecondPuzzleUI();
   updateSkinPreviews();
   
   if (!document.getElementById("market")?.classList.contains("active")) {
@@ -1520,6 +1559,24 @@ function applySkin(skinId, variant = null) {
     coin.dataset.mystic = "0";
     coin.dataset.cookStage = "0";
   }
+
+// В месте, где запускается animation timer для скинов
+if (d.skin === 'gkspt') {
+  let frame = 0;
+  window.skinAnimationTimer = setInterval(() => {
+    const img = frame % 2 === 0 ? 'gkspt.png' : 'gkspt1.png';
+    document.getElementById('coin').src = img;
+    frame++;
+  }, 220);
+}
+if (d.skin === 'cyber_android') {
+  let frames = ['robotic.png','robotic1.png','robotic2.png','robotic3.png'];
+  let idx = 0;
+  window.skinAnimationTimer = setInterval(() => {
+    document.getElementById('coin').src = frames[idx % frames.length];
+    idx++;
+  }, 220);
+}
   
   // Auto-unlock backgrounds for certain skins
   if (skinId === 'cookie' && !d.ownedBgs.includes('chrisp')) {
@@ -1827,6 +1884,16 @@ function updateBackground() {
       case "chrisp":
         body.style.backgroundImage = "url('chrisp.png')";
         body.style.backgroundColor = "transparent";
+        break;
+      case 'hell':
+        document.body.style.backgroundImage = "url('hell.png')";
+        document.body.style.backgroundSize = "cover";
+        document.body.style.backgroundPosition = "center";
+        break;
+      case 'math':
+        document.body.style.backgroundImage = "url('math.png')";
+        document.body.style.backgroundSize = "cover";
+        document.body.style.backgroundPosition = "center";
         break;
       // NEW BACKGROUND: xfone.png for banditx skin
       case "xfone":
@@ -2302,6 +2369,80 @@ function updatePuzzleUI() {
   }
 }
 
+function updateSecondPuzzleUI() {
+  const card = document.getElementById("secondPuzzleCard");
+  const statusElem = document.getElementById("puzzleStatus2");
+  const fullImg = document.getElementById("puzzleFull2");
+  const completedText = document.getElementById("puzzleCompletedText2");
+  const placeBtn = document.getElementById("btnPlacePiece2");
+  const now = Date.now();
+
+  if (!d.puzzleDone) {
+    if (card) card.style.display = "none";
+    return;
+  }
+
+  const delay = 24 * 60 * 60 * 1000;
+  const unlockTime = (d.puzzleDoneTime || 0) + delay;
+
+  if (now < unlockTime) {
+    let timer = document.getElementById("puzzleTimer");
+    if (!timer) {
+      timer = document.createElement('div');
+      timer.id = "puzzleTimer";
+      timer.style.cssText = "color:#ff9800; font-weight:bold; margin-top:10px;";
+      const controls = document.querySelector("#pz1")?.closest(".puzzle-controls");
+      if (controls) controls.appendChild(timer);
+    }
+    const remaining = unlockTime - now;
+    const h = String(Math.floor(remaining / 3600000)).padStart(2,'0');
+    const m = String(Math.floor((remaining % 3600000) / 60000)).padStart(2,'0');
+    const s = String(Math.floor((remaining % 60000) / 1000)).padStart(2,'0');
+    timer.textContent = `Next puzzle in ${h}:${m}:${s}`;
+    timer.style.display = "block";
+    if (card) card.style.display = "none";
+    return;
+  }
+
+  if (card) card.style.display = "block";
+  const timerElem = document.getElementById("puzzleTimer");
+  if (timerElem) timerElem.style.display = "none";
+
+  let ownedCount2 = 0;
+  for (let i = 0; i < 9; i++) {
+    const cell = document.getElementById("pz2_" + (i + 1));
+    if (cell) {
+      if (d.puzzles2[i] === 1) {
+        cell.classList.add("filled");
+        ownedCount2++;
+      } else {
+        cell.classList.remove("filled");
+      }
+    }
+  }
+  if (statusElem) statusElem.textContent = `Owned: ${ownedCount2}/9`;
+
+  if (ownedCount2 === 9 && !d.puzzle2Done) {
+    d.puzzle2Done = true;
+    if (!d.skins) d.skins = {};
+    if (!d.skins['cat']) {
+      d.skins['cat'] = 1;
+      showToast(t('puzzle_completed2'));
+      save();
+    }
+  }
+
+  if (d.puzzle2Done) {
+    if (fullImg) fullImg.style.display = "block";
+    if (completedText) completedText.style.display = "block";
+    if (placeBtn) placeBtn.style.display = "none";
+  } else {
+    if (fullImg) fullImg.style.display = "none";
+    if (completedText) completedText.style.display = "none";
+    if (placeBtn) placeBtn.style.display = "inline-block";
+  }
+}
+
 function updateCapsuleUI() {
   const btn = document.getElementById("btnOpenCapsule");
   const txt = document.getElementById("capsuleTimer");
@@ -2367,7 +2508,9 @@ function updateSettingsUI() {
     {id: 'bg-btn-heaven', key: 'heaven', price: 0},
     {id: 'bg-btn-bug', key: 'bug', price: 0},
     {id: 'bg-btn-chrisp', key: 'chrisp', price: 0},
-    {id: 'bg-btn-xfone', key: 'xfone', price: 0}
+    {id: 'bg-btn-xfone', key: 'xfone', price: 0},
+    {id: 'bg-btn-hell', key: 'hell', price: 0},
+    {id: 'bg-btn-math', key: 'math', price: 0}
   ];
   
   bgButtons.forEach(bg => {
@@ -2428,13 +2571,20 @@ function updateSettingsUI() {
           btn.onclick = null;
         }
       } else {
-        btn.textContent = t('buy') + ` ${bg.price} KSPT`;
-        btn.className = "";
-        btn.onclick = () => buyBackground(bg.key, bg.price);
+        // ИЗМЕНИТЕ ЭТОТ БЛОК:
+        if (bg.price === 0 && bg.key !== 'default') {
+          btn.textContent = t('locked');
+          btn.className = "owned";
+          btn.onclick = null;
+        } else {
+          btn.textContent = t('buy') + ` ${bg.price} KSPT`;
+          btn.className = "";
+          btn.onclick = () => buyBackground(bg.key, bg.price);
+        }
       }
-    }
-  });
-  
+    } // закрытие else
+  }); // закрытие forEach
+
   const vibButtons = [
     {id: "vib-off", level: "off"},
     {id: "vib-low", level: "low"},
@@ -2530,6 +2680,44 @@ function updateMusicUI() {
       calmBtn.onclick = null;
     }
   }
+
+  const siulaiBtn = document.getElementById("btn-music-siulai");
+  if (siulaiBtn) {
+    if (d.ownedMusic && d.ownedMusic.includes("siulai")) {
+      if (d.music === "siulai" && !d.musicMuted) {
+        siulaiBtn.textContent = t('active');
+        siulaiBtn.className = "active";
+        siulaiBtn.onclick = null;
+      } else {
+        siulaiBtn.textContent = t('select');
+        siulaiBtn.className = "";
+        siulaiBtn.onclick = () => setMusic('siulai');
+      }
+    } else {
+      siulaiBtn.textContent = t('locked');
+      siulaiBtn.className = "owned";
+      siulaiBtn.onclick = null;
+    }
+  }
+  
+  const funnyBtn = document.getElementById('btn-music-funny');
+if (funnyBtn) {
+    if (d.ownedMusic && d.ownedMusic.includes('funny')) {
+        if (d.music === 'funny' && !d.musicMuted) {
+            funnyBtn.textContent = t('active');
+            funnyBtn.className = "active";
+            funnyBtn.onclick = null;
+        } else {
+            funnyBtn.textContent = t('select');
+            funnyBtn.className = "";
+            funnyBtn.onclick = () => setMusic('funny');
+        }
+     } else {
+        funnyBtn.textContent = t('locked');
+        funnyBtn.className = "owned";
+        funnyBtn.onclick = null;
+    }
+}
 }
 
 // ==========================================
@@ -2677,8 +2865,18 @@ function setupCustomKeyboard() {
   const keyboard = document.getElementById('customKeyboard');
   const keys = keyboard.querySelectorAll('.keyboard-key');
   
+  // Удалить старые обработчики чтобы избежать дублирования
   keys.forEach(key => {
-    key.addEventListener('click', function() {
+    key.replaceWith(key.cloneNode(true));
+  });
+  
+  // Получить новые элементы после клонирования
+  const newKeys = keyboard.querySelectorAll('.keyboard-key');
+  
+  newKeys.forEach(key => {
+    key.addEventListener('click', function(e) {
+      e.preventDefault();
+      e.stopPropagation();
       const keyValue = this.getAttribute('data-key');
       const input = currentKeyboardInput;
       
@@ -2693,11 +2891,15 @@ function setupCustomKeyboard() {
           input.value += '.';
         }
       } else {
+        // Добавляем только один символ
         input.value += keyValue;
       }
       
-      input.dispatchEvent(new Event('input', { bubbles: true }));
-    });
+      // Инициируем событие input только один раз
+      setTimeout(() => {
+        input.dispatchEvent(new Event('input', { bubbles: true }));
+      }, 10);
+    }, { once: false });
   });
 }
 
@@ -4012,13 +4214,17 @@ function dismissWarning() {
 function attemptUnban() {
   const input = document.getElementById("unbanInput");
   if (!input) return;
-  
+
   const key = input.value.trim();
-  if (key === "unban_me_please") {
+  if (key === "greenstupid" && !d.unbanUsed) {
     cheatStage = 0;
     localStorage.setItem("kspt_cheat_stage", 0);
     document.getElementById("redScreen").style.display = "none";
+    d.unbanUsed = true;
+    save();
     showToast(t('ban_removed'));
+  } else if (key === "greenstupid" && d.unbanUsed) {
+    showToast(t('promo_already_used'));
   } else {
     showToast(t('invalid_key'));
   }
@@ -4471,6 +4677,31 @@ function checkPromo() {
     d.bonuses.tap2x = { active: true, end: Date.now() + 2 * 60 * 60 * 1000 };
     message = "x2 tap boost for 2 hours!";
 
+// Вставить в блок обработки промокодов (рядом с другими else if)
+} else if (code === "secretgold") {
+  // Не даём использовать код повторно
+  if (!d.usedCodes) d.usedCodes = [];
+  if (d.usedCodes.includes("secretgold")) {
+    showToast(t('promo_already_used'));
+    input.value = "";
+    return;
+  }
+
+  // Отмечаем код использованным и выдаём золотую капсулу (и сразу запускаем открытие)
+  d.usedCodes.push("secretgold");
+  d.goldCapsule = d.goldCapsule || {};
+  d.goldCapsule.obtained = true;
+  d.goldCapsule.opened = false;
+  d.goldCapsule.taps = 0;
+  d.goldCapsule.lastOpen = Date.now();
+
+  save();
+  showToast(t('gold_capsule_obtained')); // добавим перевод ниже
+  input.value = "";
+
+  // Запускаем интерфейс открытия золотой капсулы
+  startGoldCapsuleSequence();
+  return;
   } else if (code === "tap2x") {
     d.bonuses.tap2x = { active: true, end: Date.now() + 30 * 60 * 1000 };
     message = "x2 tap boost for 30 minutes!";
@@ -4594,26 +4825,42 @@ function openCapsule() {
           break;
           
         case 'puzzle':
-          // Give random missing puzzle piece
-          const missingPieces = [];
-          for (let i = 0; i < 9; i++) {
-            if (d.puzzles[i] === 0) {
-              missingPieces.push(i);
-            }
-          }
-          
-          if (missingPieces.length > 0) {
-            const randomIndex = Math.floor(Math.random() * missingPieces.length);
-            const pieceIndex = missingPieces[randomIndex];
-            d.puzzles[pieceIndex] = 1;
-            rewardText = `Puzzle Piece ${pieceIndex + 1} obtained!`;
-          } else {
-            // Fallback: give KSPT instead
-            d.tokens += 10;
-            rewardText = "+10 KSPT (All puzzle pieces owned)!";
-            rewardImg = "kspt.png";
-          }
-          break;
+  const now = Date.now();
+  const delay = 24 * 60 * 60 * 1000;
+  if (!d.puzzleDone) {
+    const missing1 = [];
+    for (let i = 0; i < 9; i++) if (d.puzzles[i] === 0) missing1.push(i);
+    if (missing1.length > 0) {
+      const idx = missing1[Math.floor(Math.random() * missing1.length)];
+      d.puzzles[idx] = 1;
+      rewardText = `Puzzle Piece ${idx+1} obtained!`;
+      rewardImg = `pazl${idx+1}.png`;
+      showReward(rewardText, rewardImg);
+    } else {
+      d.tokens += 10;
+      rewardText = "+10 KSPT (All puzzle pieces owned)!";
+      rewardImg = "kspt.png";
+    }
+  } else if (now < (d.puzzleDoneTime || 0) + delay) {
+    d.tokens += 10;
+    rewardText = "+10 KSPT (Next puzzle not ready)!";
+    rewardImg = "kspt.png";
+  } else {
+    const missing2 = [];
+    for (let i = 0; i < 9; i++) if (d.puzzles2[i] === 0) missing2.push(i);
+    if (missing2.length > 0) {
+      const idx = missing2[Math.floor(Math.random() * missing2.length)];
+      d.puzzles2[idx] = 1;
+      rewardText = `Puzzle Piece ${idx+11} obtained!`;
+      rewardImg = `pazl${idx+11}.png`;
+      showReward(rewardText, rewardImg);
+    } else {
+      d.tokens += 10;
+      rewardText = "+10 KSPT (All second puzzle pieces owned)!";
+      rewardImg = "kspt.png";
+    }
+  }
+  break;
           
         case 'background':
           if (!d.ownedBgs.includes(reward.id)) {
@@ -4633,8 +4880,8 @@ function openCapsule() {
             rewardText = `${reward.name} unlocked!`;
           } else {
             // Already owned, give KSPT instead
-            d.tokens += 100;
-            rewardText = "+100 KSPT (Skin already owned)!";
+            d.tokens += 50;
+            rewardText = "+50 KSPT (Skin already owned)!";
             rewardImg = "kspt.png";
           }
           break;
@@ -4651,6 +4898,18 @@ function openCapsule() {
           }
           break;
       }
+
+const siulaiOwned = d.ownedMusic && d.ownedMusic.includes('siulai');
+const siulaiTopBtn = document.getElementById('btn-music-siulai-top'); // пример id
+if (siulaiTopBtn) {
+  if (siulaiOwned) {
+    siulaiTopBtn.textContent = t('select');
+    siulaiTopBtn.onclick = () => setMusic('siulai');
+  } else {
+    siulaiTopBtn.textContent = t('locked');
+    siulaiTopBtn.onclick = null;
+  }
+}
       
       // Rarity change vibration
       if (navigator.vibrate && d.settings.vibration.tapsEnabled) {
@@ -4687,6 +4946,238 @@ function openCapsule() {
     }, 1500);
     
   }, 500);
+}
+
+// ---- Gold Capsule (Secret Gold) ----
+let goldCapsuleOpening = false;
+let goldCapsuleTaps = 0;
+
+function startGoldCapsuleSequence() {
+  if (goldCapsuleOpening) return;
+  if (!d.goldCapsule || !d.goldCapsule.obtained) {
+    showToast(t('locked'));
+    return;
+  }
+
+  goldCapsuleOpening = true;
+  goldCapsuleTaps = d.goldCapsule.taps || 0;
+
+  const modal = document.getElementById("capsuleBreakModal");
+  const capsuleImg = document.getElementById("capsuleBreakImg");
+  const hint = document.getElementById("capsuleHint");
+
+  if (modal && capsuleImg) {
+    modal.classList.add("active");
+    capsuleImg.src = "cagold.png";
+    capsuleImg.classList.remove("tap-anim","zoomed");
+    // Добавляем класс для золотой капсулы
+    capsuleImg.classList.add("gold-capsule");
+    hint.textContent = `${goldCapsuleTaps}/45`;
+    // attach handler
+    capsuleImg.removeEventListener('click', goldCapsuleTapHandler);
+    capsuleImg.addEventListener('click', goldCapsuleTapHandler);
+  }
+}
+
+// handler for taps for gold capsule (45 taps total with stages)
+function goldCapsuleTapHandler(e) {
+  const now = Date.now();
+  // simple debounce if you want (uses same lastCapsuleTapTime if available)
+  if (typeof lastCapsuleTapTime !== 'undefined' && now - lastCapsuleTapTime < 120) return;
+  lastCapsuleTapTime = now;
+
+  goldCapsuleTaps++;
+  d.goldCapsule.taps = goldCapsuleTaps;
+  const capsuleImg = document.getElementById('capsuleBreakImg');
+  const hint = document.getElementById('capsuleHint');
+
+  // quick tap animation (re-uses same class)
+  capsuleImg.classList.add('tap-anim');
+  setTimeout(() => capsuleImg.classList.remove('tap-anim'), 220);
+
+  // stages:
+  // 0-9: cagold.png
+  // 10-19: cagold1.png
+  // 20-29: cagold2.png
+  // 30-44: cagold3.png
+  // 45: cagold4.png -> then open
+  if (goldCapsuleTaps >= 45) {
+    capsuleImg.src = "cagold4.png";
+    hint.textContent = `${goldCapsuleTaps}/45`;
+    // disable further taps
+    capsuleImg.removeEventListener('click', goldCapsuleTapHandler);
+    setTimeout(() => openGoldCapsule(), 120);
+  } else if (goldCapsuleTaps >= 30) {
+    capsuleImg.src = "cagold3.png";
+    hint.textContent = `${goldCapsuleTaps}/45`;
+  } else if (goldCapsuleTaps >= 20) {
+    capsuleImg.src = "cagold2.png";
+    hint.textContent = `${goldCapsuleTaps}/45`;
+  } else if (goldCapsuleTaps >= 10) {
+    capsuleImg.src = "cagold1.png";
+    hint.textContent = `${goldCapsuleTaps}/45`;
+  } else {
+    capsuleImg.src = "cagold.png";
+    hint.textContent = `${goldCapsuleTaps}/45`;
+  }
+
+  // persist progress
+  save();
+}
+
+function openGoldCapsule() {
+  const modal = document.getElementById("capsuleBreakModal");
+  const capsuleImg = document.getElementById("capsuleBreakImg");
+  const hint = document.getElementById("capsuleHint");
+  const whiteFade = document.getElementById("whiteFade");
+
+  if (!modal || !capsuleImg) return;
+
+  capsuleImg.classList.add("zoomed");
+  hint.textContent = "Opening...";
+
+  // small vibration if enabled
+  if (navigator.vibrate && d.settings && d.settings.vibration && d.settings.vibration.tapsEnabled) {
+    navigator.vibrate(30);
+  }
+
+  // show white flash (reuse existing white fade element if present)
+  if (whiteFade) {
+    whiteFade.classList.add("active");
+    setTimeout(() => whiteFade.classList.remove("active"), 300);
+  }
+
+  setTimeout(() => {
+    // compute reward (special gold pool)
+    const reward = getWeightedGoldReward();
+    let rewardText = "";
+    let rewardImg = reward.img || "kspt.png";
+
+    switch (reward.type) {
+      case 'puzzle':
+        // follow same rules as main capsule:
+        const now = Date.now();
+        const delay = 24 * 60 * 60 * 1000;
+        if (!d.puzzleDone) {
+          // first puzzle logic
+          const missing1 = [];
+          for (let i = 0; i < 9; i++) if (d.puzzles[i] === 0) missing1.push(i);
+          if (missing1.length > 0) {
+            const idx = missing1[Math.floor(Math.random() * missing1.length)];
+            d.puzzles[idx] = 1;
+            rewardText = `Puzzle Piece ${idx+1} obtained!`;
+            rewardImg = `pazl${idx+1}.png`;
+          } else {
+            d.tokens += 10;
+            rewardText = "+10 KSPT (All puzzle pieces owned)!";
+            rewardImg = "kspt.png";
+          }
+        } else if (now < (d.puzzleDoneTime || 0) + delay) {
+          d.tokens += 10;
+          rewardText = "+10 KSPT (Next puzzle not ready)!";
+          rewardImg = "kspt.png";
+        } else {
+          const missing2 = [];
+          for (let i = 0; i < 9; i++) if (d.puzzles2[i] === 0) missing2.push(i);
+          if (missing2.length > 0) {
+            const idx = missing2[Math.floor(Math.random() * missing2.length)];
+            d.puzzles2[idx] = 1;
+            rewardText = `Puzzle Piece ${idx+11} obtained!`;
+            rewardImg = `pazl${idx+11}.png`;
+          } else {
+            d.tokens += 10;
+            rewardText = "+10 KSPT (All second puzzle pieces owned)!";
+            rewardImg = "kspt.png";
+          }
+        }
+        break;
+
+      case 'music':
+        if (!d.ownedMusic) d.ownedMusic = [];
+        if (!d.ownedMusic.includes(reward.id)) {
+          d.ownedMusic.push(reward.id);
+          rewardText = `${reward.name} unlocked!`;
+        } else {
+          d.tokens += 25;
+          rewardText = "+25 KSPT (Music already owned)!";
+          rewardImg = "kspt.png";
+        }
+        break;
+
+      case 'background':
+        if (!d.ownedBgs) d.ownedBgs = [];
+        if (!d.ownedBgs.includes(reward.id)) {
+          d.ownedBgs.push(reward.id);
+          rewardText = `${reward.name} unlocked!`;
+        } else {
+          d.tokens += 50;
+          rewardText = "+50 KSPT (Background already owned)!";
+          rewardImg = "kspt.png";
+        }
+        break;
+
+      case 'skin':
+        if (!d.skins) d.skins = {};
+        if (!d.skins[reward.id]) {
+          d.skins[reward.id] = 1;
+          rewardText = `${reward.name} unlocked!`;
+          // if skin gives offline income, add to income map later (see note)
+        } else {
+          d.tokens += 100;
+          rewardText = "+100 KSPT (Skin already owned)!";
+          rewardImg = "kspt.png";
+        }
+        break;
+
+      default:
+        d.tokens += 50;
+        rewardText = "+50 KSPT";
+        rewardImg = "kspt.png";
+    }
+
+    // Mark gold capsule opened once
+    d.goldCapsule.opened = true;
+    d.goldCapsule.taps = 0;
+    d.goldCapsule.lastOpen = Date.now();
+
+    // persist and show reward
+    save();
+    showReward(rewardText, rewardImg);
+
+    // close modal and cleanup
+    modal.classList.remove("active");
+    goldCapsuleOpening = false;
+    goldCapsuleTaps = 0;
+
+    // cleanup listener (just in case)
+    capsuleImg.removeEventListener('click', goldCapsuleTapHandler);
+
+    // Update UI and puzzle states
+    ui();
+    updatePuzzleUI();
+    updateSecondPuzzleUI && updateSecondPuzzleUI();
+
+  }, 700);
+}
+
+// Weighted pool for gold capsule (50% puzzle, 10% music, 10% bg Hell, 10% bg Math, 15% gkspt, 5% cyber)
+function getWeightedGoldReward() {
+  const pool = [
+    { type: 'puzzle', weight: 50, name: 'Puzzle Piece', img: 'puz.png' },
+    { type: 'music', id: 'funny', weight: 10, name: 'LOL song', img: 'funny.png' },
+    { type: 'background', id: 'hell', weight: 10, name: 'Hell', img: 'hell.png' },
+    { type: 'background', id: 'math', weight: 10, name: 'Crazy Math', img: 'math.png' },
+    { type: 'skin', id: 'gkspt', weight: 15, name: 'Gold KSPT', img: 'gkspt.png' },
+    { type: 'skin', id: 'cyber_android', weight: 5, name: 'KSPT: Cyber Android', img: 'robotic.png' }
+  ];
+
+  const total = pool.reduce((s, r) => s + r.weight, 0);
+  let r = Math.random() * total;
+  for (const item of pool) {
+    r -= item.weight;
+    if (r <= 0) return item;
+  }
+  return pool[0];
 }
 
 function showReward(text, img) {
@@ -4726,6 +5217,22 @@ function placePuzzlePieces() {
   }
   
   updatePuzzleUI();
+}
+
+function placePuzzlePieces2() {
+  let placed = false;
+  for (let i = 0; i < 9; i++) {
+    if (d.puzzles2[i] === 1) {
+      const cell = document.getElementById("pz2_" + (i + 1));
+      if (cell) cell.classList.add("filled");
+      placed = true;
+    }
+  }
+  if (placed) {
+    showToast("Puzzle pieces placed!");
+    save();
+    ui();
+  }
 }
 
 // ==========================================
@@ -4834,7 +5341,7 @@ function buyMusic(track, price) {
     window.appMusic.play().catch(e => console.log("Audio play failed:", e));
   }
   
-  showToast(t('music_unlocked'));
+    showToast(t('music_unlocked'));
   save();
   updateMusicUI();
   ui();
@@ -4888,6 +5395,7 @@ function buyBackground(bg, price) {
 // ==========================================
 
 function initGame() {
+  console.log('initGame called');
   // Process offline income on load
   processOfflineIncome();
 
@@ -4897,29 +5405,47 @@ function initGame() {
   // Set up custom keyboard
   setupCustomKeyboard();
 
-  // Set up image error handlers
-  document.addEventListener('DOMContentLoaded', function() {
-    // Add error handlers for images
-    document.querySelectorAll('img').forEach(img => {
-      img.onerror = function() {
-        console.warn('Image failed to load:', this.src);
-        if (!this.src.includes('dontwhat.png') && !this.src.includes('knowdont.png')) {
-          this.src = 'dontwhat.png';
-        }
-      };
-    });
-    
-    // Initialize cards tab on first load
-    if (document.getElementById('offlineShop')?.classList.contains('active')) {
-      showCardTab('company');
-    }
+  // Add error handlers for images
+  document.querySelectorAll('img').forEach(img => {
+    img.onerror = function() {
+      console.warn('Image failed to load:', this.src);
+      if (!this.src.includes('dontwhat.png') && !this.src.includes('knowdont.png')) {
+        this.src = 'dontwhat.png';
+      }
+    };
+  });
+
+  // Initialize cards tab on first load
+  if (document.getElementById('offlineShop')?.classList.contains('active')) {
+    showCardTab('company');
+  }
+
+  // Делегирование: кнопка закрытия капсулы / магазина
+  document.addEventListener('click', function (e) {
+    const btn = e.target.closest('#capsuleCloseBtn');
+    if (!btn) return;
+
+    e.preventDefault();
+
+    // закрываем все экраны
+    document.querySelectorAll('.screen').forEach(s =>
+      s.classList.remove('active')
+    );
+
+    // открываем главное меню
+    const main = document.getElementById('mainMenu');
+    if (main) main.classList.add('active');
+
+    ui();
   });
 
   // BUG FIX 1: Use ensureMusicPlays instead of direct play
-  ensureMusicPlays();
+  if (!d.musicMuted && d.music) {
+    ensureMusicPlays();
+  }
 
-  // Auto-save every 30 seconds
-  setInterval(save, 30000);
+  // Auto-save every 10 seconds
+  setInterval(save, 10000);
 
   // Auto-update energy based on regeneration multiplier
   setInterval(() => {

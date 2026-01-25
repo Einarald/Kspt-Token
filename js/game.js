@@ -96,6 +96,10 @@ const translations = {
     'active_var': 'Active (Variant {0})',
     'locked_win': 'LOCKED (Win x10 Bet)',
     'sold_out': 'SOLD OUT',
+    'gold_kspt': 'Gold KSPT',
+    'cyber_android': 'KSPT: Cyber Android',
+    'gold_skin_unlocked': 'Gold KSPT skin unlocked!',
+    'cyber_skin_unlocked': 'KSPT: Cyber Android skin unlocked!',
     
     // Cards
     'company': 'Company',
@@ -344,6 +348,10 @@ const translations = {
     'active_var': 'Активен (Вариант {0})',
     'locked_win': 'ЗАБЛОКИРОВАНО (Выиграйте x10 ставку)',
     'sold_out': 'РАСПРОДАНО',
+    'gold_kspt': 'Золотой KSPT',
+    'cyber_android': 'KSPT: Кибер Андроид',
+    'gold_skin_unlocked': 'Скин Золотой KSPT разблокирован!',
+    'cyber_skin_unlocked': 'Скин KSPT: Кибер Андроид разблокирован!',
     
     // Cards
     'company': 'Компания',
@@ -1124,7 +1132,6 @@ const SKIN_INCOME = {
   mystic: 15,
   capsule: 10,
   artem: 5,
-  // NEW SKINS INCOMES
   ruka: 170,
   banditx: 210,
   goldcoin: 250,
@@ -1485,7 +1492,9 @@ function getSkinImage(skinId, euroVar = 1, artemVar = 0) {
     // NEW SKINS IMAGES
     'ruka': 'ruka.png',
     'banditx': 'banditx.png',
-    'goldcoin': 'goldcoin.png'
+    'goldcoin': 'goldcoin.png',
+    'gkspt': 'gkspt.png',                    
+    'cyber_android': 'robotic.png'
   };
   return skinImages[skinId] || 'kspt.png';
 }
@@ -1503,6 +1512,7 @@ function updateSkinImage() {
     coin.dataset.stage = "0";
     coin.dataset.mystic = "0";
     coin.dataset.cookStage = "0";
+    coin.dataset.cyberStage = "0"
   }
 }
 
@@ -1518,6 +1528,13 @@ function applySkin(skinId, variant = null) {
   
   // Check if skin is owned
   if (skinId !== 'default' && !d.skins[skinId]) {
+// ==========================================
+    // Особые скины из золотой капсулы (не покупаются)
+    if (skinId === 'gkspt' || skinId === 'cyber_android') {
+      showToast(t('locked'));
+      return;
+    }
+    // ==========================================
     // Skin not owned, try to buy it
     const prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240, euro:780, space:1210, kostia:0, pixe:3215, onion:10110, cookie:40780, metka:0, seri:0, mystic:0, capsule:0, artem:0, ruka:172080, banditx:542123, goldcoin:1120000};
     const price = prices[skinId] || 0;
@@ -1559,25 +1576,13 @@ function applySkin(skinId, variant = null) {
     coin.dataset.mystic = "0";
     coin.dataset.cookStage = "0";
   }
-
-// В месте, где запускается animation timer для скинов
-if (d.skin === 'gkspt') {
-  let frame = 0;
-  window.skinAnimationTimer = setInterval(() => {
-    const img = frame % 2 === 0 ? 'gkspt.png' : 'gkspt1.png';
-    document.getElementById('coin').src = img;
-    frame++;
-  }, 220);
-}
-if (d.skin === 'cyber_android') {
-  let frames = ['robotic.png','robotic1.png','robotic2.png','robotic3.png'];
-  let idx = 0;
-  window.skinAnimationTimer = setInterval(() => {
-    document.getElementById('coin').src = frames[idx % frames.length];
-    idx++;
-  }, 220);
-}
   
+  // Очистить любой существующий таймер анимации
+  if (window.skinAnimationTimer) {
+  clearInterval(window.skinAnimationTimer);
+  window.skinAnimationTimer = null;
+}
+
   // Auto-unlock backgrounds for certain skins
   if (skinId === 'cookie' && !d.ownedBgs.includes('chrisp')) {
     d.ownedBgs.push('chrisp');
@@ -1686,10 +1691,24 @@ function handleSkinAnimation() {
       coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
       coin.src = coin.dataset.toggle === "1" ? "banditx1.png" : "banditx.png";
       break;
-    default:
-      break;
-  }
-}                                                                                                                                                                                                                                                                                        
+    case "gkspt":
+  coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+  coin.src = coin.dataset.toggle === "1" ? "gkspt1.png" : "gkspt.png";
+  break;
+case "cyber_android":
+  let cyberStage = parseInt(coin.dataset.cyberStage || "0", 10);
+  cyberStage = (cyberStage + 1) % 4;
+  coin.dataset.cyberStage = cyberStage;
+  if (cyberStage === 0) coin.src = "robotic.png";
+  else if (cyberStage === 1) coin.src = "robotic1.png";
+  else if (cyberStage === 2) coin.src = "robotic2.png";
+  else coin.src = "robotic3.png";
+  break;
+
+  default:
+  break;
+  }  
+}
 
 function updateSkinButtons() {
   const secretSkins = {
@@ -1698,7 +1717,9 @@ function updateSkinButtons() {
     "seriSkinCard": 'seri',
     "artemSkinCard": 'artem',
     "skinCardMystic": 'mystic',
-     "skinCardCapsule": 'capsule'
+    "skinCardCapsule": 'capsule',
+    "skinCardGkspt": 'gkspt',
+    "skinCardCyberAndroid": 'cyber_android'
   };
   
   for (const [cardId, skinKey] of Object.entries(secretSkins)) {
@@ -1708,7 +1729,7 @@ function updateSkinButtons() {
     }
   }
   
-  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "artem", "ruka", "banditx", "goldcoin"];
+  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "artem", "ruka", "banditx", "goldcoin", "gkspt", "cyber_android"];
   
   skins.forEach(s => {
     const button = document.getElementById("skin-" + s);
@@ -1758,6 +1779,10 @@ function updateSkinButtons() {
         button.textContent = d.puzzleDone ? t('select') : t('locked_complete');
         button.className = d.puzzleDone ? "" : "owned";
         button.onclick = d.puzzleDone ? () => applySkin('mystic') : null;
+      } else if (s === "gkspt" || s === "cyber_android") {
+        button.textContent = d.skins[s] ? t('select') : t('locked');
+        button.className = d.skins[s] ? "" : "owned";
+        button.onclick = d.skins[s] ? () => applySkin(s) : null;
       } else if (s === "capsule") {
         button.textContent = d.skins['capsule'] ? t('select') : t('locked_find');
         button.className = d.skins['capsule'] ? "" : "owned";
@@ -1808,17 +1833,23 @@ function updateSkinPreviews() {
     // NEW SKINS PREVIEWS
     'ruka': 'ruka.png',
     'banditx': 'banditx.png',
-    'goldcoin': 'goldcoin.png'
+    'goldcoin': 'goldcoin.png',
+    'gkspt': 'gkspt.png',                
+    'cyber_android': 'robotic.png'
   };
   
-  for (const [skin, img] of Object.entries(skinImageMap)) {
+   for (const [skin, img] of Object.entries(skinImageMap)) {
     const imgElement = document.getElementById(`skin-img-${skin}`);
     if (imgElement) {
       let isOwned = false;
+      
+      // Особые проверки для разных типов скинов
       if (skin === 'mystic') {
         isOwned = d.puzzleDone;
       } else if (skin === 'capsule') {
         isOwned = d.skins['capsule'];
+      } else if (skin === 'gkspt' || skin === 'cyber_android') {
+        isOwned = d.skins[skin] || false;  // Скины из капсулы
       } else if (skin === 'artem' || skin === 'kostia' || skin === 'metka' || skin === 'seri') {
         isOwned = d.skins[skin] || false;
       } else {
@@ -1828,7 +1859,7 @@ function updateSkinPreviews() {
       if (isOwned) {
         imgElement.src = img;
       } else {
-        imgElement.src = 'dontwhat.png';
+        imgElement.src = skin === 'gkspt' || skin === 'cyber_android' ? 'knowdont.png' : 'dontwhat.png';
       }
     }
   }
@@ -5068,8 +5099,8 @@ function openGoldCapsule() {
             rewardText = `Puzzle Piece ${idx+1} obtained!`;
             rewardImg = `pazl${idx+1}.png`;
           } else {
-            d.tokens += 10;
-            rewardText = "+10 KSPT (All puzzle pieces owned)!";
+            d.tokens += 20;
+            rewardText = "+20 KSPT (All puzzle pieces owned)!";
             rewardImg = "kspt.png";
           }
         } else if (now < (d.puzzleDoneTime || 0) + delay) {
@@ -5085,8 +5116,8 @@ function openGoldCapsule() {
             rewardText = `Puzzle Piece ${idx+11} obtained!`;
             rewardImg = `pazl${idx+11}.png`;
           } else {
-            d.tokens += 10;
-            rewardText = "+10 KSPT (All second puzzle pieces owned)!";
+            d.tokens += 40;
+            rewardText = "+40 KSPT (All second puzzle pieces owned)!";
             rewardImg = "kspt.png";
           }
         }
@@ -5112,6 +5143,28 @@ function openGoldCapsule() {
         } else {
           d.tokens += 50;
           rewardText = "+50 KSPT (Background already owned)!";
+          rewardImg = "kspt.png";
+        }
+        break;
+
+      case 'skin':
+        if (!d.skins[reward.id]) {
+          d.skins[reward.id] = 1;
+          rewardText = `${reward.name} unlocked!`;
+          
+          // Показать карточку скина в каталоге
+          const cardId = "skinCard" + (reward.id === 'gkspt' ? 'Gkspt' : 'CyberAndroid');
+          const card = document.getElementById(cardId);
+          if (card) {
+            card.style.display = "block";
+          }
+          
+          // Обновить UI скинов
+          updateSkinButtons();
+          updateSkinPreviews();
+        } else {
+          d.tokens += 100;
+          rewardText = "+100 KSPT (Skin already owned)!";
           rewardImg = "kspt.png";
         }
         break;

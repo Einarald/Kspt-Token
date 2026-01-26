@@ -161,7 +161,6 @@ const translations = {
     'cat_puzzle': 'Cat Puzzle',
     'cat_puzzle_desc': 'Collect all 9 pieces to unlock the Cat: KSPT skin!',
     'puzzle_completed2': 'Puzzle complete! Cat: KSPT skin unlocked!',
-    'owned_progress': 'Owned: {0}/9',
     'gold_capsule_obtained': 'Secret Gold Capsule obtained!',
     'gold_capsule_name': 'Secret Gold Capsule',
     'gold_capsule_desc': 'Exclusive one-time capsule. Unlock rare items!',
@@ -170,6 +169,13 @@ const translations = {
     'bg_math': 'Crazy Math',
     'gold_skin_unlocked': 'Gold KSPT unlocked!',
     'cyber_skin_unlocked': 'KSPT: Cyber Android unlocked!',
+    'cat_skin_unlocked': 'Cat: KSPT skin unlocked!',
+    'cat_music_unlocked': 'Cat\'s Yarn music unlocked!',
+
+    // Noob Box
+     'noob_box': 'Noob Box',
+     'noob_box_desc': 'A special box for beginners (+skin)',
+     'noob_box_obtained': 'Noob Box obtained!',
      
     // Market
     'balance': 'Balance: ',
@@ -412,7 +418,6 @@ const translations = {
     'cat_puzzle': 'Кошачий пазл',
     'cat_puzzle_desc': 'Соберите все 9 частей, чтобы разблокировать скин «Cat: KSPT»!',
     'puzzle_completed2': 'Пазл завершен! Скин «Cat: KSPT» разблокирован!',
-    'owned_progress': 'В наличии: {0}/9',
     'gold_capsule_obtained': 'Золотая капсула получена!',
     'gold_capsule_name': 'Золотая капсула (Secret Gold)',
     'gold_capsule_desc': 'Эксклюзивная одноразовая капсула. Открой редкие предметы!',
@@ -421,6 +426,13 @@ const translations = {
     'bg_math': 'Сумасшедшая математика',
     'gold_skin_unlocked': 'Скин Gold KSPT разблокирован!',
     'cyber_skin_unlocked': 'Скин KSPT: Кибер Андроид разблокирован!',
+    'cat_skin_unlocked': 'Скин Cat: KSPT разблокирован!',
+    'cat_music_unlocked': 'Музыка Cat\'s Yarn разблокирована!',
+
+    // Noob Box
+     'noob_box': 'Нуб Кейс',
+'noob_box_desc': 'Особый ящик для новичков (+скин)',
+'noob_box_obtained': 'Нуб Кейс получен!',
     
     // Market
     'balance': 'Баланс: ',
@@ -915,6 +927,29 @@ if(cheatStage >= 3) {
   document.getElementById("redScreen").style.display = "flex";
 }
 
+const noobBoxRewards = [
+  { type: 'kspt', value: 1, weight: 40, name: '+1 KSPT', img: 'kspt.png' },
+  { type: 'banx', value: 5500, weight: 30, name: '+5500 BANX', img: 'bandit.png' },
+  { type: 'jvm', value: 6.7, weight: 15, name: '+6.7 JVM', img: 'jvm.png' },
+  { type: 'puzzle', weight: 5, name: 'Random Puzzle Piece', img: 'puz.png' },
+  { type: 'capsuleSkip', weight: 5, name: 'Capsule Timer Skip', img: 'iks.png' },
+  { type: 'skin', id: 'dirty', weight: 5, name: 'Skin: Dirty Fingers', img: 'dirty.png' }
+];
+
+function getWeightedNoobBoxReward() {
+  const totalWeight = noobBoxRewards.reduce((sum, reward) => sum + reward.weight, 0);
+  let random = Math.random() * totalWeight;
+  let cumulativeWeight = 0;
+  
+  for (const reward of noobBoxRewards) {
+    cumulativeWeight += reward.weight;
+    if (random < cumulativeWeight) {
+      return reward;
+    }
+  }
+  return noobBoxRewards[0];
+}
+
 // ==========================================
 // ИНИЦИАЛИЗАЦИЯ ДАННЫХ
 // ==========================================
@@ -955,6 +990,12 @@ const defaultData = {
     usedSkipFuse: false,
     usedFuse: false
   },
+  noobBox: {
+  obtained: false,
+  opened: false,
+  taps: 0,
+  lastOpen: 0
+},
   goldCapsule: {
   obtained: false,   // true после ввода промокода
   opened: false,     // true после открытия
@@ -1041,57 +1082,72 @@ try {
 
 // FIXED FUNCTION: Corrected spread operator syntax
 function migrateData(oldData, defaultData) {
-  const merged = { ...defaultData };
+  // Сначала создаем копию defaultData
+  const merged = JSON.parse(JSON.stringify(defaultData));
   
+  // Если oldData пусто или не является объектом, возвращаем defaultData
+  if (!oldData || typeof oldData !== 'object') {
+    return merged;
+  }
+  
+  // Рекурсивно обновляем merged данными из oldData
   for (const key in oldData) {
     if (oldData.hasOwnProperty(key)) {
-      if (typeof oldData[key] === 'object' && !Array.isArray(oldData[key])) {
+      // Если это объект (но не массив) и в merged уже есть этот ключ
+      if (typeof oldData[key] === 'object' && oldData[key] !== null && 
+          !Array.isArray(oldData[key]) && 
+          merged[key] && typeof merged[key] === 'object') {
+        // Рекурсивно мержим вложенные объекты
         merged[key] = { ...merged[key], ...oldData[key] };
       } else {
+        // Иначе просто присваиваем значение
         merged[key] = oldData[key];
       }
     }
   }
   
+  // Дополнительные проверки и инициализации
   if (!merged.skins) merged.skins = {default: 1};
+  if (!merged.skins.default) merged.skins.default = 1;
+  
   if (!merged.bonuses) merged.bonuses = defaultData.bonuses;
+  
   if (!merged.market) merged.market = defaultData.market;
+  
   if (!merged.settings) merged.settings = defaultData.settings;
   
   if (!merged.cards) merged.cards = {};
-
-  if (!merged.cards.s1) merged.cards.s1 = -1;
-  if (!merged.cards.s2) merged.cards.s2 = -1;
-  if (!merged.cards.s3) merged.cards.s3 = -1;
-  if (!merged.cards.s4) merged.cards.s4 = -1;
-  if (!merged.cards.s5) merged.cards.s5 = -1;
-  if (!merged.cards.g1) merged.cards.g1 = -1;
-  if (!merged.cards.g2) merged.cards.g2 = -1;
-  if (!merged.cards.g3) merged.cards.g3 = -1;
-  if (!merged.cards.c1) merged.cards.c1 = -1;
-  if (!merged.cards.c2) merged.cards.c2 = -1;
-  if (!merged.cards.c3) merged.cards.c3 = -1;
-  if (!merged.cards.c4) merged.cards.c4 = -1;
-  if (!merged.cards.c5) merged.cards.c5 = -1;
-
+  
+  // Инициализируем все карты, если они не существуют
+  const allCards = ['c1', 'c2', 'c3', 'c4', 'c5', 's1', 's2', 's3', 's4', 's5', 'g1', 'g2', 'g3'];
+  allCards.forEach(cardKey => {
+    if (merged.cards[cardKey] === undefined) {
+      merged.cards[cardKey] = -1;
+    }
+  });
+  
   if (!merged.lang) merged.lang = 'en';
   
+  if (!merged.market.ksptToken) merged.market.ksptToken = defaultData.market.ksptToken;
   if (merged.market.ksptToken && !merged.market.ksptToken.lastUserBuyPrice) {
     merged.market.ksptToken.lastUserBuyPrice = null;
     merged.market.ksptToken.lastUserSellPrice = null;
     merged.market.ksptToken.chartOffset = 0;
   }
+  
+  if (!merged.market.banxToken) merged.market.banxToken = defaultData.market.banxToken;
   if (merged.market.banxToken && !merged.market.banxToken.lastUserBuyPrice) {
     merged.market.banxToken.lastUserBuyPrice = null;
     merged.market.banxToken.lastUserSellPrice = null;
     merged.market.banxToken.chartOffset = 0;
   }
-  if (!merged.market.jvmToken) {
-    merged.market.jvmToken = defaultData.market.jvmToken;
-  }
   
-  if (!merged.skins.default) {
-    merged.skins.default = 1;
+  if (!merged.market.jvmToken) merged.market.jvmToken = defaultData.market.jvmToken;
+  
+  if (!merged.noobBox) merged.noobBox = defaultData.noobBox;
+  
+    if (!merged.noobBox) {
+    merged.noobBox = defaultData.noobBox;
   }
   
   return merged;
@@ -1135,8 +1191,11 @@ const SKIN_INCOME = {
   ruka: 170,
   banditx: 210,
   goldcoin: 250,
-  'gkspt': 10,           
-  'cyber_android': 15
+  gkspt: 10,           
+  cyber_android: 15, 
+  siulai: 20,
+  dirty: 10
+  
 };
 
 // Card data - UPDATED WITH EXACT VALUES
@@ -1492,9 +1551,12 @@ function getSkinImage(skinId, euroVar = 1, artemVar = 0) {
     // NEW SKINS IMAGES
     'ruka': 'ruka.png',
     'banditx': 'banditx.png',
-    'goldcoin': 'goldcoin.png',
+    'goldcoin': 'def.png',
     'gkspt': 'gkspt.png',                    
-    'cyber_android': 'robotic.png'
+    'cyber_android': 'robotic.png', 
+    'siulai': 'siulai.png',   
+    'dirty': 'dirty.png'
+    
   };
   return skinImages[skinId] || 'kspt.png';
 }
@@ -1528,9 +1590,8 @@ function applySkin(skinId, variant = null) {
   
   // Check if skin is owned
   if (skinId !== 'default' && !d.skins[skinId]) {
-// ==========================================
     // Особые скины из золотой капсулы (не покупаются)
-    if (skinId === 'gkspt' || skinId === 'cyber_android') {
+    if (skinId === 'gkspt' || skinId === 'cyber_android' || skinId === 'dirty') {
       showToast(t('locked'));
       return;
     }
@@ -1704,6 +1765,18 @@ case "cyber_android":
   else if (cyberStage === 2) coin.src = "robotic2.png";
   else coin.src = "robotic3.png";
   break;
+  case "dirty":
+  let dirtyStage = parseInt(coin.dataset.dirtyStage || "0", 10);
+  dirtyStage = (dirtyStage + 1) % 3;
+  coin.dataset.dirtyStage = dirtyStage;
+  if (dirtyStage === 0) coin.src = "dirty.png";
+  else if (dirtyStage === 1) coin.src = "dirty1.png";
+  else coin.src = "dirty2.png";
+  break;
+  case "siulai":
+    coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+    coin.src = coin.dataset.toggle === "1" ? "siulai1.png" : "siulai.png";
+    break;
 
   default:
   break;
@@ -1718,8 +1791,10 @@ function updateSkinButtons() {
     "artemSkinCard": 'artem',
     "skinCardMystic": 'mystic',
     "skinCardCapsule": 'capsule',
+    "skinCardSiulai": 'siulai',
     "skinCardGkspt": 'gkspt',
-    "skinCardCyberAndroid": 'cyber_android'
+    "skinCardCyberAndroid": 'cyber_android',
+    "skinCardDirty": 'dirty'
   };
   
   for (const [cardId, skinKey] of Object.entries(secretSkins)) {
@@ -1729,7 +1804,7 @@ function updateSkinButtons() {
     }
   }
   
-  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "artem", "ruka", "banditx", "goldcoin", "gkspt", "cyber_android"];
+  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android"];
   
   skins.forEach(s => {
     const button = document.getElementById("skin-" + s);
@@ -1776,35 +1851,39 @@ function updateSkinButtons() {
       const prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240, euro:780, space:1210, kostia:0, pixe:3215, onion:10110, cookie:40780, metka:0, seri:0, mystic:0, capsule:0, artem:0, ruka:172080, banditx:542123, goldcoin:1120000};
       
       if (s === "mystic") {
-        button.textContent = d.puzzleDone ? t('select') : t('locked_complete');
-        button.className = d.puzzleDone ? "" : "owned";
-        button.onclick = d.puzzleDone ? () => applySkin('mystic') : null;
-      } else if (s === "gkspt" || s === "cyber_android") {
-        button.textContent = d.skins[s] ? t('select') : t('locked');
-        button.className = d.skins[s] ? "" : "owned";
-        button.onclick = d.skins[s] ? () => applySkin(s) : null;
-      } else if (s === "capsule") {
-        button.textContent = d.skins['capsule'] ? t('select') : t('locked_find');
-        button.className = d.skins['capsule'] ? "" : "owned";
-        button.onclick = d.skins['capsule'] ? () => applySkin('capsule') : null;
-      } else if (s === "artem" || s === "kostia" || s === "metka" || s === "seri") {
-        button.textContent = d.skins[s] ? t('select') : t('locked_promo');
-        button.className = d.skins[s] ? "" : "owned";
-        button.onclick = d.skins[s] ? () => applySkin(s) : null;
-      } else if (s !== "kostia" && s !== "metka" && s !== "seri") {
-        let cost = prices[s];
-        if (d.bonuses.discounts && d.bonuses.discounts[s] && Date.now() < d.bonuses.discounts[s]) {
-          let discounted = Math.floor(cost * 0.85);
-          button.innerHTML = `<span style="text-decoration:line-through; color:red; font-size:11px;">${cost}</span> ${t('buy')} ${discounted} KSPT`;
-        } else {
-          button.textContent = t('buy') + ` ${cost} KSPT`;
-        }
-        button.className = "";
-        button.onclick = () => buySkin(s, cost);
-      } else {
-        button.textContent = t('locked_promo');
-        button.className = "owned";
-        button.onclick = null;
+    button.textContent = d.puzzleDone ? t('select') : t('locked_complete');
+    button.className = d.puzzleDone ? "" : "owned";
+    button.onclick = d.puzzleDone ? () => applySkin('mystic') : null;
+} else if (s === "gkspt" || s === "cyber_android") {
+    button.textContent = d.skins[s] ? t('select') : t('locked');
+    button.className = d.skins[s] ? "" : "owned";
+    button.onclick = d.skins[s] ? () => applySkin(s) : null;
+} else if (s === "capsule") {
+    button.textContent = d.skins['capsule'] ? t('select') : t('locked_find');
+    button.className = d.skins['capsule'] ? "" : "owned";
+    button.onclick = d.skins['capsule'] ? () => applySkin('capsule') : null;
+} else if (s === "artem" || s === "kostia" || s === "metka" || s === "seri") {
+    button.textContent = d.skins[s] ? t('select') : t('locked_promo');
+    button.className = d.skins[s] ? "" : "owned";
+    button.onclick = d.skins[s] ? () => applySkin(s) : null;
+} else if (s === "siulai") {
+    button.textContent = d.skins[s] ? t('select') : t('locked');
+    button.className = d.skins[s] ? "" : "owned";
+    button.onclick = d.skins[s] ? () => applySkin('siulai') : null;
+} else if (s !== "kostia" && s !== "metka" && s !== "seri") {
+    let cost = prices[s];
+    if (d.bonuses.discounts && d.bonuses.discounts[s] && Date.now() < d.bonuses.discounts[s]) {
+        let discounted = Math.floor(cost * 0.85);
+        button.innerHTML = `<span style="text-decoration:line-through; color:red; font-size:11px;">${cost}</span> ${t('buy')} ${discounted} KSPT`;
+    } else {
+        button.textContent = t('buy') + ` ${cost} KSPT`;
+    }
+    button.className = "";
+    button.onclick = () => buySkin(s, cost);
+} else {
+    button.textContent = t('locked_promo');
+    button.className = "owned";
+    button.onclick = null;
       }
     }
   });
@@ -1835,7 +1914,9 @@ function updateSkinPreviews() {
     'banditx': 'banditx.png',
     'goldcoin': 'goldcoin.png',
     'gkspt': 'gkspt.png',                
-    'cyber_android': 'robotic.png'
+    'cyber_android': 'robotic.png',
+    'dirty': 'dirty.png',
+    'siulai': 'siulai.png'
   };
   
    for (const [skin, img] of Object.entries(skinImageMap)) {
@@ -1852,6 +1933,10 @@ function updateSkinPreviews() {
         isOwned = d.skins[skin] || false;  // Скины из капсулы
       } else if (skin === 'artem' || skin === 'kostia' || skin === 'metka' || skin === 'seri') {
         isOwned = d.skins[skin] || false;
+      } else if (skin === 'dirty') {
+      isOwned = d.skins[skin] || false;
+      } else if (skin === 'siulai') {
+  isOwned = d.skins && d.skins['siulai'] || d.puzzle2Done;  // Проверяем и владение, и завершение пазла ёпта
       } else {
         isOwned = d.skins[skin] || (skin === 'default');
       }
@@ -2383,6 +2468,7 @@ function updatePuzzleUI() {
   
   if (ownedCount === 9 && !d.puzzleDone) {
     d.puzzleDone = true;
+    d.puzzleDoneTime = Date.now();
     if (!d.skins['mystic']) {
       d.skins['mystic'] = 1;
       showToast(t('puzzle_complete'));
@@ -2397,6 +2483,47 @@ function updatePuzzleUI() {
     if (fullImg) fullImg.style.display = "none";
     if (completedText) completedText.style.display = "none";
     if (placeBtn) placeBtn.style.display = ownedCount > 0 ? "block" : "none";
+  }
+}
+
+function checkSecondPuzzleCompletion() {
+  if (d.puzzle2Done) return;
+  
+  let allCollected = true;
+  for (let i = 0; i < 9; i++) {
+    if (d.puzzles2[i] !== 1) {
+      allCollected = false;
+      break;
+    }
+  }
+  
+  if (allCollected) {
+    d.puzzle2Done = true;
+    
+    // Разблокируем скин siulai
+    if (!d.skins) d.skins = {};
+    if (!d.skins['siulai']) {
+      d.skins['siulai'] = 1;
+      showToast("Cat: KSPT skin unlocked!");
+    }
+    
+    // Разблокируем музыку siulai
+    if (!d.ownedMusic) d.ownedMusic = [];
+    if (!d.ownedMusic.includes('siulai')) {
+      d.ownedMusic.push('siulai');
+      showToast("Cat's Yarn music unlocked!");
+    }
+    
+    // Показываем карточку скина
+    const skinCard = document.getElementById('skinCardSiulai');
+    if (skinCard) {
+      skinCard.style.display = "block";
+    }
+    
+    save();
+    updateSkinButtons();
+    updateSkinPreviews();
+    updateMusicUI();
   }
 }
 
@@ -2451,26 +2578,47 @@ function updateSecondPuzzleUI() {
       }
     }
   }
+  
   if (statusElem) statusElem.textContent = `Owned: ${ownedCount2}/9`;
 
+  // ИСПРАВЛЕНИЕ: Добавляем проверку на завершение пазла
   if (ownedCount2 === 9 && !d.puzzle2Done) {
     d.puzzle2Done = true;
+    
+    // Инициализируем объекты, если их нет
     if (!d.skins) d.skins = {};
-    if (!d.skins['cat']) {
-      d.skins['cat'] = 1;
-      showToast(t('puzzle_completed2'));
-      save();
+    if (!d.ownedMusic) d.ownedMusic = [];
+    
+    // Разблокируем скин siulai
+    if (!d.skins['siulai']) {
+      d.skins['siulai'] = 1;
+      showToast("Cat: KSPT skin unlocked!");
     }
+    
+    // Разблокируем музыку siulai
+    if (!d.ownedMusic.includes('siulai')) {
+      d.ownedMusic.push('siulai');
+      showToast("Cat's Yarn music unlocked!");
+    }
+    
+    // Сохраняем изменения
+    save();
+    
+    // Обновляем UI
+    updateSkinButtons();
+    updateSkinPreviews();
+    updateMusicUI();
   }
 
   if (d.puzzle2Done) {
     if (fullImg) fullImg.style.display = "block";
     if (completedText) completedText.style.display = "block";
     if (placeBtn) placeBtn.style.display = "none";
+    if (statusElem) statusElem.textContent = "Complete!";
   } else {
     if (fullImg) fullImg.style.display = "none";
     if (completedText) completedText.style.display = "none";
-    if (placeBtn) placeBtn.style.display = "inline-block";
+    if (placeBtn) placeBtn.style.display = ownedCount2 > 0 ? "inline-block" : "none";
   }
 }
 
@@ -2713,23 +2861,31 @@ function updateMusicUI() {
   }
 
   const siulaiBtn = document.getElementById("btn-music-siulai");
-  if (siulaiBtn) {
-    if (d.ownedMusic && d.ownedMusic.includes("siulai")) {
-      if (d.music === "siulai" && !d.musicMuted) {
-        siulaiBtn.textContent = t('active');
-        siulaiBtn.className = "active";
-        siulaiBtn.onclick = null;
-      } else {
-        siulaiBtn.textContent = t('select');
-        siulaiBtn.className = "";
-        siulaiBtn.onclick = () => setMusic('siulai');
-      }
-    } else {
-      siulaiBtn.textContent = t('locked');
-      siulaiBtn.className = "owned";
-      siulaiBtn.onclick = null;
+if (siulaiBtn) {
+  // Проверяем, есть ли скин siulai у игрока
+  if (d.skins && d.skins['siulai']) {
+    // Если скин есть, разблокируем музыку (если еще не разблокирована)
+    if (!d.ownedMusic.includes('siulai')) {
+      d.ownedMusic.push('siulai');
+      showToast(t('cat_music_unlocked'));
+      save();
     }
+    
+    if (d.music === "siulai" && !d.musicMuted) {
+      siulaiBtn.textContent = t('active');
+      siulaiBtn.className = "active";
+      siulaiBtn.onclick = null;
+    } else {
+      siulaiBtn.textContent = t('select');
+      siulaiBtn.className = "";
+      siulaiBtn.onclick = () => setMusic('siulai');
+    }
+  } else {
+    siulaiBtn.textContent = t('locked');
+    siulaiBtn.className = "owned";
+    siulaiBtn.onclick = null;
   }
+}
   
   const funnyBtn = document.getElementById('btn-music-funny');
 if (funnyBtn) {
@@ -4662,6 +4818,19 @@ function checkPromo() {
       return;
     }
 
+   } else if (code === "dirtynoob") {
+  if (!d.noobBox) d.noobBox = defaultData.noobBox;
+  if (d.noobBox.obtained) {
+    showToast(t('promo_already_used'));
+    input.value = "";
+    return;
+  }
+  d.noobBox.obtained = true;
+  message = "Noob Box obtained!";
+  // Запускаем открытие сразу
+  startNoobBoxSequence();
+  return;
+
   } else if (code === "metka") {
     if (!d.skins.metka) {
       d.skins.metka = 1;
@@ -4759,6 +4928,196 @@ function checkPromo() {
  // ==========================================
 // CAPSULE FUNCTIONS - UPDATED WITH FIXES
 // ==========================================
+
+// ---- Noob Box ----
+let noobBoxOpening = false;
+let noobBoxTaps = 0;
+
+function startNoobBoxSequence() {
+  if (noobBoxOpening) return;
+  if (!d.noobBox || !d.noobBox.obtained) {
+    showToast(t('locked'));
+    return;
+  }
+
+  noobBoxOpening = true;
+  noobBoxTaps = d.noobBox.taps || 0;
+
+  const modal = document.getElementById("noobBoxModal");
+  const boxImg = document.getElementById("noobBoxImg");
+  const hint = document.getElementById("noobBoxHint");
+
+  if (modal && boxImg) {
+    modal.classList.add("active");
+    boxImg.src = "noob.png";
+    boxImg.classList.remove("tap-anim", "zoomed");
+    hint.textContent = `Tap to open! (${noobBoxTaps}/10)`;
+    
+    // attach handler
+    boxImg.removeEventListener('click', noobBoxTapHandler);
+    boxImg.addEventListener('click', noobBoxTapHandler);
+  }
+}
+
+function noobBoxTapHandler(e) {
+  const now = Date.now();
+  if (lastCapsuleTapTime && now - lastCapsuleTapTime < 120) return;
+  lastCapsuleTapTime = now;
+
+  noobBoxTaps++;
+  d.noobBox.taps = noobBoxTaps;
+  const boxImg = document.getElementById('noobBoxImg');
+  const hint = document.getElementById('noobBoxHint');
+
+  // tap animation
+  boxImg.classList.add('tap-anim');
+  setTimeout(() => boxImg.classList.remove('tap-anim'), 220);
+
+  // Update taps counter
+  hint.textContent = `Tap to open! (${noobBoxTaps}/10)`;
+
+  // At 10 taps, change image and open
+  if (noobBoxTaps >= 10) {
+    boxImg.src = "noob1.png";
+    hint.textContent = "Opening...";
+    
+    // disable further taps
+    boxImg.removeEventListener('click', noobBoxTapHandler);
+    setTimeout(() => openNoobBox(), 300);
+  }
+
+  // persist progress
+  save();
+}
+
+function openNoobBox() {
+  const modal = document.getElementById("noobBoxModal");
+  const boxImg = document.getElementById("noobBoxImg");
+  const hint = document.getElementById("noobBoxHint");
+  const whiteFade = document.getElementById("whiteFade");
+
+  if (!modal || !boxImg) return;
+
+  // White flash effect
+  if (whiteFade) {
+    whiteFade.classList.add("active");
+    setTimeout(() => whiteFade.classList.remove("active"), 250);
+  }
+
+  // vibration if enabled
+  if (navigator.vibrate && d.settings && d.settings.vibration && d.settings.vibration.tapsEnabled) {
+    navigator.vibrate(30);
+  }
+
+  setTimeout(() => {
+    // Get random reward
+    const reward = getWeightedNoobBoxReward();
+    let rewardText = "";
+    let rewardImg = reward.img || "kspt.png";
+
+    switch (reward.type) {
+      case 'kspt':
+        d.tokens += reward.value;
+        rewardText = `${reward.name}!`;
+        break;
+
+      case 'banx':
+        if (!d.market.banxToken) d.market.banxToken = defaultData.market.banxToken;
+        d.market.banxToken.owned += reward.value;
+        rewardText = `${reward.name}!`;
+        break;
+
+      case 'jvm':
+        if (!d.market.jvmToken) d.market.jvmToken = defaultData.market.jvmToken;
+        d.market.jvmToken.owned += reward.value;
+        rewardText = `${reward.name}!`;
+        break;
+
+      case 'puzzle':
+        const now = Date.now();
+        const delay = 24 * 60 * 60 * 1000;
+        if (!d.puzzleDone) {
+          // First puzzle
+          const missing1 = [];
+          for (let i = 0; i < 9; i++) if (d.puzzles[i] === 0) missing1.push(i);
+          if (missing1.length > 0) {
+            const idx = missing1[Math.floor(Math.random() * missing1.length)];
+            d.puzzles[idx] = 1;
+            rewardText = `Puzzle Piece ${idx+1} obtained!`;
+            rewardImg = `pazl${idx+1}.png`;
+          } else {
+            d.tokens += 5;
+            rewardText = "+5 KSPT (All puzzle pieces owned)!";
+            rewardImg = "kspt.png";
+          }
+        } else if (now < (d.puzzleDoneTime || 0) + delay) {
+          d.tokens += 5;
+          rewardText = "+5 KSPT (Next puzzle not ready)!";
+          rewardImg = "kspt.png";
+        } else {
+          // Second puzzle
+          const missing2 = [];
+          for (let i = 0; i < 9; i++) if (d.puzzles2[i] === 0) missing2.push(i);
+          if (missing2.length > 0) {
+            const idx = missing2[Math.floor(Math.random() * missing2.length)];
+            d.puzzles2[idx] = 1;
+            rewardText = `Puzzle Piece ${idx+11} obtained!`;
+            rewardImg = `pazl${idx+11}.png`;
+          } else {
+            d.tokens += 5;
+            rewardText = "+5 KSPT (All puzzle pieces owned)!";
+            rewardImg = "kspt.png";
+          }
+        }
+        break;
+
+      case 'capsuleSkip':
+        d.capsule.lastOpen = 0;
+        rewardText = "Capsule timer skipped!";
+        rewardImg = "iks.png";
+        break;
+
+      case 'skin':
+        if (!d.skins) d.skins = {};
+        if (!d.skins[reward.id]) {
+          d.skins[reward.id] = 1;
+          rewardText = `${reward.name} unlocked!`;
+          
+          // Show skin card
+          const card = document.getElementById("skinCardDirty");
+          if (card) card.style.display = "block";
+        } else {
+          d.tokens += 15;
+          rewardText = "+15 KSPT (Skin already owned)!";
+          rewardImg = "kspt.png";
+        }
+        break;
+    }
+
+    // Mark box as opened
+    d.noobBox.opened = true;
+    d.noobBox.taps = 0;
+    d.noobBox.lastOpen = Date.now();
+
+    // Save and show reward
+    save();
+    showReward(rewardText, rewardImg);
+
+    // Close modal and cleanup
+    modal.classList.remove("active");
+    noobBoxOpening = false;
+    noobBoxTaps = 0;
+
+    // Cleanup listener
+    boxImg.removeEventListener('click', noobBoxTapHandler);
+
+    // Update UI
+    ui();
+    updatePuzzleUI();
+    if (updateSecondPuzzleUI) updateSecondPuzzleUI();
+
+  }, 300);
+}
 
 function startCapsuleSequence() {
   if (capsuleOpening) return;

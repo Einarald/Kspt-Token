@@ -90,7 +90,11 @@
   <div class="balance-main" id="balanceMain">0.00 KSPT</div>
   <div class="offline-info" id="offlineRateMain">Offline: 0.00 KSPT/h</div>
 
-  <img id="coin" class="coin" src="kspt.png" alt="Coin">
+  <div class="coin-3d-container" id="coin3dContainer">
+  <div class="coin-3d" id="coin3d">
+    <img id="coin" class="coin" src="kspt.png" alt="Coin">
+  </div>
+</div>
   
   <div class="energy-box">
     <img src="ener.png" alt="E">
@@ -249,6 +253,17 @@
           <span class="toggle-slider"></span>
         </label>
       </div>
+
+<div class="settings-checkbox">
+  <div style="flex:1;">
+    <label for="toggle3DEffect" data-lang-key="3d_effect">3D Coin Effect</label>
+    <div class="subtext" data-lang-key="3d_effect_desc">Tilt the coin with mouse/finger</div>
+  </div>
+  <label class="toggle-switch">
+    <input type="checkbox" id="toggle3DEffect" checked onchange="toggle3DEffect(this.checked)">
+    <span class="toggle-slider"></span>
+  </label>
+</div>
     </div>
     <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
   </div>

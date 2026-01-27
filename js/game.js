@@ -53,6 +53,8 @@ const translations = {
     'choose_language': 'Choose your preferred language',
     'english_desc': 'Default language',
     'russian_desc': 'Russian language',
+    '3d_effect': '3D Coin Effect',
+    '3d_effect_desc': 'Tilt the coin with mouse/finger',
     
     // Backgrounds
     'customize_menu': 'Customize your main menu',
@@ -311,6 +313,8 @@ const translations = {
     'choose_language': 'Выберите предпочитаемый язык',
     'english_desc': 'Английский язык',
     'russian_desc': 'Русский язык',
+    '3d_effect': '3D эффект монеты',
+    '3d_effect_desc': 'Наклоняйте монету мышкой/пальцем',
     
     // Backgrounds
     'customize_menu': 'Настройте главное меню',
@@ -1008,7 +1012,8 @@ const defaultData = {
   settings: {
     animation: {
       skins: true,
-      transitions: true
+      transitions: true,
+      coin3d: true
     },
     vibration: {
       tapsEnabled: true,
@@ -1296,8 +1301,8 @@ function processOfflineMarket(minutes) {
     else if(range === 3) change = (Math.random() * 0.25) + 0.15;
     
     let newPrice = d.market.ksptToken.price + (change * sign);
-    if(newPrice < 0.35) newPrice = 0.35;
-    if(newPrice > 2.80) newPrice = 2.80;
+    if(newPrice < 0.40) newPrice = 0.40;
+    if(newPrice > 3.10) newPrice = 3.10;
     
     d.market.ksptToken.price = newPrice;
     d.market.ksptToken.history.push(newPrice);
@@ -1347,8 +1352,8 @@ function processOfflineMarket(minutes) {
       else if(jvmRange === 4) jvmChange = (Math.random() * 0.10) + 0.20;
       
       let newJvmPrice = d.market.jvmToken.price + (jvmChange * jvmSign);
-      if(newJvmPrice < 2.20) newJvmPrice = 2.20;
-      if(newJvmPrice > 7.40) newJvmPrice = 7.40;
+      if(newJvmPrice < 2.80) newJvmPrice = 2.80;
+      if(newJvmPrice > 12.10) newJvmPrice = 12.10;
       
       d.market.jvmToken.price = newJvmPrice;
       d.market.jvmToken.history.push(newJvmPrice);
@@ -2786,6 +2791,11 @@ function updateSettingsUI() {
   });
   
   updateMusicUI();
+
+ const toggle3DEffectCheckbox = document.getElementById('toggle3DEffect');
+  if (toggle3DEffectCheckbox && d.settings && d.settings.animation) {
+    toggle3DEffectCheckbox.checked = d.settings.animation.coin3d !== false;
+  }
 }
 
 function updateMusicUI() {
@@ -2921,13 +2931,107 @@ function initMarketReferences() {
   marketDOMRefs.priceJVM = document.getElementById('price-jvmToken-value');
   marketDOMRefs.portfolioValue = document.getElementById('market-portfolio-value');
   marketDOMRefs.chartCanvas = document.getElementById('priceChart');
+
   if (marketDOMRefs.chartCanvas) {
     marketDOMRefs.chartCtx = marketDOMRefs.chartCanvas.getContext('2d');
   }
-  marketDOMRefs.tradeAmount = document.getElementById('tradeAmount');
-  marketDOMRefs.priceContainer = document.getElementById('trade-price-container');
-  marketDOMRefs.priceArrow = document.getElementById('trade-price-arrow');
+
+  const now = Date.now();
+  if (now - lastMarketUpdate < 1000) {
+    return;
+  }
+  lastMarketUpdate = now;
 }
+  
+  // Save focused input state if any
+  let focused = null;
+  let selectionStart = 0;
+  let selectionEnd = 0;
+  let inputValue = '';
+  
+  if (focusedInput) {
+    focused = focusedInput;
+    selectionStart = focused.selectionStart;
+    selectionEnd = focused.selectionEnd;
+    inputValue = focused.value;
+  }
+  
+  if (currentMarketView === 'main') {
+    marketTicker();
+    
+    // Update only text nodes, not entire DOM
+    if (marketDOMRefs.priceKSPT) {
+      marketDOMRefs.priceKSPT.textContent = formatNumber(d.market.ksptToken.price, 2);
+    }
+    
+    if (marketDOMRefs.priceBANX) {
+      marketDOMRefs.priceBANX.textContent = formatNumber(d.market.banxToken.price, 5);
+    }
+    
+    if (marketDOMRefs.priceJVM) {
+      marketDOMRefs.priceJVM.textContent = formatNumber(d.market.jvmToken.price, 2);
+    }
+    
+    if (marketDOMRefs.pricePersonal && d.market.personalToken) {
+      marketDOMRefs.pricePersonal.textContent = formatNumber(d.market.personalToken.price, 4);
+    }
+    
+    if (marketDOMRefs.portfolioValue) {
+      let totalValue = (d.market.ksptToken.owned * d.market.ksptToken.price);
+      if (d.market.banxToken) {
+        totalValue += (d.market.banxToken.owned * d.market.banxToken.price);
+      }
+      if (d.market.jvmToken) {
+        totalValue += (d.market.jvmToken.owned * d.market.jvmToken.price);
+      }
+      if (d.market.personalToken) {
+        totalValue += (d.market.personalToken.owned * d.market.personalToken.price);
+      }
+      marketDOMRefs.portfolioValue.textContent = formatNumber(totalValue, 2) + " KSPT";
+    }
+  } else if (currentMarketView === 'trade' && selectedToken) {
+    marketTicker();
+    
+    let tokenData;
+    if (selectedToken === 'ksptToken') tokenData = d.market.ksptToken;
+    else if (selectedToken === 'banxToken') tokenData = d.market.banxToken;
+    else if (selectedToken === 'jvmToken') tokenData = d.market.jvmToken;
+    else if (selectedToken === 'personalToken') tokenData = d.market.personalToken;
+    
+    if (tokenData && marketDOMRefs.priceContainer && marketDOMRefs.priceArrow) {
+      const lastPrice = tokenData.history[tokenData.history.length - 2] || tokenData.price;
+      const diff = tokenData.price - lastPrice;
+      const colorClass = diff >= 0 ? "price-up" : "price-down";
+      const arrow = diff >= 0 ? "▲" : "▼";
+      
+      const priceValueElem = document.getElementById('trade-price-value');
+      if (priceValueElem) {
+        if (selectedToken === 'ksptToken' || selectedToken === 'jvmToken') {
+          priceValueElem.textContent = formatNumber(tokenData.price, 2);
+        } else if (selectedToken === 'banxToken') {
+          priceValueElem.textContent = formatNumber(tokenData.price, 5);
+        } else {
+          priceValueElem.textContent = formatNumber(tokenData.price, 4);
+        }
+      }
+      
+      marketDOMRefs.priceContainer.className = colorClass;
+      marketDOMRefs.priceArrow.textContent = arrow;
+    }
+    
+    if (now % 3000 < 100) {
+      drawChart();
+    }
+  }
+  
+  // Restore focused input state
+  if (focused) {
+    focused.value = inputValue;
+    focused.setSelectionRange(selectionStart, selectionEnd);
+    focused.focus();
+  }
+  
+  updateBuyCooldownInfo();
 
 function updateMarketPrices() {
   if (!document.getElementById("market")?.classList.contains("active")) {
@@ -3029,6 +3133,128 @@ function updateMarketPrices() {
   }
   
   updateBuyCooldownInfo();
+}
+
+// ==========================================
+// 3D COIN ROTATION EFFECT
+// ==========================================
+
+function init3DCoin() {
+  const coinContainer = document.getElementById('coin3dContainer');
+  const coin3d = document.getElementById('coin3d');
+  
+  if (!coinContainer || !coin3d) return;
+  
+  // Проверяем включен ли 3D эффект
+  if (!coinContainer.classList.contains('three-d-enabled')) return;
+  
+  let mouseX = 0;
+  let mouseY = 0;
+  let rotateX = 0;
+  let rotateY = 0;
+  let isHovering = false;
+  
+  // Чувствительность вращения (можно настроить)
+  const sensitivity = 0.2;
+  
+  // Обработчик движения мыши
+  coinContainer.addEventListener('mousemove', (e) => {
+    if (!isHovering) return;
+    
+    const rect = coinContainer.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    mouseX = e.clientX - centerX;
+    mouseY = e.clientY - centerY;
+    
+    // Рассчитываем вращение на основе позиции мыши
+    rotateY = mouseX * sensitivity;
+    rotateX = -mouseY * sensitivity;
+    
+    // Применяем вращение
+    coin3d.style.transform = `rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
+  });
+  
+  // Обработчик для сенсорных устройств
+  coinContainer.addEventListener('touchmove', (e) => {
+    if (!isHovering) return;
+    e.preventDefault();
+    
+    const touch = e.touches[0];
+    const rect = coinContainer.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    mouseX = touch.clientX - centerX;
+    mouseY = touch.clientY - centerY;
+    
+    rotateY = mouseX * sensitivity;
+    rotateX = -mouseY * sensitivity;
+    
+    coin3d.style.transform = `rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
+  }, { passive: false });
+  
+  // Сброс вращения при уходе мыши
+  coinContainer.addEventListener('mouseleave', () => {
+    isHovering = false;
+    // Плавно возвращаем в исходное положение
+    coin3d.style.transition = 'transform 0.5s ease';
+    coin3d.style.transform = 'rotateY(0deg) rotateX(0deg)';
+    
+    setTimeout(() => {
+      coin3d.style.transition = 'transform 0.1s ease-out';
+    }, 500);
+  });
+  
+  // Начало наведения
+  coinContainer.addEventListener('mouseenter', () => {
+    isHovering = true;
+  });
+  
+  // Для сенсорных устройств
+  coinContainer.addEventListener('touchstart', () => {
+    isHovering = true;
+  });
+  
+  coinContainer.addEventListener('touchend', () => {
+    isHovering = false;
+    coin3d.style.transition = 'transform 0.5s ease';
+    coin3d.style.transform = 'rotateY(0deg) rotateX(0deg)';
+    
+    setTimeout(() => {
+      coin3d.style.transition = 'transform 0.1s ease-out';
+    }, 500);
+  });
+  
+  // Сохраняем ссылки для других функций
+  window.coin3d = coin3d;
+  window.coinContainer = coinContainer;
+}
+
+// Включить/выключить 3D эффект (можно добавить в настройки)
+// Находите функцию toggle3DEffect (примерно строка 1790)
+function toggle3DEffect(enabled) {
+  if (!d.settings) d.settings = {};
+  if (!d.settings.animation) d.settings.animation = {};
+  d.settings.animation.coin3d = enabled;
+  save();
+  
+  const coinContainer = document.getElementById('coin3dContainer');
+  if (!coinContainer) return;
+  
+  if (enabled) {
+    coinContainer.classList.add('three-d-enabled');
+    // Инициализация 3D
+    init3DCoin();
+  } else {
+    coinContainer.classList.remove('three-d-enabled');
+    // Сброс трансформации
+    const coin3d = document.getElementById('coin3d');
+    if (coin3d) {
+      coin3d.style.transform = 'none';
+    }
+  }
 }
 
 function updateBuyCooldownInfo() {
@@ -3515,6 +3741,7 @@ function updateMarketUI() {
     if (!marketInitialized) {
       initMarketUI();
     }
+    // Обновляем цены при каждом вызове
     updateMarketPrices();
   } else if (currentMarketView === 'trade') {
     renderTradeView();
@@ -4038,8 +4265,8 @@ function marketTicker() {
     }
     
     let newPrice = d.market.ksptToken.price + (change * sign);
-    if (newPrice < 0.35) newPrice = 0.35;
-    if (newPrice > 2.80) newPrice = 2.80;
+    if (newPrice < 0.40) newPrice = 0.40;
+    if (newPrice > 3.10) newPrice = 3,10;
     
     d.market.ksptToken.price = newPrice;
     d.market.ksptToken.history.push(newPrice);
@@ -4082,8 +4309,8 @@ function marketTicker() {
     }
     
     let newJvmPrice = d.market.jvmToken.price + (jvmChange * jvmSign);
-    if (newJvmPrice < 2.20) newJvmPrice = 2.20;
-    if (newJvmPrice > 7.40) newJvmPrice = 7.40;
+    if (newJvmPrice < 2.80) newJvmPrice = 2.80;
+    if (newJvmPrice > 12.10) newJvmPrice = 12.10;
     
     d.market.jvmToken.price = newJvmPrice;
     d.market.jvmToken.history.push(newJvmPrice);
@@ -4149,14 +4376,14 @@ function openScreen(id) {
     hideCustomKeyboard();
     marketInitialized = false;
   } else if (id === 'market') {
-    document.getElementById('navMarket')?.classList.add("active");
-    if (!marketUpdateInterval) {
-      marketUpdateInterval = setInterval(updateMarketPrices, 1000);
-      console.debug('market: interval started');
-    }
-    setTimeout(() => {
-      updateMarketUI();
-    }, 100);
+  document.getElementById('navMarket')?.classList.add("active");
+  if (!marketUpdateInterval) {
+    marketUpdateInterval = setInterval(updateMarketPrices, 1000);
+    console.debug('market: interval started');
+  }
+  setTimeout(() => {
+    updateMarketUI();
+  }, 100);
   } else if (id === 'offlineShop') {
     // Initialize cards tab on first open
     if (!document.getElementById('cards-content').innerHTML) {
@@ -5814,6 +6041,11 @@ function initGame() {
   // Initial UI update
   ui();
 
+   const coin3dEnabled = d.settings && d.settings.animation && d.settings.animation.coin3d !== false;
+  if (coin3dEnabled) {
+    init3DCoin();
+  }
+
   // Set up custom keyboard
   setupCustomKeyboard();
 
@@ -5830,6 +6062,12 @@ function initGame() {
   // Initialize cards tab on first load
   if (document.getElementById('offlineShop')?.classList.contains('active')) {
     showCardTab('company');
+  }
+
+   // Установите состояние чекбокса
+  const toggle3DEffectCheckbox = document.getElementById('toggle3DEffect');
+  if (toggle3DEffectCheckbox) {
+    toggle3DEffectCheckbox.checked = coin3dEnabled;
   }
 
   // Делегирование: кнопка закрытия капсулы / магазина

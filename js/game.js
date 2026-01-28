@@ -3229,9 +3229,17 @@ function init3DCoin() {
     coin3d.style.transform = `rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
   };
   
+  // ВАЖНОЕ ИСПРАВЛЕНИЕ: Добавляем обработчик pointerdown для пропуска событий
+  const pointerDownHandler = (e) => {
+    // Разрешаем событию пройти дальше (не блокируем)
+    if (e.cancelable) {
+      e.stopPropagation(); // Останавливаем всплытие, но не блокируем
+    }
+  };
+  
   const touchStartHandler = (e) => {
     if (!coinContainer.classList.contains('three-d-enabled')) return;
-    e.preventDefault();
+    // ВАЖНО: не вызываем e.preventDefault() - это позволяет событию пройти дальше
     isTouching = true;
     
     const touch = e.touches[0];
@@ -3253,7 +3261,6 @@ function init3DCoin() {
   
   const touchMoveHandler = (e) => {
     if (!coinContainer.classList.contains('three-d-enabled') || !isTouching) return;
-    e.preventDefault();
     
     const touch = e.touches[0];
     const rect = coinContainer.getBoundingClientRect();
@@ -3291,6 +3298,7 @@ function init3DCoin() {
   threeDHandlers.mouseEnter = mouseEnterHandler;
   threeDHandlers.mouseLeave = mouseLeaveHandler;
   threeDHandlers.mouseMove = mouseMoveHandler;
+  threeDHandlers.pointerDown = pointerDownHandler; // Новый обработчик
   threeDHandlers.touchStart = touchStartHandler;
   threeDHandlers.touchMove = touchMoveHandler;
   threeDHandlers.touchEnd = touchEndHandler;
@@ -3299,8 +3307,11 @@ function init3DCoin() {
   coinContainer.addEventListener('mouseenter', mouseEnterHandler);
   coinContainer.addEventListener('mouseleave', mouseLeaveHandler);
   document.addEventListener('mousemove', mouseMoveHandler);
-  coinContainer.addEventListener('touchstart', touchStartHandler, { passive: false });
-  document.addEventListener('touchmove', touchMoveHandler, { passive: false });
+  
+  // ВАЖНО: Добавляем pointerdown с passive:true чтобы не блокировать клики
+  coinContainer.addEventListener('pointerdown', pointerDownHandler, { passive: true });
+  coinContainer.addEventListener('touchstart', touchStartHandler, { passive: true }); // passive: true разрешает прокрутку
+  document.addEventListener('touchmove', touchMoveHandler, { passive: true });
   document.addEventListener('touchend', touchEndHandler);
 }
 

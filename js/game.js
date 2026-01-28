@@ -553,17 +553,23 @@ function formatNumber(value, decimals = 2) {
 }
 
 function updateAllTexts() {
-  document.querySelectorAll('[data-lang-key]').forEach(element => {
-    const key = element.getAttribute('data-lang-key');
-    if (key) {
-      const text = t(key);
-      if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
-        element.placeholder = text;
-      } else {
-        element.textContent = text;
-      }
+    document.querySelectorAll('[data-lang-key]').forEach(element => {
+        const key = element.getAttribute('data-lang-key');
+        if (key) {
+            const text = t(key);
+            if (element.tagName === 'INPUT' || element.tagName === 'TEXTAREA') {
+                element.placeholder = text;
+            } else {
+                element.textContent = text;
+            }
+        }
+    });
+    
+    // Обновляем состояние 3D чекбокса
+    const toggle3DEffectCheckbox = document.getElementById('toggle3DEffect');
+    if (toggle3DEffectCheckbox && d.settings && d.settings.animation) {
+        toggle3DEffectCheckbox.checked = d.settings.animation.coin3d !== false;
     }
-  });
   
   // Update skin texts with correct prices and incomes
   updateSkinTexts();
@@ -821,6 +827,16 @@ let focusedInput = null;
 let chartIsDragging = false;
 let chartDragStartX = 0;
 let chartDragStartOffset = 0;
+
+// ===== 3D COIN GLOBAL HANDLERS =====
+let threeDHandlers = {
+  mouseEnter: null,
+  mouseLeave: null,
+  mouseMove: null,
+  touchStart: null,
+  touchMove: null,
+  touchEnd: null
+};
 
 // Capsule opening guard
 let capsuleOpening = false;
@@ -2793,9 +2809,10 @@ function updateSettingsUI() {
   updateMusicUI();
 
  const toggle3DEffectCheckbox = document.getElementById('toggle3DEffect');
-  if (toggle3DEffectCheckbox && d.settings && d.settings.animation) {
-    toggle3DEffectCheckbox.checked = d.settings.animation.coin3d !== false;
-  }
+    if (toggle3DEffectCheckbox && d.settings && d.settings.animation) {
+        // Используем правильное значение
+        toggle3DEffectCheckbox.checked = d.settings.animation.coin3d !== false;
+    }
 }
 
 function updateMusicUI() {
@@ -2915,6 +2932,22 @@ if (funnyBtn) {
         funnyBtn.onclick = null;
     }
 }
+}
+
+function toggle3DEffect(enabled) {
+  if (!d.settings) d.settings = {};
+  if (!d.settings.animation) d.settings.animation = {};
+  
+  d.settings.animation.coin3d = enabled;
+  save();
+  
+  if (enabled) {
+    init3DCoin();
+  } else {
+    disable3DEffect();
+  }
+  
+  updateSettingsUI();
 }
 
 // ==========================================
@@ -3145,21 +3178,43 @@ function init3DCoin() {
   
   if (!coinContainer || !coin3d) return;
   
-  // Проверяем включен ли 3D эффект
-  if (!coinContainer.classList.contains('three-d-enabled')) return;
+  // Сначала отключаем старые обработчики
+  disable3DEffect();
+  
+  // Добавляем класс для активации 3D эффекта
+  coinContainer.classList.add('three-d-enabled');
   
   let mouseX = 0;
   let mouseY = 0;
   let rotateX = 0;
   let rotateY = 0;
   let isHovering = false;
-  
-  // Чувствительность вращения (можно настроить)
+  let isTouching = false;
+  let lastTouchX = 0;
+  let lastTouchY = 0;
   const sensitivity = 0.2;
   
-  // Обработчик движения мыши
-  coinContainer.addEventListener('mousemove', (e) => {
-    if (!isHovering) return;
+  // Функции-обработчики
+  const mouseEnterHandler = () => {
+    if (!coinContainer.classList.contains('three-d-enabled')) return;
+    isHovering = true;
+  };
+  
+  const mouseLeaveHandler = () => {
+    if (!coinContainer.classList.contains('three-d-enabled')) return;
+    isHovering = false;
+    
+    // Плавный возврат в исходное положение
+    coin3d.style.transition = 'transform 0.5s ease';
+    coin3d.style.transform = 'rotateY(0deg) rotateX(0deg)';
+    
+    setTimeout(() => {
+      coin3d.style.transition = 'transform 0.1s ease-out';
+    }, 500);
+  };
+  
+  const mouseMoveHandler = (e) => {
+    if (!coinContainer.classList.contains('three-d-enabled') || !isHovering) return;
     
     const rect = coinContainer.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
@@ -3168,23 +3223,24 @@ function init3DCoin() {
     mouseX = e.clientX - centerX;
     mouseY = e.clientY - centerY;
     
-    // Рассчитываем вращение на основе позиции мыши
     rotateY = mouseX * sensitivity;
     rotateX = -mouseY * sensitivity;
     
-    // Применяем вращение
     coin3d.style.transform = `rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
-  });
+  };
   
-  // Обработчик для сенсорных устройств
-  coinContainer.addEventListener('touchmove', (e) => {
-    if (!isHovering) return;
+  const touchStartHandler = (e) => {
+    if (!coinContainer.classList.contains('three-d-enabled')) return;
     e.preventDefault();
+    isTouching = true;
     
     const touch = e.touches[0];
     const rect = coinContainer.getBoundingClientRect();
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
+    
+    lastTouchX = touch.clientX;
+    lastTouchY = touch.clientY;
     
     mouseX = touch.clientX - centerX;
     mouseY = touch.clientY - centerY;
@@ -3193,69 +3249,149 @@ function init3DCoin() {
     rotateX = -mouseY * sensitivity;
     
     coin3d.style.transform = `rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
-  }, { passive: false });
+  };
   
-  // Сброс вращения при уходе мыши
-  coinContainer.addEventListener('mouseleave', () => {
-    isHovering = false;
-    // Плавно возвращаем в исходное положение
+  const touchMoveHandler = (e) => {
+    if (!coinContainer.classList.contains('three-d-enabled') || !isTouching) return;
+    e.preventDefault();
+    
+    const touch = e.touches[0];
+    const rect = coinContainer.getBoundingClientRect();
+    const centerX = rect.left + rect.width / 2;
+    const centerY = rect.top + rect.height / 2;
+    
+    const deltaX = touch.clientX - lastTouchX;
+    const deltaY = touch.clientY - lastTouchY;
+    
+    rotateY += deltaX * sensitivity;
+    rotateX -= deltaY * sensitivity;
+    
+    rotateX = Math.max(-30, Math.min(30, rotateX));
+    rotateY = Math.max(-30, Math.min(30, rotateY));
+    
+    coin3d.style.transform = `rotateY(${rotateY}deg) rotateX(${rotateX}deg)`;
+    
+    lastTouchX = touch.clientX;
+    lastTouchY = touch.clientY;
+  };
+  
+  const touchEndHandler = (e) => {
+    if (!coinContainer.classList.contains('three-d-enabled') || !isTouching) return;
+    isTouching = false;
+    
     coin3d.style.transition = 'transform 0.5s ease';
     coin3d.style.transform = 'rotateY(0deg) rotateX(0deg)';
     
     setTimeout(() => {
       coin3d.style.transition = 'transform 0.1s ease-out';
     }, 500);
-  });
+  };
   
-  // Начало наведения
-  coinContainer.addEventListener('mouseenter', () => {
-    isHovering = true;
-  });
+  // Сохраняем ссылки на обработчики
+  threeDHandlers.mouseEnter = mouseEnterHandler;
+  threeDHandlers.mouseLeave = mouseLeaveHandler;
+  threeDHandlers.mouseMove = mouseMoveHandler;
+  threeDHandlers.touchStart = touchStartHandler;
+  threeDHandlers.touchMove = touchMoveHandler;
+  threeDHandlers.touchEnd = touchEndHandler;
   
-  // Для сенсорных устройств
-  coinContainer.addEventListener('touchstart', () => {
-    isHovering = true;
-  });
-  
-  coinContainer.addEventListener('touchend', () => {
-    isHovering = false;
-    coin3d.style.transition = 'transform 0.5s ease';
-    coin3d.style.transform = 'rotateY(0deg) rotateX(0deg)';
-    
-    setTimeout(() => {
-      coin3d.style.transition = 'transform 0.1s ease-out';
-    }, 500);
-  });
-  
-  // Сохраняем ссылки для других функций
-  window.coin3d = coin3d;
-  window.coinContainer = coinContainer;
+  // Добавляем обработчики
+  coinContainer.addEventListener('mouseenter', mouseEnterHandler);
+  coinContainer.addEventListener('mouseleave', mouseLeaveHandler);
+  document.addEventListener('mousemove', mouseMoveHandler);
+  coinContainer.addEventListener('touchstart', touchStartHandler, { passive: false });
+  document.addEventListener('touchmove', touchMoveHandler, { passive: false });
+  document.addEventListener('touchend', touchEndHandler);
 }
 
-// Включить/выключить 3D эффект (можно добавить в настройки)
-// Находите функцию toggle3DEffect (примерно строка 1790)
-function toggle3DEffect(enabled) {
-  if (!d.settings) d.settings = {};
-  if (!d.settings.animation) d.settings.animation = {};
-  d.settings.animation.coin3d = enabled;
-  save();
-  
+function disable3DEffect() {
   const coinContainer = document.getElementById('coin3dContainer');
-  if (!coinContainer) return;
+  const coin3d = document.getElementById('coin3d');
   
-  if (enabled) {
+  if (!coinContainer || !coin3d) return;
+  
+  // Удаляем все обработчики
+  if (threeDHandlers.mouseEnter) {
+    coinContainer.removeEventListener('mouseenter', threeDHandlers.mouseEnter);
+  }
+  if (threeDHandlers.mouseLeave) {
+    coinContainer.removeEventListener('mouseleave', threeDHandlers.mouseLeave);
+  }
+  if (threeDHandlers.mouseMove) {
+    document.removeEventListener('mousemove', threeDHandlers.mouseMove);
+  }
+  if (threeDHandlers.touchStart) {
+    coinContainer.removeEventListener('touchstart', threeDHandlers.touchStart);
+  }
+  if (threeDHandlers.touchMove) {
+    document.removeEventListener('touchmove', threeDHandlers.touchMove);
+  }
+  if (threeDHandlers.touchEnd) {
+    document.removeEventListener('touchend', threeDHandlers.touchEnd);
+  }
+  
+  // Сбрасываем трансформацию
+  coin3d.style.transition = 'transform 0.5s ease';
+  coin3d.style.transform = 'none';
+  
+  // Удаляем класс
+  coinContainer.classList.remove('three-d-enabled');
+  
+  // Сбрасываем обработчики
+  threeDHandlers = {
+    mouseEnter: null,
+    mouseLeave: null,
+    mouseMove: null,
+    touchStart: null,
+    touchMove: null,
+    touchEnd: null
+  };
+}
+
+// ===== АКТИВАЦИЯ 3D ЭФФЕКТА ПРИ ЗАГРУЗКЕ =====
+// В функции initGame() добавьте вызов init3DCoin после инициализации настроек:
+function initGame() {
+  console.log('initGame called');
+  // ... существующий код ...
+  
+    // 3D эффект монеты - ИСПРАВЛЕННАЯ ЛОГИКА
+  const coin3dEnabled = d.settings && d.settings.animation && d.settings.animation.coin3d !== false;
+  
+  // Обновляем UI переключателя
+const toggle3DEffectCheckbox = document.getElementById('toggle3DEffect');
+if (toggle3DEffectCheckbox) {
+  toggle3DEffectCheckbox.checked = coin3dEnabled;
+}
+
+// Контейнер монеты
+const coinContainer = document.getElementById('coin3dContainer');
+
+// Инициализируем / отключаем 3D эффект
+if (coin3dEnabled) {
+  if (coinContainer) {
     coinContainer.classList.add('three-d-enabled');
-    // Инициализация 3D
+  }
+
+  // Инициализируем с небольшой задержкой
+  setTimeout(() => {
     init3DCoin();
-  } else {
+  }, 100);
+
+} else {
+  disable3DEffect();
+
+  if (coinContainer) {
     coinContainer.classList.remove('three-d-enabled');
-    // Сброс трансформации
+  }
+
+   // Сброс трансформации
     const coin3d = document.getElementById('coin3d');
     if (coin3d) {
       coin3d.style.transform = 'none';
     }
   }
 }
+
 
 function updateBuyCooldownInfo() {
   const now = Date.now();
@@ -4266,7 +4402,7 @@ function marketTicker() {
     
     let newPrice = d.market.ksptToken.price + (change * sign);
     if (newPrice < 0.40) newPrice = 0.40;
-    if (newPrice > 3.10) newPrice = 3,10;
+    if (newPrice > 3.10) newPrice = 3.10;
     
     d.market.ksptToken.price = newPrice;
     d.market.ksptToken.history.push(newPrice);
@@ -6034,77 +6170,85 @@ function buyBackground(bg, price) {
 // ==========================================
 
 function initGame() {
-  console.log('initGame called');
-  // Process offline income on load
-  processOfflineIncome();
+    console.log('initGame called');
+    // Process offline income on load
+    processOfflineIncome();
 
-  // Initial UI update
-  ui();
-
-   const coin3dEnabled = d.settings && d.settings.animation && d.settings.animation.coin3d !== false;
-  if (coin3dEnabled) {
-    init3DCoin();
-  }
-
-  // Set up custom keyboard
-  setupCustomKeyboard();
-
-  // Add error handlers for images
-  document.querySelectorAll('img').forEach(img => {
-    img.onerror = function() {
-      console.warn('Image failed to load:', this.src);
-      if (!this.src.includes('dontwhat.png') && !this.src.includes('knowdont.png')) {
-        this.src = 'dontwhat.png';
-      }
-    };
-  });
-
-  // Initialize cards tab on first load
-  if (document.getElementById('offlineShop')?.classList.contains('active')) {
-    showCardTab('company');
-  }
-
-   // Установите состояние чекбокса
-  const toggle3DEffectCheckbox = document.getElementById('toggle3DEffect');
-  if (toggle3DEffectCheckbox) {
-    toggle3DEffectCheckbox.checked = coin3dEnabled;
-  }
-
-  // Делегирование: кнопка закрытия капсулы / магазина
-  document.addEventListener('click', function (e) {
-    const btn = e.target.closest('#capsuleCloseBtn');
-    if (!btn) return;
-
-    e.preventDefault();
-
-    // закрываем все экраны
-    document.querySelectorAll('.screen').forEach(s =>
-      s.classList.remove('active')
-    );
-
-    // открываем главное меню
-    const main = document.getElementById('mainMenu');
-    if (main) main.classList.add('active');
-
+    // Initial UI update
     ui();
-  });
 
-  // BUG FIX 1: Use ensureMusicPlays instead of direct play
-  if (!d.musicMuted && d.music) {
-    ensureMusicPlays();
-  }
-
-  // Auto-save every 10 seconds
-  setInterval(save, 10000);
-
-  // Auto-update energy based on regeneration multiplier
-  setInterval(() => {
-    if (d.energy < d.maxEnergy) {
-      const regenRate = 0.7 * d.regenMult; // Base 0.7 per second * multiplier
-      d.energy = Math.min(d.maxEnergy, d.energy + regenRate);
-      ui();
+    // Инициализация 3D эффекта монеты
+    const coin3dEnabled = d.settings && d.settings.animation && d.settings.animation.coin3d !== false;
+    const coinContainer = document.getElementById('coin3dContainer');
+    
+    if (coinContainer) {
+        if (coin3dEnabled) {
+            coinContainer.classList.add('three-d-enabled');
+            init3DCoin();
+        } else {
+            coinContainer.classList.remove('three-d-enabled');
+        }
     }
-  }, 1000);
+
+    // Set up custom keyboard
+    setupCustomKeyboard();
+
+    // Add error handlers for images
+    document.querySelectorAll('img').forEach(img => {
+        img.onerror = function() {
+            console.warn('Image failed to load:', this.src);
+            if (!this.src.includes('dontwhat.png') && !this.src.includes('knowdont.png')) {
+                this.src = 'dontwhat.png';
+            }
+        };
+    });
+
+    // Initialize cards tab on first load
+    if (document.getElementById('offlineShop')?.classList.contains('active')) {
+        showCardTab('company');
+    }
+
+    // Установите состояние чекбокса
+    const toggle3DEffectCheckbox = document.getElementById('toggle3DEffect');
+    if (toggle3DEffectCheckbox && d.settings && d.settings.animation) {
+        toggle3DEffectCheckbox.checked = coin3dEnabled;
+    }
+
+    // Делегирование: кнопка закрытия капсулы / магазина
+    document.addEventListener('click', function (e) {
+        const btn = e.target.closest('#capsuleCloseBtn');
+        if (!btn) return;
+
+        e.preventDefault();
+
+        // закрываем все экраны
+        document.querySelectorAll('.screen').forEach(s =>
+            s.classList.remove('active')
+        );
+
+        // открываем главное меню
+        const main = document.getElementById('mainMenu');
+        if (main) main.classList.add('active');
+
+        ui();
+    });
+
+    // BUG FIX 1: Use ensureMusicPlays instead of direct play
+    if (!d.musicMuted && d.music) {
+        ensureMusicPlays();
+    }
+
+    // Auto-save every 10 seconds
+    setInterval(save, 10000);
+
+    // Auto-update energy based on regeneration multiplier
+    setInterval(() => {
+        if (d.energy < d.maxEnergy) {
+            const regenRate = 0.7 * d.regenMult; // Base 0.7 per second * multiplier
+            d.energy = Math.min(d.maxEnergy, d.energy + regenRate);
+            ui();
+        }
+    }, 1000);
 }
 
 // Запуск игры

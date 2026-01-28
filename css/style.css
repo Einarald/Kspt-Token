@@ -1192,6 +1192,22 @@ input:checked + .toggle-slider:before {
   animation: coin-rotate 2s linear infinite;
 }
 
+/* Добавьте в конец файла style.css */
+.coin-3d-container.three-d-enabled {
+  cursor: pointer;
+}
+
+.coin-3d-container.three-d-enabled .coin {
+  transition: none; /* Убираем стандартную анимацию для 3D режима */
+}
+
+/* Оптимизация для touch-устройств */
+@media (hover: none) and (pointer: coarse) {
+  .coin-3d-container.three-d-enabled {
+    touch-action: pan-x pan-y;
+  }
+}
+
 </style>
 </head>
 

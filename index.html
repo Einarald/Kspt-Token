@@ -41,6 +41,35 @@
   </div>
 </div>
 
+<script>
+window.addEventListener('message', (event) => {
+  const msg = event.data;
+  if (!msg || typeof msg !== 'object') return;
+
+  try {
+    if (msg.type === 'kspt_award_reward') {
+      // вызывает локальную функцию (она есть в games.js)
+      if (typeof awardGameReward === 'function') {
+        awardGameReward(Number(msg.reward) || 0, msg.x || 0, msg.y || 0);
+      }
+    } else if (msg.type === 'kspt_consume_ticket') {
+      if (typeof consumeTicketForCurrentGame === 'function') {
+        consumeTicketForCurrentGame();
+      }
+    } else if (msg.type === 'kspt_exit_game') {
+      if (typeof exitGame === 'function') exitGame();
+    }
+    else if (msg.type === 'ek_award') {
+  if (typeof awardGameEK === 'function') {
+    awardGameEK(Number(msg.amount) || 0, msg.x || 0, msg.y || 0);
+  }
+}
+  } catch (e) {
+    console.warn('message handler failed', e);
+  }
+});
+</script>
+
 <!-- Custom Keyboard -->
 <div id="customKeyboard" class="custom-keyboard">
   <div class="keyboard-row">
@@ -130,6 +159,95 @@
   <div id="marketContainer"></div>
 </div>
 
+<div id="games" class="screen">
+  <div class="top-bar">
+  <!-- показываем EK-иконку в Games (fallback на kspt если нет ek.png) -->
+  <img id="gamesCurrencyIcon" src="ek.png" onerror="this.src='kspt.png'">
+  <span id="balanceGames"></span>
+  <img src="iks.png" class="close-x" onclick="openScreen('main')">
+</div>
+
+        <div class="card" id="ekShopCard" style="cursor:pointer;">
+    <div class="card-title" style="color: #ffb300;">
+      🛒 EK Shop
+    </div>
+    <div class="card-sub" style="color: #ffe0b2;">
+      Open the EK Shop to buy skins & backgrounds
+    </div>
+  </div>
+
+  <!-- Билеты -->
+  <div class="card" style="background: linear-gradient(135deg, #1a237e, #311b92);">
+    <div class="card-title" style="color: #18ffff;">
+      <span data-lang-key="tickets_label">🎫 Tickets:</span>
+      <span id="ticketCount">10</span>/10
+    </div>
+    <div class="card-sub" style="color: #b388ff;" data-lang-key="tickets_left_today">You have <span id="ticketsLeft">10</span> tickets left today</div>
+    <div id="ticketTimer" class="card-sub" style="color: #ff4081; display: none;">
+      <span data-lang-key="next_ticket_in">Next ticket in:</span> <span id="ticketTimerText">23:59:59</span>
+    </div>
+  </div>
+
+    <!-- Список игр -->
+  <div class="card">
+    <div class="card-title" style="color: #00e676;">Available Games</div>
+    <div class="card-sub" style="color: #b9f6ca;">1 ticket = 1 game session</div>
+
+    <!-- Snake Game -->
+    <div class="game-item" onclick="startGame('snake')">
+      <img src="snake.png" class="game-icon">
+      <div class="game-info">
+        <div class="game-title">Snake Game</div>
+        <div class="game-desc">Eat apples, grow longer, earn KSPT!</div>
+      </div>
+      <div class="game-ticket">1 ticket</div>
+    </div>
+
+    <!-- Ping-Pong -->
+    <div class="game-item" onclick="startGame('pingpong')">
+      <img src="pong.png" class="game-icon">
+      <div class="game-info">
+        <div class="game-title">Ping-Pong</div>
+        <div class="game-desc">Defend your goal, score points, earn KSPT!</div>
+      </div>
+      <div class="game-ticket">1 ticket</div>
+    </div>
+
+    <!-- BlocksFast -->
+    <div class="game-item" onclick="startGame('blocksfast')">
+      <img src="tetris.png" class="game-icon" alt="BlocksFast">
+      <div class="game-info">
+        <div class="game-title">BlocksFast</div>
+        <div class="game-desc">Fast block-matching — like BlockBlast. Clear lines, chain combos, earn KSPT!</div>
+      </div>
+      <div class="game-ticket">1 ticket</div>
+    </div>
+
+    <!-- Slither: KSPT Mode -->
+    <div class="game-item" onclick="startGame('slither')">
+      <img src="slither.png" class="game-icon" alt="Slither">
+      <div class="game-info">
+        <div class="game-title">Slither: KSPT Mode</div>
+        <div class="game-desc">Classic slither.io-style — grow by eating orbs, avoid others, earn KSPT!</div>
+      </div>
+      <div class="game-ticket">1 ticket</div>
+    </div>
+
+  </div>
+
+    <button class="back" onclick="openScreen('main')" data-lang-key="back">Back</button>
+  </div>
+
+<!-- Игровые экраны (будут загружаться через iframe) -->
+<div id="gameContainer" class="screen" style="display:none;">
+  <div class="top-bar">
+    <img src="kspt.png">
+    <span id="balanceGame"></span>
+    <img src="iks.png" class="close-x" onclick="exitGame()">
+  </div>
+  <div id="gameFrameContainer"></div>
+</div>
+
 <div id="capsuleScreen" class="screen">
   <div class="top-bar">
     <img src="kspt.png">
@@ -137,72 +255,94 @@
     <img src="iks.png" class="close-x" onclick="openScreen('main')">
   </div>
 
-  <div class="card">
-    <div class="card-title" data-lang-key="ancient_puzzle">Ancient Puzzle</div>
-    <div class="card-sub" data-lang-key="puzzle_desc">Collect all 9 pieces to unlock Hamster Piece Skin!</div>
-    
-    <div class="puzzle-container">
-        <div class="puzzle-grid">
-           <img src="pazl.png" id="puzzleFull" class="puzzle-full-img">
-           <div class="puzzle-cell" id="pz1"><img src="pazl1.png"></div>
-            <div class="puzzle-cell" id="pz2"><img src="pazl2.png"></div>
-            <div class="puzzle-cell" id="pz3"><img src="pazl3.png"></div>
-            <div class="puzzle-cell" id="pz4"><img src="pazl4.png"></div>
-            <div class="puzzle-cell" id="pz5"><img src="pazl5.png"></div>
-            <div class="puzzle-cell" id="pz6"><img src="pazl6.png"></div>
-            <div class="puzzle-cell" id="pz7"><img src="pazl7.png"></div>
-            <div class="puzzle-cell" id="pz8"><img src="pazl8.png"></div>
-            <div class="puzzle-cell" id="pz9"><img src="pazl9.png"></div>
-        </div>
-        <div class="puzzle-controls">
-            <div id="puzzleStatus" class="card-sub" style="margin-bottom:10px;" data-lang-key="owned">Owned: 0/9</div>
-            <button id="btnPlacePiece" onclick="placePuzzlePieces()" style="display:none;" data-lang-key="place_pieces">Place Available Pieces</button>
-             <div id="puzzleCompletedText" style="display:none; color:#ff9800; font-weight:bold; margin-top:10px;" data-lang-key="puzzle_completed">A new puzzle will appear soon!</div>
-        </div>
-    </div>
+  <!-- КНОПКИ ПЕРЕКЛЮЧЕНИЯ ВКЛАДОК -->
+  <div style="display: flex; justify-content: center; margin-bottom: 15px;">
+    <button id="tabPuzzle" onclick="showIventTab('puzzle')" style="margin-right: 10px; background: #2e7d32;">Пазлы</button>
+    <button id="tabIvent" onclick="showIventTab('ivent')" style="background: #444;">События</button>
   </div>
 
-<!-- Второй (кошачий) пазл: скрыт по умолчанию -->
-<div class="card" id="secondPuzzleCard" style="display:none;">
-  <div class="card-title" data-lang-key="cat_puzzle">Cat Puzzle</div>
-  <div class="card-sub" data-lang-key="cat_puzzle_desc">
-    Collect all 9 pieces to unlock the Cat: KSPT skin!
-  </div>
-  <div class="puzzle-container">
-    <div class="puzzle-grid">
-      <img src="pazlik.png" id="puzzleFull2" class="puzzle-full-img" style="display:none;">
-      <!-- части пазла 11–19 -->
-      <div class="puzzle-cell" id="pz2_1"><img src="pazl11.png" onerror="this.src='dontwhat.png'"></div>
-      <div class="puzzle-cell" id="pz2_2"><img src="pazl12.png" onerror="this.src='dontwhat.png'"></div>
-      <div class="puzzle-cell" id="pz2_3"><img src="pazl13.png" onerror="this.src='dontwhat.png'"></div>
-      <div class="puzzle-cell" id="pz2_4"><img src="pazl14.png" onerror="this.src='dontwhat.png'"></div>
-      <div class="puzzle-cell" id="pz2_5"><img src="pazl15.png" onerror="this.src='dontwhat.png'"></div>
-      <div class="puzzle-cell" id="pz2_6"><img src="pazl16.png" onerror="this.src='dontwhat.png'"></div>
-      <div class="puzzle-cell" id="pz2_7"><img src="pazl17.png" onerror="this.src='dontwhat.png'"></div>
-      <div class="puzzle-cell" id="pz2_8"><img src="pazl18.png" onerror="this.src='dontwhat.png'"></div>
-      <div class="puzzle-cell" id="pz2_9"><img src="pazl19.png" onerror="this.src='dontwhat.png'"></div>
-    </div>
-    <div class="puzzle-controls">
-      <div id="puzzleStatus2" class="card-sub" style="margin-bottom:10px;"
-           data-lang-key="owned_progress">Owned: 0/9</div>
-      <button id="btnPlacePiece2" onclick="placePuzzlePieces2()"
-              style="display:none;" data-lang-key="place_pieces">
-        Place Available Pieces
-      </button>
-      <div id="puzzleCompletedText2"
-           style="display:none; color:#ff9800; font-weight:bold; margin-top:10px;"
-           data-lang-key="puzzle_completed2">
-        More puzzles coming soon!
+  <!-- ВКЛАДКА ПАЗЛОВ (ПО УМОЛЧАНИЮ) -->
+  <div id="puzzleTab">
+    <div class="card">
+      <div class="card-title" data-lang-key="ancient_puzzle">Ancient Puzzle</div>
+      <div class="card-sub" data-lang-key="puzzle_desc">Collect all 9 pieces to unlock Hamster Piece Skin!</div>
+      
+      <div class="puzzle-container">
+          <div class="puzzle-grid">
+             <img src="pazl.png" id="puzzleFull" class="puzzle-full-img">
+             <div class="puzzle-cell" id="pz1"><img src="pazl1.png"></div>
+              <div class="puzzle-cell" id="pz2"><img src="pazl2.png"></div>
+              <div class="puzzle-cell" id="pz3"><img src="pazl3.png"></div>
+              <div class="puzzle-cell" id="pz4"><img src="pazl4.png"></div>
+              <div class="puzzle-cell" id="pz5"><img src="pazl5.png"></div>
+              <div class="puzzle-cell" id="pz6"><img src="pazl6.png"></div>
+              <div class="puzzle-cell" id="pz7"><img src="pazl7.png"></div>
+              <div class="puzzle-cell" id="pz8"><img src="pazl8.png"></div>
+              <div class="puzzle-cell" id="pz9"><img src="pazl9.png"></div>
+          </div>
+          <div class="puzzle-controls">
+              <div id="puzzleStatus" class="card-sub" style="margin-bottom:10px;" data-lang-key="owned">Owned: 0/9</div>
+              <button id="btnPlacePiece" onclick="placePuzzlePieces()" style="display:none;" data-lang-key="place_pieces">Place Available Pieces</button>
+               <div id="puzzleCompletedText" style="display:none; color:#ff9800; font-weight:bold; margin-top:10px;" data-lang-key="puzzle_completed">A new puzzle will appear soon!</div>
+          </div>
       </div>
     </div>
-  </div>
-</div>
 
-  <div class="card capsule-info">
-    <img src="capsule.png" class="capsule-img-small">
-    <div class="card-title" data-lang-key="mystery_capsule">Mystery Capsule</div>
-    <div class="card-sub" id="capsuleTimer" data-lang-key="ready">Ready to open!</div>
-    <button id="btnOpenCapsule" onclick="startCapsuleSequence()" style="background:#ff9800; color:#000; font-weight:bold; margin-top:10px;" data-lang-key="open">OPEN!</button>
+    <!-- Второй (кошачий) пазл: скрыт по умолчанию -->
+    <div class="card" id="secondPuzzleCard" style="display:none;">
+      <div class="card-title" data-lang-key="cat_puzzle">Cat Puzzle</div>
+      <div class="card-sub" data-lang-key="cat_puzzle_desc">
+        Collect all 9 pieces to unlock the Cat: KSPT skin!
+      </div>
+      <div class="puzzle-container">
+        <div class="puzzle-grid">
+          <img src="pazlik.png" id="puzzleFull2" class="puzzle-full-img" style="display:none;">
+          <!-- части пазла 11–19 -->
+          <div class="puzzle-cell" id="pz2_1"><img src="pazl11.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz2_2"><img src="pazl12.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz2_3"><img src="pazl13.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz2_4"><img src="pazl14.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz2_5"><img src="pazl15.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz2_6"><img src="pazl16.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz2_7"><img src="pazl17.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz2_8"><img src="pazl18.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz2_9"><img src="pazl19.png" onerror="this.src='dontwhat.png'"></div>
+        </div>
+        <div class="puzzle-controls">
+          <div id="puzzleStatus2" class="card-sub" style="margin-bottom:10px;"
+               data-lang-key="owned_progress">Owned: 0/9</div>
+          <button id="btnPlacePiece2" onclick="placePuzzlePieces2()"
+                  style="display:none;" data-lang-key="place_pieces">
+            Place Available Pieces
+          </button>
+          <div id="puzzleCompletedText2"
+               style="display:none; color:#ff9800; font-weight:bold; margin-top:10px;"
+               data-lang-key="puzzle_completed2">
+            More puzzles coming soon!
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card capsule-info">
+      <img src="capsule.png" class="capsule-img-small">
+      <div class="card-title" data-lang-key="mystery_capsule">Mystery Capsule</div>
+      <div class="card-sub" id="capsuleTimer" data-lang-key="ready">Ready to open!</div>
+      <button id="btnOpenCapsule" onclick="startCapsuleSequence()" style="background:#ff9800; color:#000; font-weight:bold; margin-top:10px;" data-lang-key="open">OPEN!</button>
+    </div>
+  </div>
+
+  <!-- ВКЛАДКА СОБЫТИЙ (СКРЫТА ПО УМОЛЧАНИЮ) -->
+  <div id="iventTab" style="display:none;">
+    <!-- Временные события -->
+    <div class="card">
+      <div class="card-title" data-lang-key="ivent_title">Временные события</div>
+      <div class="card-sub" data-lang-key="ivent_desc">Успей получить награды!</div>
+      
+      <div id="iventContainer">
+        <!-- Сюда будет вставляться содержимое события -->
+      </div>
+    </div>
   </div>
 
   <button class="back" onclick="openScreen('main')" data-lang-key="back">Back</button>
@@ -627,6 +767,13 @@
   <button id="skin-siulai" onclick="applySkin('siulai')" data-lang-key="select">Select</button>
 </div>
 
+<div class="card" id="skinCardCryptoHeart" style="display:none">
+  <img id="skin-img-crypto_heart" src="knowdont.png" class="card-img">
+  <div class="card-title">Crypto-heart</div>
+  <div class="card-sub">Valentine's Day Exclusive (+14 KSPT/h)</div>
+  <button id="skin-crypto_heart" onclick="applySkin('crypto_heart')" data-lang-key="locked">LOCKED</button>
+</div>
+
   <div class="card" id="skinCardMystic" style="display:none">
    <img id="skin-img-mystic" src="knowdont.png" class="card-img">
    <div class="card-title">Hamster Piece</div>
@@ -673,6 +820,13 @@
   </div>
 
   <div class="card">
+  <img id="skin-img-brb" src="dontwhat.png" class="card-img" onerror="this.src='dontwhat.png'">
+  <div class="card-title">Big Red Button</div>
+  <div id="skin-sub-brb" class="card-sub">Price: 5,000,000 KSPT (+500 KSPT/h)</div>
+  <button id="skin-brb" onclick="applySkin('brb')">Buy 5,000,000 KSPT</button>
+</div>
+
+  <div class="card">
     <div class="card-title">NUMBER #1!</div>
     <div class="card-sub" id="limitedSkinSub" style="color:#ff9800"></div>
     <button id="skin-priz" onclick="applySkin('priz')" data-lang-key="locked">LOCKED</button>
@@ -705,11 +859,12 @@
   <div class="cardik-header">
     <img id="cardikHeader" src="cardik.png" onerror="this.src='dontwhat.png'">
   </div>
-  <div class="cardik-tabs">
+<div class="cardik-tabs">
     <button id="tab-company" class="active" onclick="showCardTab('company')">Company</button>
     <button id="tab-sport" onclick="showCardTab('sport')">Sport</button>
     <button id="tab-games" onclick="showCardTab('games')">Board & Games</button>
-  </div>
+    <button id="tab-limited" onclick="showCardTab('limited')">Limited</button>
+</div>
   
   <div id="cards-content">
     <!-- Content will be populated by JavaScript -->
@@ -783,6 +938,10 @@
 </div>
 
 <div class="global-nav">
+  <div class="nav-item" id="navGames" onclick="openScreen('games')">
+    <div class="nav-icon" style="background: url('game.png') center/cover;"></div>
+    <span data-lang-key="games">Games</span>
+  </div>
   <div class="nav-item active" id="navMain" onclick="openScreen('main')">
     <div class="nav-icon" style="background: url('kspt.png') center/cover;"></div>
     <span data-lang-key="main_menu">Main Menu</span>
@@ -795,16 +954,49 @@
 
 </div> <!-- закрытие .app -->
 
+<!-- SKINS container (required by game.js) -->
+<div id="skins" class="skins-screen" style="display:block; padding:12px; max-width:900px; margin: 10px auto;">
+  <!-- existing skin cards will be inserted here by JS -->
+</div>
+
 <script src="js/game.js"></script>
+<script src="js/games.js"></script>
+
 <script>
-// Инициализация после загрузки скрипта
-document.addEventListener('DOMContentLoaded', function() {
-    if (typeof initGame === 'function') {
-        initGame();
-    } else {
-        console.error('initGame function not found!');
-    }
+document.addEventListener('DOMContentLoaded', function () {
+  if (typeof initGames === 'function') {
+    initGames();
+  }
 });
 </script>
+
+<script>
+  (function(){
+    const card = document.getElementById('ekShopCard');
+    if (card) {
+      card.addEventListener('click', () => {
+        // если функция openEKShop объявлена в games.js — вызываем её
+        if (typeof openEKShop === 'function') {
+          openEKShop();
+        } else {
+          // fallback: если пока нет games.js или функция недоступна — открываем в iframe через game container
+          try {
+            const container = document.getElementById('gameFrameContainer');
+            const gameContainer = document.getElementById('gameContainer');
+            if (container && gameContainer) {
+              gameContainer.style.display = 'block';
+              gameContainer.classList.add('active');
+              container.innerHTML = `<iframe class="game-frame" src="ekshop.html" allow="autoplay"></iframe>`;
+            } else {
+              // если совсем ничего — откроем в новой вкладке как запасной вариант
+              window.open('ekshop.html', '_blank');
+            }
+          } catch(e){ window.open('ekshop.html', '_blank'); }
+        }
+      });
+    }
+  })();
+</script>
+
 </body>
 </html>

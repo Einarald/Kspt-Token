@@ -1,0 +1,1458 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>BlocksFast - KSPT</title>
+    <style>
+        :root {
+            --accent: #00bcd4;
+            --accent-2: #00e676;
+            --bg: #111;
+            --panel: #0b0b0b;
+            --danger: #ff4081;
+            --warning: #ff9800;
+        }
+
+        * {
+            box-sizing: border-box;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            touch-action: manipulation;
+        }
+
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            padding: 10px;
+            background: linear-gradient(135deg, var(--panel) 0%, #1a1a1a 100%);
+            position: relative;
+        }
+
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.45);
+            border-radius: 10px;
+            border: 1px solid var(--accent);
+        }
+
+        .game-title {
+            color: var(--accent-2);
+            font-weight: bold;
+            font-size: 18px;
+        }
+
+        .game-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+        }
+
+        .game-stats div {
+            display: flex;
+            align-items: center;
+        }
+
+        canvas {
+            background: var(--bg);
+            border: 2px solid var(--accent);
+            border-radius: 10px;
+            image-rendering: pixelated;
+            display: block;
+            touch-action: none;
+        }
+
+        .next-blocks-container {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin: 20px 0;
+            width: 100%;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.3);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 188, 212, 0.3);
+        }
+
+        .next-block {
+            position: relative;
+            width: 80px;
+            height: 80px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 8px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            transition: transform 0.2s ease, border-color 0.2s ease;
+        }
+
+        .next-block:hover {
+            border-color: var(--accent);
+        }
+
+        .next-block:active {
+            transform: scale(0.95);
+        }
+
+        .next-block.active {
+            border: 2px solid var(--accent-2);
+            box-shadow: 0 0 15px rgba(0, 230, 118, 0.3);
+        }
+
+        .block-cell {
+            position: absolute;
+            border-radius: 3px;
+            border: 1px solid rgba(0, 0, 0, 0.3);
+        }
+
+        .game-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            width: 100%;
+            justify-content: center;
+        }
+
+        .game-buttons button {
+            padding: 12px 22px;
+            background: linear-gradient(135deg, #00e5ff, #00bcd4);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            letter-spacing: 0.5px;
+            box-shadow: 0 0 10px rgba(0, 188, 212, 0.6), inset 0 0 6px rgba(255, 255, 255, 0.3);
+            transition: transform .12s ease, box-shadow .12s ease, filter .12s ease;
+        }
+
+        .game-buttons button:hover {
+            filter: brightness(1.12);
+        }
+
+        .game-buttons button:active {
+            transform: scale(.95);
+            box-shadow: 0 0 4px rgba(0, 188, 212, 0.4), inset 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+
+        .game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.95);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid var(--accent-2);
+            text-align: center;
+            z-index: 100;
+            width: 85%;
+            max-width: 320px;
+            backdrop-filter: blur(5px);
+        }
+
+        .game-over h2 {
+            color: var(--danger);
+            margin-top: 0;
+            font-size: 24px;
+        }
+
+        .earned {
+            color: var(--accent-2);
+            font-weight: bold;
+            font-size: 24px;
+            margin: 15px 0;
+            text-shadow: 0 0 10px rgba(0, 230, 118, 0.5);
+        }
+
+        .preview-container {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 360px;
+            height: 360px;
+            pointer-events: none;
+            z-index: 5;
+        }
+
+        .preview-cell {
+            position: absolute;
+            background: rgba(255, 255, 255, 0.15);
+            border: 2px solid rgba(255, 255, 255, 0.3);
+            border-radius: 3px;
+            pointer-events: none;
+            z-index: 5;
+            transition: all 0.1s;
+        }
+
+        .preview-cell.invalid {
+            background: rgba(255, 64, 129, 0.15);
+            border: 2px solid rgba(255, 64, 129, 0.3);
+        }
+
+        .drag-ghost {
+            position: fixed;
+            pointer-events: none;
+            z-index: 9999;
+            opacity: 0.8;
+            filter: drop-shadow(0 0 10px rgba(255, 255, 255, 0.5));
+            transform-origin: center;
+            transition: none;
+        }
+
+        .particle {
+            position: absolute;
+            pointer-events: none;
+            z-index: 20;
+        }
+
+        .clear-effect {
+            position: absolute;
+            pointer-events: none;
+            z-index: 10;
+            background: rgba(0, 230, 118, 0.5);
+            border-radius: 3px;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <div class="game-title">🧱 BlocksFast - KSPT</div>
+            <div class="game-stats">
+                <div>Lines: <span id="lines">0</span></div>
+                <div>Level: <span id="level">1</span></div>
+                <div>Combo: <span id="combo">x1.0</span></div>
+            </div>
+        </div>
+
+        <div style="position: relative;">
+            <canvas id="gameCanvas" width="360" height="360"></canvas>
+            <div class="preview-container" id="previewContainer"></div>
+        </div>
+
+        <div class="next-blocks-container">
+            <div class="next-block" id="block1"></div>
+            <div class="next-block" id="block2"></div>
+            <div class="next-block" id="block3"></div>
+        </div>
+
+        <div class="game-buttons">
+            <button id="pauseBtn">Pause</button>
+            <button id="restartBtn">Restart (-1)</button>
+            <button id="exitBtn">Exit</button>
+        </div>
+    </div>
+
+    <div class="game-over" id="gameOverScreen">
+        <h2>Game Over!</h2>
+        <div>Lines Cleared: <span id="finalLines">0</span></div>
+        <div>Max Combo: <span id="maxCombo">x1.0</span></div>
+        <div class="earned">+<span id="earnedKSPT">0.00</span> KSPT</div>
+        <div class="earned">+<span id="earnedEK">0</span> EK</div>
+        <button id="playAgainBtn" style="background:#00e676; margin-bottom:10px;">Play Again</button>
+        <button id="exitToMenuBtn" style="background:#ff4081;">Exit to Menu</button>
+    </div>
+
+    <script>
+/* ===== helper: проверка билетов (localStorage) ===== */
+function getLocalTicketCount() {
+  try {
+    const raw = localStorage.getItem('kspt_tickets');
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (data && typeof data.current === 'number') return data.current;
+    // иногда структура была { current: N } или { current: "N" }
+    if (data && data.current != null) return Number(data.current) || 0;
+  } catch (e) {
+    // если iframe cross-origin — не можем прочитать, вернём null (не мешаем)
+    return null;
+  }
+  return null;
+}
+
+function ensureHasTicketOrWarn() {
+  const c = getLocalTicketCount();
+  if (c === null) {
+    // не можем проверить — разрешаем рестарт (родитель может контролировать)
+    return true;
+  }
+  if (c <= 0) {
+    // если есть postMessage handler — сообщим родителю
+    try { (window.parent || window.top).postMessage({ type: 'kspt_no_tickets' }, '*'); } catch(e){}
+    // локальное сообщение / тост
+    try { showToast && showToast("Not enough tickets!"); } catch(e){ alert("Not enough tickets!"); }
+    return false;
+  }
+  return true;
+}
+
+        // ==========================================
+        // BLOCKSFAST GAME - JavaScript
+        // ==========================================
+
+        // ================= SAFE HOST HELPERS =================
+        function isSameOrigin(win) {
+            try { void win.location.href; return true; } catch (e) { return false; }
+        }
+
+        function safeAwardGameReward(amount, x = 0, y = 0) {
+            try {
+                if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.awardGameReward === 'function') {
+                    window.top.awardGameReward(Number(amount) || 0, x, y);
+                    return;
+                }
+            } catch (e) { console.warn('safeAwardGameReward direct call failed', e); }
+
+            try {
+                (window.parent || window.top).postMessage({ type: 'kspt_award_reward', reward: Number(amount) || 0, x, y }, '*');
+                return;
+            } catch (e) { console.warn('safeAwardGameReward postMessage failed', e); }
+
+            console.log('Local reward fallback', amount, x, y);
+        }
+
+function safeAwardGameEK(amount, x = 0, y = 0) {
+  try {
+    if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.awardGameEK === 'function') {
+      window.top.awardGameEK(Number(amount) || 0, x, y); return;
+    }
+  } catch(e) {}
+  try {
+    (window.parent || window.top).postMessage({ type: 'ek_award', amount: Number(amount)||0, x, y }, '*'); return;
+  } catch(e){}
+  console.log('Local EK fallback', amount, x, y);
+}
+
+        function safeConsumeTicket() {
+            try {
+                if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.consumeTicketForCurrentGame === 'function') {
+                    window.top.consumeTicketForCurrentGame();
+                    return;
+                }
+            } catch (e) { console.warn('safeConsumeTicket direct call failed', e); }
+
+            try { (window.parent || window.top).postMessage({ type: 'kspt_consume_ticket' }, '*'); return; } catch (e) { console.warn('consumeTicket postMessage failed', e); }
+
+            console.log('consumeTicket fallback (no parent handler)');
+        }
+
+        function safeExitGame() {
+            try {
+                if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.exitGame === 'function') {
+                    window.top.exitGame();
+                    return;
+                }
+            } catch (e) { console.warn('safeExitGame direct call failed', e); }
+
+            try { (window.parent || window.top).postMessage({ type: 'kspt_exit_game' }, '*'); return; } catch (e) { console.warn('safeExitGame postMessage failed', e); }
+
+            console.log('exitGame fallback (no parent handler)');
+        }
+
+        window.__kspt_hourly = window.__kspt_hourly || 0;
+
+        window.addEventListener('message', (ev) => {
+  const msg = ev.data;
+  if (!msg || typeof msg !== 'object') return;
+
+  if (msg.type === 'kspt_init' || msg.type === 'kspt_hourly_update') {
+    const h = Number(msg.hourly) || 0;
+    window.__kspt_hourly = h;
+  }
+
+  if (msg.type === 'kspt_no_tickets') {
+  gameRunning = false;
+  gamePaused = true;
+
+  // показываем Game Over экран
+  const gos = document.getElementById('gameOverScreen');
+  if (gos) gos.style.display = 'block';
+
+  alert("Not enough tickets!");
+}
+
+  if (msg.type === 'kspt_parent_set_game_over' && msg.blockButtons) {
+    document.getElementById('pauseBtn')?.setAttribute('disabled','true');
+    document.getElementById('restartBtn')?.setAttribute('disabled','true');
+    document.getElementById('exitBtn')?.setAttribute('disabled','true');
+  }
+});
+
+        function safeGetOfflinePercent(percent) {
+            try {
+                if (typeof HOST !== 'undefined' && HOST !== window && typeof HOST.getOfflinePercent === 'function') {
+                    return Number(HOST.getOfflinePercent(percent)) || 0;
+                }
+            } catch (e) { /* ignore */ }
+
+            if (typeof window.__kspt_hourly === 'number') {
+                return Math.round((window.__kspt_hourly * (percent / 100)) * 100) / 100;
+            }
+
+            try {
+                const raw = localStorage.getItem('kspt_data') || localStorage.getItem('d') || null;
+                if (raw) {
+                    const parsed = JSON.parse(raw);
+                    if (parsed && typeof parsed.offlineHourly === 'number') {
+                        return Math.round((parsed.offlineHourly * (percent / 100)) * 100) / 100;
+                    }
+                }
+            } catch (e) { }
+
+            return 0;
+        }
+
+        // ================= GAME VARIABLES =================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const previewContainer = document.getElementById('previewContainer');
+        const linesEl = document.getElementById('lines');
+        const levelEl = document.getElementById('level');
+        const comboEl = document.getElementById('combo');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalLinesEl = document.getElementById('finalLines');
+        const maxComboEl = document.getElementById('maxCombo');
+        const earnedKSPTEl = document.getElementById('earnedKSPT');
+        const earnedEKElem = document.getElementById('earnedEK');
+        const block1El = document.getElementById('block1');
+        const block2El = document.getElementById('block2');
+        const block3El = document.getElementById('block3');
+
+        // Game constants
+        const GRID_SIZE = 8;
+        const CELL_SIZE = 360 / GRID_SIZE;
+        const COLORS = [
+            '#00bcd4', '#00e676', '#ff4081', '#ff9800',
+            '#9c27b0', '#2196f3', '#ffeb3b', '#e91e63',
+            '#4caf50', '#3f51b5'
+        ];
+
+        // Block shapes
+        const BLOCK_SHAPES = [
+            [[1,1],[1,1]],
+            [[1,1,1],[1,1,1],[1,1,1]],
+            [[1,1,1,1]],
+            [[1,1,1,1,1]],
+            [[1,1]],
+            [[1,1,1]],
+            [[1],[1],[1],[1]],
+            [[1],[1],[1]],
+            [[1],[1]],
+            [[1,0],[1,0],[1,1]],
+            [[0,1],[0,1],[1,1]],
+            [[1,1,0],[0,1,1]],
+            [[0,1,1],[1,1,0]],
+            [[1,1,1],[0,1,0]],
+            [[1,0],[1,1],[1,0]],
+            [[1,0,0],[0,1,0],[0,0,1]],
+            [[0,0,1],[0,1,0],[1,0,0]]
+        ];
+
+        // Game state
+        let gameRunning = true;
+        let gamePaused = false;
+        let animationId = null;
+        let grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
+        let linesCleared = 0;
+        let level = 1;
+        let totalEarnedKSPT = 0;
+        let totalEarnedEK = 0; // Добавлено: счетчик EK за сессию
+        let currentBlocks = [];
+        let selectedBlockIndex = -1;
+        let draggedBlock = null;
+        let blocksPlaced = 0;
+        let currentCombo = 0;
+        let maxCombo = 1;
+        let comboMultiplier = 1.0;
+
+        // Effects
+        const particles = [];
+        const floatingTexts = [];
+        const clearEffects = [];
+
+        // Audio context
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+        let userInteracted = false;
+
+        // ================= GAME FUNCTIONS =================
+        function initGame() {
+            grid = Array(GRID_SIZE).fill().map(() => Array(GRID_SIZE).fill(null));
+            linesCleared = 0;
+            level = 1;
+            totalEarnedKSPT = 0;
+            totalEarnedEK = 0; // Сбрасываем EK
+            blocksPlaced = 0;
+            currentCombo = 0;
+            maxCombo = 1;
+            comboMultiplier = 1.0;
+            particles.length = 0;
+            floatingTexts.length = 0;
+            clearEffects.length = 0;
+            previewContainer.innerHTML = '';
+            gameRunning = true;
+            gameOverScreen.style.display = 'none';
+            
+            updateUI();
+            generateNewBlocks();
+            draw();
+            
+            if (animationId) cancelAnimationFrame(animationId);
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        function generateNewBlocks() {
+            currentBlocks = [];
+            for (let i = 0; i < 3; i++) {
+                const shape = BLOCK_SHAPES[Math.floor(Math.random() * BLOCK_SHAPES.length)];
+                const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+                currentBlocks.push({ shape, color });
+                renderBlockPreview(i, shape, color);
+            }
+            selectedBlockIndex = -1;
+            updateBlockSelection();
+            
+            // Check if any block can be placed
+            checkForPossibleMoves();
+        }
+
+        function checkForPossibleMoves() {
+            if (canAnyBlockBePlaced()) {
+                return true;
+            } else {
+                // Если нет возможных ходов, но еще есть незаполненные клетки
+                // Проверим, есть ли вообще свободные клетки
+                let hasEmptyCells = false;
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    for (let x = 0; x < GRID_SIZE; x++) {
+                        if (grid[y][x] === null) {
+                            hasEmptyCells = true;
+                            break;
+                        }
+                    }
+                    if (hasEmptyCells) break;
+                }
+                
+                if (hasEmptyCells) {
+                    // Есть свободные клетки, но текущие фигуры не подходят
+                    // Игра окончена
+                    setTimeout(() => endGame(true), 1000);
+                    return false;
+                } else {
+                    // Все клетки заполнены - игра выиграна!
+                    setTimeout(() => endGame(false), 1000);
+                    return false;
+                }
+            }
+        }
+
+        function canAnyBlockBePlaced() {
+            for (let blockIndex = 0; blockIndex < currentBlocks.length; blockIndex++) {
+                const block = currentBlocks[blockIndex];
+                if (!block) continue;
+                
+                for (let y = 0; y <= GRID_SIZE - block.shape.length; y++) {
+                    for (let x = 0; x <= GRID_SIZE - block.shape[0].length; x++) {
+                        if (canPlaceBlock(block.shape, x, y)) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            return false;
+        }
+
+        function canPlaceBlock(shape, gridX, gridY) {
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        const checkX = gridX + x;
+                        const checkY = gridY + y;
+                        
+                        if (checkX < 0 || checkX >= GRID_SIZE || checkY < 0 || checkY >= GRID_SIZE) {
+                            return false;
+                        }
+                        
+                        if (grid[checkY][checkX] !== null) {
+                            return false;
+                        }
+                    }
+                }
+            }
+            return true;
+        }
+
+        function placeBlock(shape, color, gridX, gridY) {
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        const placeX = gridX + x;
+                        const placeY = gridY + y;
+                        if (placeX >= 0 && placeX < GRID_SIZE && placeY >= 0 && placeY < GRID_SIZE) {
+                            grid[placeY][placeX] = { 
+                                color, 
+                                placedAt: Date.now()
+                            };
+                        }
+                    }
+                }
+            }
+            blocksPlaced++;
+            
+            // Create placement particles
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        const particleX = (gridX + x) * CELL_SIZE + CELL_SIZE / 2;
+                        const particleY = (gridY + y) * CELL_SIZE + CELL_SIZE / 2;
+                        createPlacementParticles(particleX, particleY, color);
+                    }
+                }
+            }
+            
+            playSound('place');
+            gameVibrate([30]);
+            
+            // Check for completed lines
+            setTimeout(checkLines, 50);
+        }
+
+        function checkLines() {
+            const completedRows = [];
+            const completedCols = [];
+            
+            // Check rows
+            for (let y = 0; y < GRID_SIZE; y++) {
+                let rowComplete = true;
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    if (grid[y][x] === null) {
+                        rowComplete = false;
+                        break;
+                    }
+                }
+                if (rowComplete) completedRows.push(y);
+            }
+            
+            // Check columns
+            for (let x = 0; x < GRID_SIZE; x++) {
+                let colComplete = true;
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    if (grid[y][x] === null) {
+                        colComplete = false;
+                        break;
+                    }
+                }
+                if (colComplete) completedCols.push(x);
+            }
+            
+            const totalCleared = completedRows.length + completedCols.length;
+            
+            if (totalCleared > 0) {
+                currentCombo++;
+                maxCombo = Math.max(maxCombo, currentCombo);
+                comboMultiplier = 1 + (currentCombo * 0.15);
+                
+                // Calculate reward
+                let rewardPercent = 0;
+                if (totalCleared === 1) rewardPercent = 0.6;
+                else if (totalCleared === 2) rewardPercent = 1.4;
+                else if (totalCleared === 3) rewardPercent = 2.5;
+                else if (totalCleared === 4) rewardPercent = 3.0;
+                else if (totalCleared <= 6) rewardPercent = 4.0;
+                else if (totalCleared === 7) rewardPercent = 5.0;
+                else if (totalCleared === 8) rewardPercent = 7.0;
+                
+                rewardPercent *= comboMultiplier;
+                
+                const reward = safeGetOfflinePercent(rewardPercent);
+                totalEarnedKSPT += reward;
+                
+                // Award reward
+                const centerX = canvas.width / 2;
+                const centerY = canvas.height / 2;
+                spawnFloatingText(`+${reward.toFixed(2)} KSPT`, centerX, centerY, '#00e5ff');
+                safeAwardGameReward(reward, centerX, centerY);
+                
+                // для каждой очищенной линии шанс 5.5% получить +1 EK
+                for (let i = 0; i < totalCleared; i++) {
+                  if (Math.random() < 0.055) { // 5.5%
+                    totalEarnedEK++;
+                    safeAwardGameEK(1, centerX, centerY - 20);
+                    spawnFloatingText('+1 EK', centerX, centerY - 20, '#ffd54f');
+                  }
+                }
+                
+                // Show combo text
+                if (currentCombo > 1) {
+                    spawnFloatingText(`COMBO x${currentCombo.toFixed(1)}!`, centerX, centerY - 50, '#ff9800');
+                }
+                
+                // Create clear effects
+                createClearEffects(completedRows, completedCols);
+                
+                linesCleared += totalCleared;
+                level = Math.floor(linesCleared / 10) + 1;
+                
+                playSound(totalCleared >= 4 ? 'big_clear' : 'clear');
+                gameVibrate(totalCleared >= 4 ? [100, 50, 100] : [50, 30, 50]);
+                
+                // Clear the lines after animation
+                setTimeout(() => {
+                    clearGridLines(completedRows, completedCols);
+                    updateUI();
+                    
+                    // Check if we need new blocks
+                    let allBlocksUsed = true;
+                    for (let i = 0; i < 3; i++) {
+                        if (currentBlocks[i] !== null) {
+                            allBlocksUsed = false;
+                            break;
+                        }
+                    }
+                    
+                    if (allBlocksUsed) {
+                        generateNewBlocks();
+                    } else {
+                        // Check if remaining blocks can be placed
+                        checkForPossibleMoves();
+                    }
+                }, 600);
+            } else {
+                currentCombo = 0;
+                comboMultiplier = 1.0;
+                updateUI();
+                
+                // Check if we need new blocks
+                let allBlocksUsed = true;
+                for (let i = 0; i < 3; i++) {
+                    if (currentBlocks[i] !== null) {
+                        allBlocksUsed = false;
+                        break;
+                    }
+                }
+                
+                if (allBlocksUsed) {
+                    generateNewBlocks();
+                } else {
+                    // Check if remaining blocks can be placed
+                    checkForPossibleMoves();
+                }
+            }
+        }
+
+        function createClearEffects(rows, cols) {
+            // Row effects
+            rows.forEach(row => {
+                const effect = {
+                    x: 0,
+                    y: row * CELL_SIZE,
+                    width: canvas.width,
+                    height: CELL_SIZE,
+                    alpha: 0.7,
+                    life: 1
+                };
+                clearEffects.push(effect);
+                
+                // Animate fade out
+                animateEffect(effect);
+            });
+            
+            // Column effects
+            cols.forEach(col => {
+                const effect = {
+                    x: col * CELL_SIZE,
+                    y: 0,
+                    width: CELL_SIZE,
+                    height: canvas.height,
+                    alpha: 0.7,
+                    life: 1
+                };
+                clearEffects.push(effect);
+                
+                // Animate fade out
+                animateEffect(effect);
+            });
+            
+            // Create particles at intersections
+            rows.forEach(row => {
+                cols.forEach(col => {
+                    createClearParticles(col * CELL_SIZE + CELL_SIZE / 2, row * CELL_SIZE + CELL_SIZE / 2, '#00e676');
+                });
+            });
+        }
+
+        function animateEffect(effect) {
+            const startTime = Date.now();
+            const duration = 500;
+            
+            const animate = () => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(elapsed / duration, 1);
+                
+                effect.alpha = 0.7 * (1 - progress);
+                effect.life = 1 - progress;
+                
+                if (progress < 1) {
+                    requestAnimationFrame(animate);
+                } else {
+                    const index = clearEffects.indexOf(effect);
+                    if (index > -1) clearEffects.splice(index, 1);
+                }
+            };
+            animate();
+        }
+
+        function createClearParticles(x, y, color) {
+            for (let i = 0; i < 8; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 2 + Math.random() * 3;
+                const size = 3 + Math.random() * 4;
+                const life = 0.8 + Math.random() * 0.4;
+                
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: life,
+                    maxLife: life,
+                    color: color,
+                    size: size,
+                    rotation: 0,
+                    rotationSpeed: (Math.random() - 0.5) * 0.1
+                });
+            }
+        }
+
+        function createPlacementParticles(x, y, color) {
+            for (let i = 0; i < 6; i++) {
+                const angle = Math.random() * Math.PI * 2;
+                const speed = 1 + Math.random() * 2;
+                const size = 2 + Math.random() * 3;
+                
+                particles.push({
+                    x, y,
+                    vx: Math.cos(angle) * speed,
+                    vy: Math.sin(angle) * speed,
+                    life: 1,
+                    maxLife: 1,
+                    color: color,
+                    size: size,
+                    rotation: 0,
+                    rotationSpeed: 0
+                });
+            }
+        }
+
+        function clearGridLines(rows, cols) {
+            // Clear rows
+            rows.forEach(row => {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    if (grid[row][x]) {
+                        createClearParticles(x * CELL_SIZE + CELL_SIZE / 2, row * CELL_SIZE + CELL_SIZE / 2, grid[row][x].color);
+                    }
+                    grid[row][x] = null;
+                }
+            });
+            
+            // Clear columns
+            cols.forEach(col => {
+                for (let y = 0; y < GRID_SIZE; y++) {
+                    if (grid[y][col]) {
+                        createClearParticles(col * CELL_SIZE + CELL_SIZE / 2, y * CELL_SIZE + CELL_SIZE / 2, grid[y][col].color);
+                    }
+                    grid[y][col] = null;
+                }
+            });
+        }
+
+        function spawnFloatingText(text, x, y, color = '#00e676') {
+            floatingTexts.push({
+                text, x, y,
+                color,
+                alpha: 1,
+                vy: -1.2,
+                life: 1
+            });
+        }
+
+        function updateBlockSelection() {
+            [block1El, block2El, block3El].forEach((el, index) => {
+                el.classList.toggle('active', index === selectedBlockIndex);
+            });
+        }
+
+        function renderBlockPreview(blockIndex, shape, color) {
+            const container = [block1El, block2El, block3El][blockIndex];
+            container.innerHTML = '';
+            
+            if (!shape) return;
+            
+            const blockWidth = shape[0].length;
+            const blockHeight = shape.length;
+            const cellSize = Math.min(30 / Math.max(blockWidth, blockHeight), 15);
+            const offsetX = (80 - blockWidth * cellSize) / 2;
+            const offsetY = (80 - blockHeight * cellSize) / 2;
+            
+            for (let y = 0; y < shape.length; y++) {
+                for (let x = 0; x < shape[y].length; x++) {
+                    if (shape[y][x]) {
+                        const cell = document.createElement('div');
+                        cell.className = 'block-cell';
+                        cell.style.left = `${offsetX + x * cellSize}px`;
+                        cell.style.top = `${offsetY + y * cellSize}px`;
+                        cell.style.width = `${cellSize}px`;
+                        cell.style.height = `${cellSize}px`;
+                        cell.style.background = color;
+                        container.appendChild(cell);
+                    }
+                }
+            }
+        }
+
+        function createDragGhost(shape, color, x, y) {
+            const ghost = document.createElement('div');
+            ghost.className = 'drag-ghost';
+            
+            const blockWidth = shape[0].length;
+            const blockHeight = shape.length;
+            const cellSize = 30;
+            
+            for (let y2 = 0; y2 < shape.length; y2++) {
+                for (let x2 = 0; x2 < shape[y2].length; x2++) {
+                    if (shape[y2][x2]) {
+                        const cell = document.createElement('div');
+                        cell.className = 'block-cell';
+                        cell.style.left = `${x2 * cellSize}px`;
+                        cell.style.top = `${y2 * cellSize}px`;
+                        cell.style.width = `${cellSize}px`;
+                        cell.style.height = `${cellSize}px`;
+                        cell.style.background = color;
+                        ghost.appendChild(cell);
+                    }
+                }
+            }
+            
+            ghost.style.width = `${blockWidth * cellSize}px`;
+            ghost.style.height = `${blockHeight * cellSize}px`;
+            ghost.style.left = `${x - blockWidth * cellSize / 2}px`;
+            ghost.style.top = `${y - blockHeight * cellSize / 2}px`;
+            
+            document.body.appendChild(ghost);
+            return ghost;
+        }
+
+        function updatePlacementPreview(gridX, gridY) {
+            previewContainer.innerHTML = '';
+            
+            if (!draggedBlock || !draggedBlock.shape) return;
+            
+            const canPlace = canPlaceBlock(draggedBlock.shape, gridX, gridY);
+            
+            for (let y = 0; y < draggedBlock.shape.length; y++) {
+                for (let x = 0; x < draggedBlock.shape[y].length; x++) {
+                    if (draggedBlock.shape[y][x]) {
+                        const previewCell = document.createElement('div');
+                        previewCell.className = 'preview-cell';
+                        if (!canPlace) previewCell.classList.add('invalid');
+                        
+                        const cellX = (gridX + x) * CELL_SIZE;
+                        const cellY = (gridY + y) * CELL_SIZE;
+                        
+                        previewCell.style.left = `${cellX}px`;
+                        previewCell.style.top = `${cellY}px`;
+                        previewCell.style.width = `${CELL_SIZE}px`;
+                        previewCell.style.height = `${CELL_SIZE}px`;
+                        
+                        previewContainer.appendChild(previewCell);
+                    }
+                }
+            }
+        }
+
+        // ================= DRAWING =================
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw grid
+            ctx.strokeStyle = '#333';
+            ctx.lineWidth = 1;
+            
+            for (let i = 0; i <= GRID_SIZE; i++) {
+                ctx.beginPath();
+                ctx.moveTo(i * CELL_SIZE, 0);
+                ctx.lineTo(i * CELL_SIZE, canvas.height);
+                ctx.stroke();
+                
+                ctx.beginPath();
+                ctx.moveTo(0, i * CELL_SIZE);
+                ctx.lineTo(canvas.width, i * CELL_SIZE);
+                ctx.stroke();
+            }
+            
+            // Draw placed blocks
+            for (let y = 0; y < GRID_SIZE; y++) {
+                for (let x = 0; x < GRID_SIZE; x++) {
+                    if (grid[y][x] !== null) {
+                        drawCell(x, y, grid[y][x].color);
+                    }
+                }
+            }
+            
+            // Draw clear effects
+            ctx.globalAlpha = 0.7;
+            clearEffects.forEach(effect => {
+                ctx.fillStyle = '#00e676';
+                ctx.fillRect(effect.x, effect.y, effect.width, effect.height);
+            });
+            ctx.globalAlpha = 1;
+            
+            // Draw particles
+            for (let i = particles.length - 1; i >= 0; i--) {
+                const p = particles[i];
+                ctx.globalAlpha = p.life / p.maxLife;
+                ctx.fillStyle = p.color;
+                ctx.beginPath();
+                ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+                ctx.fill();
+                
+                p.x += p.vx;
+                p.y += p.vy;
+                p.vy += 0.05;
+                p.life -= 0.015;
+                p.rotation += p.rotationSpeed;
+                
+                if (p.life <= 0) {
+                    particles.splice(i, 1);
+                }
+            }
+            ctx.globalAlpha = 1;
+            
+            // Draw floating texts
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const text = floatingTexts[i];
+                ctx.globalAlpha = text.alpha;
+                ctx.fillStyle = text.color;
+                ctx.font = 'bold 16px Arial';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'middle';
+                ctx.fillText(text.text, text.x, text.y);
+                
+                text.y += text.vy;
+                text.alpha -= 0.015;
+                text.vy *= 0.95;
+                
+                if (text.alpha <= 0) {
+                    floatingTexts.splice(i, 1);
+                }
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function drawCell(x, y, color) {
+            const cellX = x * CELL_SIZE;
+            const cellY = y * CELL_SIZE;
+            
+            // Main cell
+            ctx.fillStyle = color;
+            ctx.fillRect(cellX + 2, cellY + 2, CELL_SIZE - 4, CELL_SIZE - 4);
+            
+            // Cell highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+            ctx.fillRect(cellX + 2, cellY + 2, CELL_SIZE - 4, 3);
+            ctx.fillRect(cellX + 2, cellY + 2, 3, CELL_SIZE - 4);
+            
+            // Cell shadow
+            ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+            ctx.fillRect(cellX + 2, cellY + CELL_SIZE - 5, CELL_SIZE - 4, 3);
+            ctx.fillRect(cellX + CELL_SIZE - 5, cellY + 2, 3, CELL_SIZE - 4);
+            
+            // Inner highlight
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.fillRect(cellX + 6, cellY + 6, CELL_SIZE - 12, 2);
+            ctx.fillRect(cellX + 6, cellY + 6, 2, CELL_SIZE - 12);
+        }
+
+        // ================= GAME LOOP =================
+        function gameLoop() {
+            if (!gamePaused && gameRunning) {
+                draw();
+            }
+            animationId = requestAnimationFrame(gameLoop);
+        }
+
+        // ================= INPUT HANDLING =================
+        function handleBlockSelect(e, index) {
+            if (!gameRunning || gamePaused || !currentBlocks[index]) return;
+            
+            selectedBlockIndex = index;
+            updateBlockSelection();
+            playSound('select');
+            
+            // Remove any existing drag ghost
+            if (draggedBlock && draggedBlock.ghost) {
+                draggedBlock.ghost.remove();
+                draggedBlock = null;
+            }
+            
+            // Clear preview
+            previewContainer.innerHTML = '';
+        }
+
+        function handleBlockDragStart(e, index) {
+            if (!gameRunning || gamePaused || !currentBlocks[index]) return;
+            
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            if (!clientX || !clientY) return;
+            
+            e.preventDefault();
+            
+            selectedBlockIndex = index;
+            updateBlockSelection();
+            
+            const block = currentBlocks[index];
+            draggedBlock = {
+                index,
+                shape: block.shape,
+                color: block.color,
+                x: clientX,
+                y: clientY,
+                ghost: createDragGhost(block.shape, block.color, clientX, clientY),
+                lastGridX: -1,
+                lastGridY: -1
+            };
+            
+            playSound('select');
+        }
+
+        function handleBlockDragMove(e) {
+            if (!draggedBlock || !draggedBlock.ghost) return;
+            
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            if (!clientX || !clientY) return;
+            
+            draggedBlock.x = clientX;
+            draggedBlock.y = clientY;
+            
+            // Update ghost position
+            const blockWidth = draggedBlock.shape[0].length;
+            const blockHeight = draggedBlock.shape.length;
+            const cellSize = 30;
+            
+            draggedBlock.ghost.style.left = `${clientX - blockWidth * cellSize / 2}px`;
+            draggedBlock.ghost.style.top = `${clientY - blockHeight * cellSize / 2}px`;
+            
+            // Update placement preview
+            const rect = canvas.getBoundingClientRect();
+            const gridX = Math.floor((clientX - rect.left) / CELL_SIZE);
+            const gridY = Math.floor((clientY - rect.top) / CELL_SIZE);
+            
+            // Only update if grid position changed
+            if (gridX !== draggedBlock.lastGridX || gridY !== draggedBlock.lastGridY) {
+                draggedBlock.lastGridX = gridX;
+                draggedBlock.lastGridY = gridY;
+                updatePlacementPreview(gridX, gridY);
+            }
+        }
+
+        function handleBlockDragEnd(e) {
+            if (!draggedBlock || !draggedBlock.ghost) return;
+            
+            const clientX = e.clientX || (e.changedTouches && e.changedTouches[0].clientX);
+            const clientY = e.clientY || (e.changedTouches && e.changedTouches[0].clientY);
+            
+            if (clientX && clientY) {
+                const rect = canvas.getBoundingClientRect();
+                const gridX = Math.floor((clientX - rect.left) / CELL_SIZE);
+                const gridY = Math.floor((clientY - rect.top) / CELL_SIZE);
+                
+                const block = currentBlocks[draggedBlock.index];
+                if (block && canPlaceBlock(block.shape, gridX, gridY)) {
+                    placeBlock(block.shape, block.color, gridX, gridY);
+                    currentBlocks[draggedBlock.index] = null;
+                    renderBlockPreview(draggedBlock.index, null, null);
+                }
+            }
+            
+            // Clean up
+            draggedBlock.ghost.remove();
+            draggedBlock = null;
+            selectedBlockIndex = -1;
+            updateBlockSelection();
+            
+            // Clear preview
+            previewContainer.innerHTML = '';
+        }
+
+        function handleCanvasClick(e) {
+            if (!gameRunning || gamePaused || selectedBlockIndex === -1) return;
+            
+            const rect = canvas.getBoundingClientRect();
+            const clientX = e.clientX || (e.touches && e.touches[0].clientX);
+            const clientY = e.clientY || (e.touches && e.touches[0].clientY);
+            
+            if (!clientX || !clientY) return;
+            
+            const gridX = Math.floor((clientX - rect.left) / CELL_SIZE);
+            const gridY = Math.floor((clientY - rect.top) / CELL_SIZE);
+            
+            const block = currentBlocks[selectedBlockIndex];
+            if (block && canPlaceBlock(block.shape, gridX, gridY)) {
+                placeBlock(block.shape, block.color, gridX, gridY);
+                currentBlocks[selectedBlockIndex] = null;
+                renderBlockPreview(selectedBlockIndex, null, null);
+                selectedBlockIndex = -1;
+                updateBlockSelection();
+            }
+        }
+
+        // ================= SOUND & VIBRATION =================
+        function playSound(soundName) {
+            if (!userInteracted || audioContext.state === 'suspended') return;
+            
+            try {
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                let frequency = 440;
+                let duration = 0.1;
+                
+                switch(soundName) {
+                    case 'place': 
+                        frequency = 440; 
+                        duration = 0.1;
+                        break;
+                    case 'select': 
+                        frequency = 550; 
+                        duration = 0.05;
+                        break;
+                    case 'clear': 
+                        frequency = 660; 
+                        duration = 0.2;
+                        break;
+                    case 'big_clear': 
+                        frequency = 880; 
+                        duration = 0.3;
+                        break;
+                }
+                
+                oscillator.frequency.value = frequency;
+                oscillator.type = 'sine';
+                
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + duration);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration);
+            } catch (e) {
+                console.warn('Sound error:', e);
+            }
+        }
+
+        function gameVibrate(pattern) {
+            if (!userInteracted || !('vibrate' in navigator)) return;
+            try {
+                navigator.vibrate(pattern);
+            } catch (e) {
+                console.warn('Vibration failed:', e);
+            }
+        }
+
+        // ================= UI UPDATES =================
+        function updateUI() {
+            linesEl.textContent = linesCleared;
+            levelEl.textContent = level;
+            comboEl.textContent = `x${comboMultiplier.toFixed(1)}`;
+        }
+
+        function endGame(isNoMoves = false) {
+            if (!gameRunning) return;
+            gameRunning = false;
+            
+            finalLinesEl.textContent = linesCleared;
+            maxComboEl.textContent = `x${maxCombo.toFixed(1)}`;
+            earnedKSPTEl.textContent = totalEarnedKSPT.toFixed(2);
+            earnedEKElem.textContent = totalEarnedEK; // Показываем EK
+            
+            gameOverScreen.style.display = 'block';
+            
+            if (isNoMoves) {
+                playSound('big_clear');
+                gameVibrate([200, 100, 200, 100, 200]);
+            } else {
+                playSound('big_clear');
+                gameVibrate([200, 100, 200, 100, 200]);
+            }
+            
+            if (animationId) {
+                cancelAnimationFrame(animationId);
+                animationId = null;
+            }
+        }
+
+        // ================= EVENT LISTENERS =================
+        function markUserInteracted() {
+            userInteracted = true;
+            if (audioContext.state === 'suspended') {
+                audioContext.resume();
+            }
+            document.removeEventListener('touchstart', markUserInteracted);
+            document.removeEventListener('mousedown', markUserInteracted);
+        }
+
+        // Initialize event listeners
+        document.addEventListener('touchstart', markUserInteracted, { once: true, passive: true });
+        document.addEventListener('mousedown', markUserInteracted, { once: true });
+
+        // Canvas click for quick placement
+        canvas.addEventListener('click', handleCanvasClick);
+        canvas.addEventListener('touchstart', (e) => {
+            if (e.touches.length === 1) {
+                handleCanvasClick(e);
+            }
+        }, { passive: false });
+
+        // Block selection and drag
+        [block1El, block2El, block3El].forEach((el, index) => {
+            // Click selection
+            el.addEventListener('click', (e) => handleBlockSelect(e, index));
+            el.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    handleBlockSelect(e, index);
+                }
+            }, { passive: false });
+            
+            // Drag start
+            el.addEventListener('mousedown', (e) => handleBlockDragStart(e, index));
+            el.addEventListener('touchstart', (e) => {
+                if (e.touches.length === 1) {
+                    handleBlockDragStart(e, index);
+                }
+            }, { passive: false });
+        });
+
+        // Global drag events
+        document.addEventListener('mousemove', handleBlockDragMove);
+        document.addEventListener('touchmove', (e) => {
+            if (e.touches.length === 1) {
+                handleBlockDragMove(e);
+            }
+        }, { passive: false });
+
+        document.addEventListener('mouseup', handleBlockDragEnd);
+        document.addEventListener('touchend', (e) => {
+            if (e.changedTouches.length === 1) {
+                handleBlockDragEnd(e);
+            }
+        });
+
+        // Button events
+        document.getElementById('pauseBtn').addEventListener('click', function() {
+            if (!gameRunning) return;
+            gamePaused = !gamePaused;
+            this.textContent = gamePaused ? 'Resume' : 'Pause';
+            playSound('select');
+        });
+
+        document.getElementById('restartBtn').addEventListener('click', function() {
+  // Проверяем билеты локально
+  if (!ensureHasTicketOrWarn()) return;
+  
+  // Вместо прямого списания билета, запрашиваем новый раунд
+  // Родитель сам проверит билеты и спишет если нужно
+  try {
+    (window.parent || window.top).postMessage({ 
+      type: 'kspt_new_round'
+    }, '*');
+  } catch(e) {
+    console.warn('Failed to send new round message', e);
+  }
+  
+  // Запускаем игру
+  initGame();
+});
+
+        document.getElementById('exitBtn').addEventListener('click', function() {
+            safeExitGame();
+        });
+
+        document.getElementById('playAgainBtn').addEventListener('click', function() {
+            gameOverScreen.style.display = 'none';
+            
+            try {
+                (window.parent || window.top).postMessage({ type: 'kspt_new_round' }, '*');
+            } catch(e) {}
+            
+            initGame();
+        });
+
+        document.getElementById('exitToMenuBtn').addEventListener('click', function() {
+            safeExitGame();
+        });
+
+        // Pause when tab is hidden
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden && gameRunning) {
+                gamePaused = true;
+                document.getElementById('pauseBtn').textContent = 'Resume';
+            }
+        });
+
+        // Keyboard controls
+        document.addEventListener('keydown', function(e) {
+            if (!gameRunning) return;
+            
+            switch(e.key) {
+                case '1':
+                case '2':
+                case '3':
+                    const index = parseInt(e.key) - 1;
+                    if (currentBlocks[index]) {
+                        selectedBlockIndex = index;
+                        updateBlockSelection();
+                        playSound('select');
+                    }
+                    break;
+                case ' ':
+                    gamePaused = !gamePaused;
+                    document.getElementById('pauseBtn').textContent = gamePaused ? 'Resume' : 'Pause';
+                    playSound('select');
+                    break;
+                case 'r':
+                case 'R':
+                    initGame();
+                    break;
+            }
+        });
+
+        // ================= INITIALIZE GAME =================
+        initGame();
+    </script>
+</body>
+</html>

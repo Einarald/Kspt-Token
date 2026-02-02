@@ -1208,6 +1208,367 @@ input:checked + .toggle-slider:before {
   }
 }
 
+/* ===== IVENTS STYLES ===== */
+.ivent-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 8px;
+  margin-top: 15px;
+}
+
+.ivent-day {
+  background: #1a1a1a;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+  min-height: 80px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+}
+
+.ivent-day.redeemed {
+  background: #2e7d32;
+}
+
+.ivent-day.missed {
+  background: #d32f2f;
+  opacity: 0.5;
+}
+
+.ivent-day.future {
+  opacity: 0.7;
+}
+
+.ivent-day.current {
+  border: 2px solid #ff9800;
+}
+
+.ivent-day-number {
+  font-weight: bold;
+  font-size: 18px;
+  margin-bottom: 5px;
+}
+
+.ivent-day-reward {
+  font-size: 11px;
+  color: #aaa;
+}
+
+.ivent-skin-reward {
+  margin-top: 20px;
+  text-align: center;
+  padding: 15px;
+  background: #1a1a1a;
+  border-radius: 12px;
+}
+
+.ivent-skin-reward img {
+  width: 60px;
+  height: 60px;
+  margin-bottom: 10px;
+}
+
+.ivent-info {
+  margin-bottom: 15px;
+  padding: 10px;
+  background: #1a1a1a;
+  border-radius: 8px;
+  font-size: 13px;
+}
+
+/* В style.css ДОБАВЬТЕ или ОБНОВИТЕ эти стили: */
+
+.ivent-calendar {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 10px;
+  margin-top: 15px;
+  padding: 10px;
+  background: #1a1a1a;
+  border-radius: 12px;
+}
+
+.ivent-day {
+  background: #111;
+  border-radius: 10px;
+  padding: 12px 5px;
+  text-align: center;
+  min-height: 100px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.ivent-day:hover {
+  transform: translateY(-2px);
+}
+
+.ivent-day.redeemed {
+  background: #1b5e20;
+  border-color: #2e7d32;
+}
+
+.ivent-day.missed {
+  background: #b71c1c;
+  opacity: 0.6;
+  border-color: #d32f2f;
+}
+
+.ivent-day.future {
+  background: #222;
+  opacity: 0.7;
+}
+
+.ivent-day.current {
+  background: #333;
+  border-color: #ff9800;
+  box-shadow: 0 0 10px rgba(255, 152, 0, 0.3);
+}
+
+.ivent-day-number {
+  font-weight: bold;
+  font-size: 16px;
+  margin-bottom: 8px;
+  color: #fff;
+}
+
+.ivent-day img {
+  width: 40px;
+  height: 40px;
+  object-fit: contain;
+  margin: 5px 0;
+  border-radius: 8px;
+  background: rgba(255,255,255,0.1);
+}
+
+.ivent-skin-reward {
+  margin-top: 20px;
+  text-align: center;
+  padding: 20px;
+  background: linear-gradient(135deg, #1a1a1a 0%, #222 100%);
+  border-radius: 12px;
+  border: 2px solid #ff9800;
+}
+
+.ivent-skin-reward img {
+  width: 80px;
+  height: 80px;
+  border-radius: 12px;
+  margin: 10px 0;
+  border: 2px solid gold;
+  box-shadow: 0 0 15px rgba(255, 215, 0, 0.3);
+}
+
+/* ===== GAMES SCREEN STYLES ===== */
+.game-item {
+  display: flex;
+  align-items: center;
+  background: rgba(0, 188, 212, 0.1);
+  border-radius: 12px;
+  padding: 12px;
+  margin-bottom: 10px;
+  cursor: pointer;
+  border: 2px solid transparent;
+  transition: all 0.2s ease;
+}
+
+.game-item:hover {
+  border-color: #00bcd4;
+  transform: translateY(-2px);
+  background: rgba(0, 188, 212, 0.2);
+}
+
+.game-icon {
+  width: 50px;
+  height: 50px;
+  border-radius: 10px;
+  margin-right: 12px;
+  object-fit: cover;
+}
+
+.game-info {
+  flex: 1;
+}
+
+.game-title {
+  font-weight: bold;
+  font-size: 16px;
+  color: #00e676;
+}
+
+.game-desc {
+  font-size: 12px;
+  color: #80deea;
+}
+
+.game-ticket {
+  background: #ff9800;
+  color: #000;
+  padding: 4px 8px;
+  border-radius: 10px;
+  font-size: 11px;
+  font-weight: bold;
+}
+
+/* ===== GAME CONSOLE STYLES ===== */
+.game-console {
+  background: linear-gradient(135deg, #6a11cb 0%, #2575fc 100%);
+  border-radius: 20px;
+  padding: 20px;
+  margin: 20px auto;
+  max-width: 400px;
+  position: relative;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+}
+
+.console-screen {
+  background: #000;
+  border-radius: 10px;
+  padding: 10px;
+  margin-bottom: 20px;
+}
+
+.console-joystick {
+  display: flex;
+  justify-content: center;
+  margin-top: 20px;
+}
+
+.joystick {
+  width: 120px;
+  height: 120px;
+  background: #333;
+  border-radius: 50%;
+  position: relative;
+}
+
+.joystick-cross {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 80px;
+  height: 80px;
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  grid-template-rows: repeat(3, 1fr);
+}
+
+.joystick-btn {
+  background: #666;
+  border: none;
+  color: white;
+  font-weight: bold;
+  cursor: pointer;
+}
+
+.joystick-btn.up { grid-column: 2; grid-row: 1; }
+.joystick-btn.left { grid-column: 1; grid-row: 2; }
+.joystick-btn.center { 
+  grid-column: 2; 
+  grid-row: 2; 
+  background: #888;
+}
+.joystick-btn.right { grid-column: 3; grid-row: 2; }
+.joystick-btn.down { grid-column: 2; grid-row: 3; }
+
+/* ===== FLOATING REWARDS ===== */
+.floating-reward {
+  position: fixed;
+  color: #00e676;
+  font-weight: bold;
+  font-size: 20px;
+  text-shadow: 0 0 3px #000;
+  animation: floatUp 1s ease-out forwards;
+  z-index: 99999;
+}
+
+@keyframes floatUp {
+  0% { opacity: 1; transform: translateY(0) scale(1); }
+  100% { opacity: 0; transform: translateY(-50px) scale(1.2); }
+}
+
+/* ===== GAME FRAME ===== */
+#gameFrameContainer {
+  width: 100%;
+  height: calc(100vh - 150px);
+  overflow: hidden;
+}
+
+.game-frame {
+  width: 100%;
+  height: 100%;
+  border: none;
+  background: #000;
+}
+
+/* events calendar horizontal scroll */
+.ivent-scroll {
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
+  padding-bottom: 8px;
+}
+.ivent-calendar {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  white-space: nowrap;
+}
+.ivent-calendar .day-card {
+  flex: 0 0 auto; /* чтобы элементы не сжимались */
+}
+
+/* final reward gold frame */
+.ivent-skin-reward {
+  margin-top: 12px;
+  padding: 14px;
+  background: linear-gradient(180deg,#0f0f0f,#0b0b0b);
+  border-radius: 12px;
+  text-align: center;
+  border: 2px solid rgba(255,152,0,0.12);
+}
+.ivent-skin-reward .gold-frame {
+  display: inline-block;
+  padding: 10px;
+  border-radius: 14px;
+  background: linear-gradient(45deg,#ffd27a,#ff9800);
+  box-shadow: 0 6px 30px rgba(255,152,0,0.18), inset 0 0 8px rgba(255,240,200,0.25);
+}
+.ivent-day.redeemed {
+  opacity: 1;
+  box-shadow: 0 4px 8px rgba(0,0,0,0.6);
+}
+.ivent-day.future img {
+  filter: grayscale(40%);
+}
+
+.ivent-countdown {
+  margin-top: 10px;
+  font-size: 13px;
+  color: #ffb74d;
+  text-align: center;
+  font-weight: 600;
+}
+
+/* Limited Cards Styles */
+.card-item.disabled {
+  opacity: 0.5;
+  filter: grayscale(1);
+}
+
+.card-item.disabled .card-item-button {
+  background: #333;
+  color: #888;
+  cursor: not-allowed;
+}
+
 </style>
 </head>
 

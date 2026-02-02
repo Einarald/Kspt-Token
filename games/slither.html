@@ -1,0 +1,2023 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+<title>Slither: KSPT Mode</title>
+<style>
+:root { 
+    --accent: #00bcd4; 
+    --accent-2: #00e676; 
+    --bg:#111; 
+    --panel:#0b0b0b; 
+    --danger: #ff4081; 
+    --warning: #ff9800;
+    --space-blue: #0a0a1a;
+    --space-purple: #6a11cb;
+}
+*{box-sizing:border-box; -webkit-tap-highlight-color: transparent;}
+body{margin:0;padding:0;background:#000;color:#fff;font-family:Arial, sans-serif;overflow:hidden;touch-action:manipulation;}
+.game-container{display:flex;flex-direction:column;align-items:center;height:100vh;padding:10px;background:linear-gradient(135deg,var(--panel) 0%, #1a1a1a 100%);position:relative;}
+.game-header{display:flex;justify-content:space-between;width:100%;margin-bottom:10px;padding:10px;background:rgba(0,0,0,0.45);border-radius:10px;border:1px solid var(--accent);}
+.game-title{color:var(--accent-2);font-weight:bold;font-size:18px}
+.game-stats{display:flex;gap:15px;font-size:14px}
+canvas{ background:var(--space-blue); border:2px solid var(--accent); border-radius:10px; image-rendering:pixelated; display:block }
+.leaderboard{
+  position:absolute;
+  top:70px;
+  left:10px;
+
+  width:140px;                 /* было 180 */
+  padding:6px;                 /* было 10 */
+
+  background:rgba(0,0,0,0.45); /* прозрачнее */
+  backdrop-filter: blur(4px);  /* стеклянный эффект */
+
+  border-radius:10px;
+  border:1px solid rgba(0,188,212,0.5);
+
+  z-index:10;
+}
+
+.leaderboard h3{margin:0 0 8px 0;color:var(--accent-2);font-size:12px;text-align:center;}
+.leaderboard-entry{display:flex;justify-content:space-between;padding:2px 4px;border-radius:4px;margin-bottom:2px;font-size:11px;}
+.leaderboard-entry.you{background:rgba(0,188,212,0.2);border-left:3px solid var(--accent);}
+.leaderboard-entry .rank{width:20px;font-weight:bold;}
+.leaderboard-entry .name{flex:1;}
+.leaderboard-entry .score{width:50px;text-align:right;}
+.radar{
+  position:absolute;
+  bottom:80px;
+  left:10px;
+
+  width:110px;
+  height:110px;
+
+  background:rgba(0,0,0,0.35);   /* было 0.7 */
+  backdrop-filter: blur(3px);
+
+  border-radius:50%;
+  border:2px solid rgba(0,188,212,0.5);
+
+  z-index:10;
+}
+
+.radar::before{
+  content: "";
+  position: absolute;
+  inset: 0;
+  border-radius: 50%;
+  animation: radar-scan 4s linear infinite;
+
+  background: conic-gradient(
+    rgba(0,188,212,0.05),
+    rgba(0,230,118,0.12),
+    rgba(0,188,212,0.05)
+  );
+}
+
+@keyframes radar-scan{0%{transform:rotate(0deg);}100%{transform:rotate(360deg);}}
+.radar-center{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:6px;height:6px;background:var(--accent-2);border-radius:50%;}
+.radar-dot{position:absolute;width:6px;height:6px;border-radius:50%;transform:translate(-50%,-50%);}
+.controls-container{display:flex;flex-direction:column;align-items:center;width:100%;margin-top:10px;gap:10px;}
+.control-buttons-row{display:flex;gap:10px;}
+.control-button{padding:12px 22px;background:linear-gradient(135deg,#00e5ff,#00bcd4);color:#000;border:none;border-radius:12px;cursor:pointer;font-weight:bold;font-size:15px;letter-spacing:0.5px;box-shadow:0 0 10px rgba(0,188,212,0.6), inset 0 0 6px rgba(255,255,255,0.3);transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;}
+.control-button:hover{filter:brightness(1.12)}
+.control-button:active{transform:scale(.95);box-shadow:0 0 4px rgba(0,188,212,0.4), inset 0 0 10px rgba(0,0,0,0.3);}
+.game-over{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.9);padding:30px;border-radius:15px;border:2px solid var(--accent-2);text-align:center;z-index:100;width:80%;max-width:320px;backdrop-filter:blur(5px);}
+.game-over h2{color:#ff4081;margin-top:0}
+.earned{color:var(--accent-2);font-weight:bold;font-size:24px;margin:15px 0}
+.stat-row{display:flex;justify-content:space-between;margin:8px 0;font-size:14px;}
+.stat-value{color:var(--accent-2);}
+.crown{position:absolute;top:-20px;left:50%;transform:translateX(-50%);color:gold;font-size:20px;filter:drop-shadow(0 0 4px rgba(255,215,0,0.7));}
+.ability-bar{width:100%;height:8px;background:rgba(0,0,0,0.5);border-radius:4px;margin-top:10px;overflow:hidden;}
+.ability-fill{height:100%;background:linear-gradient(90deg, var(--accent), var(--accent-2));width:100%;border-radius:4px;transition:width 0.2s;}
+.particle{position:absolute;pointer-events:none;z-index:5;}
+.asteroid{position:absolute;border-radius:50%;background:linear-gradient(135deg, #444, #222);box-shadow:0 0 10px rgba(106,17,203,0.5);}
+.leaderboard,
+.radar {
+  pointer-events: none;
+}
+
+/* Джойстик */
+.joystick-container {
+    position: relative;
+    width: 150px;
+    height: 150px;
+    margin-top: 10px;
+}
+
+.joystick-bg {
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 188, 212, 0.08);
+    border-radius: 50%;
+    position: relative;
+    border: 2px solid var(--accent);
+}
+
+.leaderboard:hover {
+  opacity: 0.9;
+}
+
+.leaderboard {
+  opacity: 0.6;
+  transition: opacity .2s;
+}
+
+.joystick-center {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    background: var(--accent);
+    border-radius: 50%;
+    box-shadow: 0 0 10px rgba(0, 188, 212, 0.5);
+    transition: transform 0.1s ease;
+}
+</style>
+</head>
+<body>
+<div class="game-container">
+    <div class="game-header">
+        <div class="game-title">🚀 Slither: KSPT Mode</div>
+        <div class="game-stats">
+            <div>Length: <span id="length">100</span></div>
+            <div>Orbs: <span id="orbs">0</span></div>
+            <div>Rank: <span id="rank">#1</span></div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas" width="360" height="360"></canvas>
+    
+    <div class="leaderboard" id="leaderboard">
+        <h3>Leaderboard</h3>
+        <div id="leaderboardEntries"></div>
+    </div>
+    
+    <div class="radar" id="radar">
+        <div class="radar-center"></div>
+    </div>
+
+    <!-- Джойстик для управления -->
+    <div class="joystick-container" id="joystickArea">
+        <div class="joystick-bg"><div class="joystick-center"></div></div>
+    </div>
+
+    <div class="controls-container">
+        <div class="control-buttons-row">
+            <button class="control-button" id="boostBtn">TURBO</button>
+            <button class="control-button" id="pauseBtn">Pause</button>
+            <button class="control-button" id="exitBtn">Exit</button>
+        </div>
+        <div class="ability-bar">
+            <div class="ability-fill" id="boostBar"></div>
+        </div>
+    </div>
+</div>
+
+<div class="game-over" id="gameOverScreen">
+    <h2>Game Over!</h2>
+    <div class="stat-row">Final Length: <span class="stat-value" id="finalLength">0</span></div>
+    <div class="stat-row">Orbs Collected: <span class="stat-value" id="finalOrbs">0</span></div>
+    <div class="stat-row">Best Combo: <span class="stat-value" id="finalCombo">0</span></div>
+    <div class="stat-row">Time Survived: <span class="stat-value" id="finalTime">0s</span></div>
+    <div class="stat-row">Enemies Killed: <span class="stat-value" id="finalKills">0</span></div>
+    <div class="earned">+<span id="earnedKSPT">0.00</span> KSPT</div>
+    <div class="earned">+<span id="earnedEK">0</span> EK</div>
+    <button id="playAgainBtn" style="background:#00e676;margin-bottom:10px;width:100%;padding:12px;">Play Again</button>
+    <button id="exitToMenuBtn" style="background:#ff4081;width:100%;padding:12px;">Exit to Menu</button>
+</div>
+
+<script>
+/* ===== helper: проверка билетов (localStorage) ===== */
+function getLocalTicketCount() {
+  try {
+    const raw = localStorage.getItem('kspt_tickets');
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (data && typeof data.current === 'number') return data.current;
+    // иногда структура была { current: N } или { current: "N" }
+    if (data && data.current != null) return Number(data.current) || 0;
+  } catch (e) {
+    // если iframe cross-origin — не можем прочитать, вернём null (не мешаем)
+    return null;
+  }
+  return null;
+}
+
+function ensureHasTicketOrWarn() {
+  const c = getLocalTicketCount();
+  if (c === null) {
+    // не можем проверить — разрешаем рестарт (родитель может контролировать)
+    return true;
+  }
+  if (c <= 0) {
+    // если есть postMessage handler — сообщим родителю
+    try { (window.parent || window.top).postMessage({ type: 'kspt_no_tickets' }, '*'); } catch(e){}
+    // локальное сообщение / тост
+    try { showToast && showToast("Not enough tickets!"); } catch(e){ alert("Not enough tickets!"); }
+    return false;
+  }
+  return true;
+}
+
+/* ========== SAFE HOST HELPERS ========== */
+function isSameOrigin(win) {
+  try { void win.location.href; return true; } catch (e) { return false; }
+}
+
+// Внутри игры
+window.__kspt_hourly = window.__kspt_hourly || 0;
+
+window.addEventListener('message', (ev) => {
+  const msg = ev.data;
+  if (!msg || typeof msg !== 'object') return;
+
+  if (msg.type === 'kspt_init' || msg.type === 'kspt_hourly_update') {
+    const h = Number(msg.hourly) || 0;
+    window.__kspt_hourly = h;
+  }
+
+  if (msg.type === 'kspt_no_tickets') {
+  gameRunning = false;
+  gamePaused = true;
+
+  // показываем Game Over экран
+  const gos = document.getElementById('gameOverScreen');
+  if (gos) gos.style.display = 'block';
+
+  alert("Not enough tickets!");
+}
+
+  if (msg.type === 'kspt_parent_set_game_over' && msg.blockButtons) {
+    document.getElementById('pauseBtn')?.setAttribute('disabled','true');
+    document.getElementById('restartBtn')?.setAttribute('disabled','true');
+    document.getElementById('exitBtn')?.setAttribute('disabled','true');
+  }
+});
+
+function safeGetOfflinePercent(percent) {
+  try {
+    if (typeof HOST !== 'undefined' && HOST !== window && typeof HOST.getOfflinePercent === 'function') {
+      return Number(HOST.getOfflinePercent(percent)) || 0;
+    }
+  } catch (e) { /* ignore */ }
+
+  if (typeof window.__kspt_hourly === 'number') {
+    return Math.round((window.__kspt_hourly * (percent/100)) * 100) / 100;
+  }
+
+  try {
+    const raw = localStorage.getItem('kspt_data') || localStorage.getItem('d') || null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.offlineHourly === 'number') {
+        return Math.round((parsed.offlineHourly * (percent/100)) * 100) / 100;
+      }
+    }
+  } catch(e) {}
+
+  return 0;
+}
+
+function safeAwardGameReward(amount, x = 0, y = 0) {
+  try {
+    if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.awardGameReward === 'function') {
+      window.top.awardGameReward(Number(amount) || 0, x, y);
+      return;
+    }
+  } catch (e) { console.warn('safeAwardGameReward direct call failed', e); }
+
+  try {
+    (window.parent || window.top).postMessage({ type: 'kspt_award_reward', reward: Number(amount) || 0, x, y }, '*');
+    return;
+  } catch (e) { console.warn('safeAwardGameReward postMessage failed', e); }
+
+  console.log('Local reward fallback', amount, x, y);
+}
+
+function safeAwardGameEK(amount, x = 0, y = 0) {
+  try {
+    if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.awardGameEK === 'function') {
+      window.top.awardGameEK(Number(amount) || 0, x, y); return;
+    }
+  } catch(e) {}
+  try {
+    (window.parent || window.top).postMessage({ type: 'ek_award', amount: Number(amount)||0, x, y }, '*'); return;
+  } catch(e){}
+  console.log('Local EK fallback', amount, x, y);
+}
+
+function safeConsumeTicket() {
+  try {
+    if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.consumeTicketForCurrentGame === 'function') {
+      window.top.consumeTicketForCurrentGame();
+      return;
+    }
+  } catch (e) { console.warn('safeConsumeTicket direct call failed', e); }
+
+  try { (window.parent || window.top).postMessage({ type: 'kspt_consume_ticket' }, '*'); return; } catch (e) { console.warn('consumeTicket postMessage failed', e); }
+
+  console.log('consumeTicket fallback (no parent handler)');
+}
+
+function safeExitGame() {
+  try {
+    if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.exitGame === 'function') {
+      window.top.exitGame();
+      return;
+    }
+  } catch (e) { console.warn('safeExitGame direct call failed', e); }
+
+  try { (window.parent || window.top).postMessage({ type: 'kspt_exit_game' }, '*'); return; } catch (e) { console.warn('safeExitGame postMessage failed', e); }
+
+  console.log('exitGame fallback (no parent handler)');
+}
+
+// Аудио система
+const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+let userInteracted = false;
+
+function markUserInteracted() {
+  userInteracted = true;
+  if (audioContext.state === 'suspended') audioContext.resume();
+}
+
+function playSound(type, frequency = 440, duration = 0.1) {
+  if (!userInteracted || audioContext.state === 'suspended') return;
+  
+  try {
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+    
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+    
+    let freq = frequency;
+    let dur = duration;
+    let vol = 0.1;
+    
+    switch(type) {
+      case 'orb': freq = 523.25; dur = 0.05; vol = 0.08; break;
+      case 'boost': freq = 659.25; dur = 0.15; vol = 0.12; break;
+      case 'crash': freq = 220; dur = 0.3; vol = 0.15; break;
+      case 'kill': freq = 880; dur = 0.2; vol = 0.12; break;
+      case 'grow': freq = 349.23; dur = 0.1; vol = 0.08; break;
+    }
+    
+    oscillator.frequency.value = freq;
+    oscillator.type = 'sine';
+    
+    gainNode.gain.setValueAtTime(vol, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.001, audioContext.currentTime + dur);
+    
+    oscillator.start(audioContext.currentTime);
+    oscillator.stop(audioContext.currentTime + dur);
+  } catch (e) {
+    console.warn('Sound error:', e);
+  }
+}
+
+function gameVibrate(pattern) {
+  if (!userInteracted || !('vibrate' in navigator)) return;
+  try {
+    navigator.vibrate(pattern);
+  } catch (e) {
+    console.warn('Vibration failed:', e);
+  }
+}
+
+/* ========== GAME VARIABLES ========== */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+const lengthEl = document.getElementById('length');
+const orbsEl = document.getElementById('orbs');
+const rankEl = document.getElementById('rank');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const finalLengthEl = document.getElementById('finalLength');
+const finalOrbsEl = document.getElementById('finalOrbs');
+const finalComboEl = document.getElementById('finalCombo');
+const finalTimeEl = document.getElementById('finalTime');
+const finalKillsEl = document.getElementById('finalKills');
+const earnedKSPTEl = document.getElementById('earnedKSPT');
+const earnedEKElem = document.getElementById('earnedEK');
+const boostBar = document.getElementById('boostBar');
+const leaderboardEntries = document.getElementById('leaderboardEntries');
+
+// Константы игры
+const GAME_WIDTH = 2000;
+const GAME_HEIGHT = 2000;
+const VIEW_WIDTH = 360;
+const VIEW_HEIGHT = 360;
+const PLAYER_SPEED = 2.5;
+const BOOST_SPEED = 4.5;
+const BOOST_COST = 0.5;
+const BOOST_RECOVERY = 0.3;
+const ORB_SIZE = 4;
+const ASTEROID_COUNT = 80;
+const AI_COUNT = 8;
+const ORBS_PER_REWARD = 30;
+
+// EK константы
+let sessionEK = 0;
+const EK_ORBS_REQUIRED = 130;
+const EK_SESSION_LIMIT = 3;
+
+// Состояние игры
+let gameRunning = true;
+let gamePaused = false;
+let animationId = null;
+let cameraX = 0;
+let cameraY = 0;
+let startTime = Date.now();
+let totalEarnedKSPT = 0;
+let earnedRewards = 0;
+
+// Управление джойстиком
+let joystickActive = false;
+let joystickAngle = 0;
+let joystickPower = 0;
+
+// Игрок
+let player = {
+    x: GAME_WIDTH / 2,
+    y: GAME_HEIGHT / 2,
+    angle: 0,
+    speed: PLAYER_SPEED,
+    length: 100,
+    maxLength: 100,
+    baseSize: 10,
+    segments: [],
+    color: '#00bcd4',
+    isBoosting: false,
+    boostEnergy: 100,
+    orbsCollected: 0,
+    kills: 0,
+    bestCombo: 0,
+    currentCombo: 0,
+    name: 'Player 1 (You)',
+    id: 0,
+    isDead: false,
+    isInitialized: false
+};
+
+// Генерация сегментов игрока
+function generatePlayerSegments() {
+    player.segments = [];
+    for (let i = 0; i < player.length; i++) {
+        player.segments.push({
+            x: player.x - Math.cos(player.angle) * i * 1.5,
+            y: player.y - Math.sin(player.angle) * i * 1.5,
+            size: Math.max(8, player.baseSize - i * 0.02)
+        });
+    }
+    player.isInitialized = true;
+}
+
+// ИИ черви
+let aiWorms = [];
+
+// Орбы (еда)
+let orbs = [];
+
+// Астероиды (границы)
+let asteroids = [];
+
+// Частицы
+let particles = [];
+
+// Всплывающий текст
+let floatingTexts = [];
+
+// Звезды для фона
+let stars = [];
+
+/* ========== ДЖОЙСТИК ========== */
+function setupJoystick() {
+    const joystick = document.getElementById('joystickArea');
+    const knob = joystick.querySelector('.joystick-center');
+    const maxRadius = 45;
+    let isActive = false;
+    let startX = 0;
+    let startY = 0;
+
+    function resetKnob() {
+        knob.style.transition = 'transform 0.15s ease';
+        knob.style.transform = 'translate(-50%, -50%)';
+        setTimeout(() => knob.style.transition = '', 150);
+        joystickActive = false;
+        joystickPower = 0;
+    }
+
+    function processMove(clientX, clientY) {
+        moveKnob(clientX, clientY, startX, startY, knob, maxRadius);
+        handleJoystickMove(clientX, clientY, startX, startY);
+    }
+
+    function moveKnob(clientX, clientY, startX, startY, knob, maxRadius) {
+        let dx = clientX - startX;
+        let dy = clientY - startY;
+
+        const dist = Math.hypot(dx, dy);
+        if (dist > maxRadius) {
+            dx = (dx / dist) * maxRadius;
+            dy = (dy / dist) * maxRadius;
+        }
+
+        knob.style.transform = `translate(-50%, -50%) translate(${dx}px, ${dy}px)`;
+
+        joystickPower = Math.min(1, dist / maxRadius);
+        joystickAngle = Math.atan2(dy, dx);
+        joystickActive = joystickPower > 0.1;
+    }
+
+    function handleJoystickMove(clientX, clientY, startX, startY) {
+        if (!gameRunning || gamePaused || player.isDead) return;
+        
+        const dx = clientX - startX;
+        const dy = clientY - startY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        
+        if (dist > 10) {
+            joystickAngle = Math.atan2(dy, dx);
+            joystickActive = true;
+        }
+    }
+
+    // Touch events
+    joystick.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const t = e.touches[0];
+        startX = t.clientX;
+        startY = t.clientY;
+        isActive = true;
+        joystickActive = true;
+        markUserInteracted();
+    });
+
+    joystick.addEventListener('touchmove', (e) => {
+        if (!isActive) return;
+        const t = e.touches[0];
+        processMove(t.clientX, t.clientY);
+    });
+
+    joystick.addEventListener('touchend', () => {
+        isActive = false;
+        resetKnob();
+    });
+
+    // Mouse events
+    joystick.addEventListener('mousedown', (e) => {
+        e.preventDefault();
+        startX = e.clientX;
+        startY = e.clientY;
+        isActive = true;
+        joystickActive = true;
+        markUserInteracted();
+    });
+
+    window.addEventListener('mousemove', (e) => {
+        if (!isActive) return;
+        processMove(e.clientX, e.clientY);
+    });
+
+    window.addEventListener('mouseup', () => {
+        if (!isActive) return;
+        isActive = false;
+        resetKnob();
+    });
+}
+
+/* ========== ИНИЦИАЛИЗАЦИЯ ========== */
+function initGame() {
+    // Сброс состояния
+    gameRunning = true;
+    gamePaused = false;
+    player = {
+        x: GAME_WIDTH / 2,
+        y: GAME_HEIGHT / 2,
+        angle: 0,
+        speed: PLAYER_SPEED,
+        length: 100,
+        maxLength: 100,
+        baseSize: 10,
+        segments: [],
+        color: '#00bcd4',
+        isBoosting: false,
+        boostEnergy: 100,
+        orbsCollected: 0,
+        kills: 0,
+        bestCombo: 0,
+        currentCombo: 0,
+        name: 'Player 1 (You)',
+        id: 0,
+        isDead: false,
+        isInitialized: false
+    };
+    
+    // Сброс EK
+    sessionEK = 0;
+    
+    // Инициализация камеры
+    cameraX = player.x - VIEW_WIDTH / 2;
+    cameraY = player.y - VIEW_HEIGHT / 2;
+    
+    generatePlayerSegments();
+    
+    // Создание звездного фона
+    stars = [];
+    for (let i = 0; i < 300; i++) {
+        stars.push({
+            x: Math.random() * GAME_WIDTH,
+            y: Math.random() * GAME_HEIGHT,
+            size: Math.random() * 2 + 0.5,
+            brightness: Math.random() * 0.7 + 0.3,
+            twinkleSpeed: Math.random() * 0.02 + 0.01
+        });
+    }
+    
+    // Создание орбов
+    orbs = [];
+    for (let i = 0; i < 200; i++) {
+        orbs.push({
+            x: Math.random() * GAME_WIDTH,
+            y: Math.random() * GAME_HEIGHT,
+            size: ORB_SIZE,
+            color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+            glow: Math.random() * 0.5 + 0.5
+        });
+    }
+    
+    // Создание астероидов
+    asteroids = [];
+    for (let i = 0; i < ASTEROID_COUNT / 4; i++) {
+        asteroids.push({
+            x: (i / (ASTEROID_COUNT / 4)) * GAME_WIDTH,
+            y: 0,
+            size: Math.random() * 15 + 10,
+            color: `hsl(${Math.random() * 30 + 250}, 40%, ${Math.random() * 20 + 40}%)`
+        });
+    }
+    for (let i = 0; i < ASTEROID_COUNT / 4; i++) {
+        asteroids.push({
+            x: (i / (ASTEROID_COUNT / 4)) * GAME_WIDTH,
+            y: GAME_HEIGHT,
+            size: Math.random() * 15 + 10,
+            color: `hsl(${Math.random() * 30 + 250}, 40%, ${Math.random() * 20 + 40}%)`
+        });
+    }
+    for (let i = 0; i < ASTEROID_COUNT / 4; i++) {
+        asteroids.push({
+            x: 0,
+            y: (i / (ASTEROID_COUNT / 4)) * GAME_HEIGHT,
+            size: Math.random() * 15 + 10,
+            color: `hsl(${Math.random() * 30 + 250}, 40%, ${Math.random() * 20 + 40}%)`
+        });
+    }
+    for (let i = 0; i < ASTEROID_COUNT / 4; i++) {
+        asteroids.push({
+            x: GAME_WIDTH,
+            y: (i / (ASTEROID_COUNT / 4)) * GAME_HEIGHT,
+            size: Math.random() * 15 + 10,
+            color: `hsl(${Math.random() * 30 + 250}, 40%, ${Math.random() * 20 + 40}%)`
+        });
+    }
+    
+    // Создание ИИ червей с улучшенной логикой
+    aiWorms = [];
+    const aiColors = [
+        '#ff4081', '#ff9800', '#9c27b0', '#2196f3', 
+        '#4caf50', '#e91e63', '#3f51b5', '#00bcd4', '#009688'
+    ];
+    
+    for (let i = 0; i < AI_COUNT; i++) {
+        let aiX, aiY;
+        let attempts = 0;
+        
+        do {
+            aiX = Math.random() * GAME_WIDTH;
+            aiY = Math.random() * GAME_HEIGHT;
+            attempts++;
+        } while (distance(player.x, player.y, aiX, aiY) < 400 && attempts < 20);
+        
+        const ai = {
+            x: aiX,
+            y: aiY,
+            angle: Math.random() * Math.PI * 2,
+            speed: PLAYER_SPEED * (0.6 + Math.random() * 0.8),
+            length: 30 + Math.random() * 120,
+            maxLength: 30 + Math.random() * 120,
+            baseSize: 6 + Math.random() * 4,
+            segments: [],
+            color: aiColors[i % aiColors.length],
+            targetX: 0,
+            targetY: 0,
+            state: 'wandering',
+            stateTimer: 0,
+            boostEnergy: 30 + Math.random() * 70,
+            isBoosting: false,
+            name: `Player ${i + 2}`, // Изменено с "AI" на "Player"
+            id: i + 1,
+            isDead: false,
+            
+            // Индивидуальные характеристики
+            aggression: Math.random(),
+            caution: Math.random(),
+            turnSpeed: 0.1 + Math.random() * 0.2,
+            visionRange: 250 + Math.random() * 200,
+            avoidStrength: 0.5 + Math.random() * 1.0,
+            
+            lastTurnTime: 0,
+            avoidanceAngle: 0,
+            stuckCounter: 0,
+            asteroidFear: 0.7 + Math.random() * 0.3 // Страх астероидов (0.7-1.0)
+        };
+        
+        ai.segments = [];
+        for (let j = 0; j < ai.length; j++) {
+            ai.segments.push({
+                x: ai.x - Math.cos(ai.angle) * j * 1.5,
+                y: ai.y - Math.sin(ai.angle) * j * 1.5,
+                size: Math.max(5, ai.baseSize - j * 0.02)
+            });
+        }
+        
+        aiWorms.push(ai);
+    }
+    
+    // Сброс времени
+    startTime = Date.now();
+    totalEarnedKSPT = 0;
+    earnedRewards = 0;
+    particles = [];
+    floatingTexts = [];
+    
+    updateUI();
+    gameOverScreen.style.display = 'none';
+    
+    if (animationId) cancelAnimationFrame(animationId);
+    animationId = requestAnimationFrame(gameLoop);
+}
+
+/* ========== ОБНОВЛЕНИЕ ИГРЫ ========== */
+function updateGame() {
+    if (!gameRunning || gamePaused) return;
+    
+    // Плавное обновление камеры
+    const targetCameraX = player.x - VIEW_WIDTH / 2;
+    const targetCameraY = player.y - VIEW_HEIGHT / 2;
+    
+    cameraX += (targetCameraX - cameraX) * 0.1;
+    cameraY += (targetCameraY - cameraY) * 0.1;
+    
+    cameraX = Math.max(0, Math.min(cameraX, GAME_WIDTH - VIEW_WIDTH));
+    cameraY = Math.max(0, Math.min(cameraY, GAME_HEIGHT - VIEW_HEIGHT));
+    
+    // Управление игроком через джойстик
+    if (joystickActive) {
+        player.angle = joystickAngle;
+    }
+    
+    // Ускорение (буст)
+    if (player.isBoosting && player.boostEnergy > 0 && player.length > 20) {
+        player.speed = BOOST_SPEED;
+        player.boostEnergy = Math.max(0, player.boostEnergy - BOOST_COST);
+        player.length = Math.max(20, player.length - 0.1);
+    } else {
+        player.speed = PLAYER_SPEED;
+        player.isBoosting = false;
+        player.boostEnergy = Math.min(100, player.boostEnergy + BOOST_RECOVERY);
+    }
+    
+    // Обновление позиции игрока
+    player.x += Math.cos(player.angle) * player.speed;
+    player.y += Math.sin(player.angle) * player.speed;
+    
+    player.x = Math.max(50, Math.min(player.x, GAME_WIDTH - 50));
+    player.y = Math.max(50, Math.min(player.y, GAME_HEIGHT - 50));
+    
+    // Обновление сегментов игрока с учетом роста в ширину
+    if (player.segments.length > 0) {
+        const targetBaseSize = 10 + (player.length - 100) * 0.02;
+        player.baseSize = Math.min(20, targetBaseSize);
+        
+        player.segments.unshift({ 
+            x: player.x, 
+            y: player.y, 
+            size: player.baseSize 
+        });
+        if (player.segments.length > player.length) {
+            player.segments.pop();
+        }
+        
+        for (let i = 0; i < player.segments.length; i++) {
+            player.segments[i].size = Math.max(6, player.baseSize - i * 0.02);
+        }
+    }
+    
+    // Обновление ИИ червей с улучшенной логикой
+    updateAI();
+    
+    // Проверка столкновений с орбами
+    checkOrbCollisions();
+    
+    // Проверка столкновений между червями
+    if (player.isInitialized && !player.isDead) {
+        checkWormCollisions();
+    }
+    
+    // Проверка столкновений с астероидами
+    checkAsteroidCollisions();
+    
+    // Обновление частиц
+    updateParticles();
+    
+    // Обновление всплывающего текста
+    updateFloatingTexts();
+    
+    // Обновление UI
+    updateUI();
+    updateLeaderboard();
+    updateRadar();
+}
+
+function updateAI() {
+    const now = Date.now();
+    const ORB_SEARCH_RADIUS = 400;
+    const PREY_SEARCH_RADIUS = 300;
+    const EDGE_PADDING = 150;
+    const LOOKAHEAD_DIST = 40;
+    const AVOID_DIST = 50;
+    const AI_AVOID_DIST = 80;
+    
+    // Вспомогательные функции
+    function findNearestOrb(ai, maxDist) {
+        let best = null, bestD = maxDist;
+        for (let o of orbs) {
+            const d = distance(ai.x, ai.y, o.x, o.y);
+            if (d < bestD) { 
+                bestD = d; 
+                best = o; 
+            }
+        }
+        return { orb: best, dist: bestD };
+    }
+    
+    function findNearestPrey(ai, maxDist) {
+        let best = null, bestD = maxDist;
+        // Проверяем других ИИ как добычу
+        for (let other of aiWorms) {
+            if (other.id === ai.id || other.isDead) continue;
+            // Учитываем агрессивность: более агрессивные атакуют более крупных целей
+            const aggressionFactor = ai.aggression > 0.7 ? 1.3 : 0.7;
+            if (other.length < ai.length * aggressionFactor) {
+                const d = distance(ai.x, ai.y, other.x, other.y);
+                if (d < bestD && d < ai.visionRange) {
+                    bestD = d;
+                    best = other;
+                }
+            }
+        }
+        
+        // Проверяем игрока как добычу (только если ИИ достаточно агрессивный)
+        if (ai.aggression > 0.5 && !player.isDead && player.length < ai.length * 1.2) {
+            const d = distance(ai.x, ai.y, player.x, player.y);
+            if (d < bestD && d < ai.visionRange) {
+                bestD = d;
+                best = player;
+            }
+        }
+        return { prey: best, dist: bestD };
+    }
+    
+    function findNearestThreat(ai, maxDist) {
+        let best = null, bestD = maxDist;
+        // Проверяем других ИИ как угрозу
+        for (let other of aiWorms) {
+            if (other.id === ai.id || other.isDead) continue;
+            if (other.length > ai.length * 1.3) {
+                const d = distance(ai.x, ai.y, other.x, other.y);
+                if (d < bestD) { 
+                    bestD = d; 
+                    best = other; 
+                }
+            }
+        }
+        // Проверяем игрока как угрозу
+        if (!player.isDead && player.length > ai.length * 1.3) {
+            const d = distance(ai.x, ai.y, player.x, player.y);
+            if (d < bestD) { 
+                bestD = d; 
+                best = player; 
+            }
+        }
+        return { threat: best, dist: bestD };
+    }
+    
+    function normAngle(a) {
+        while (a > Math.PI) a -= Math.PI * 2;
+        while (a < -Math.PI) a += Math.PI * 2;
+        return a;
+    }
+    
+    for (let ai of aiWorms) {
+        if (ai.isDead) continue;
+        
+        // Уменьшаем таймер состояния
+        if (ai.stateTimer > 0) ai.stateTimer--;
+        
+        // Обновляем счетчик застревания
+        ai._lastX = ai._lastX || ai.x;
+        ai._lastY = ai._lastY || ai.y;
+        const moved = distance(ai.x, ai.y, ai._lastX, ai._lastY);
+        if (moved < 1.0) {
+            ai.stuckCounter++;
+        } else {
+            ai.stuckCounter = 0;
+        }
+        ai._lastX = ai.x;
+        ai._lastY = ai.y;
+        
+        // Если застрял, меняем состояние
+        if (ai.stuckCounter > 60) {
+            ai.state = 'wandering';
+            ai.stateTimer = 60 + Math.random() * 60;
+            ai.targetX = ai.x + (Math.random() - 0.5) * 400;
+            ai.targetY = ai.y + (Math.random() - 0.5) * 400;
+            ai.stuckCounter = 0;
+        }
+        
+        // Если таймер состояния истек, выбираем новое состояние
+        if (ai.stateTimer <= 0) {
+            // Случайный выбор состояния с разными вероятностями
+            const rand = Math.random();
+            
+            if (rand < 0.4) { // 40% chance - блуждание
+                ai.state = 'wandering';
+                ai.stateTimer = 60 + Math.random() * 120;
+                // Разные радиусы для разных ИИ
+                const wanderRadius = 200 + Math.random() * 300;
+                ai.targetX = ai.x + (Math.random() - 0.5) * wanderRadius;
+                ai.targetY = ai.y + (Math.random() - 0.5) * wanderRadius;
+            } else if (rand < 0.7) { // 30% chance - охота
+                ai.state = 'hunting';
+                ai.stateTimer = 40 + Math.random() * 80;
+            } else { // 30% chance - бегство
+                ai.state = 'fleeing';
+                ai.stateTimer = 30 + Math.random() * 60;
+            }
+        }
+        
+        // Обновляем цель в зависимости от состояния
+        if (ai.state === 'hunting') {
+            const preyInfo = findNearestPrey(ai, 400);
+            if (preyInfo.prey) {
+                ai.targetX = preyInfo.prey.x;
+                ai.targetY = preyInfo.prey.y;
+                // Включаем буст при погоне
+                if (preyInfo.dist > 100 && ai.boostEnergy > 30) {
+                    ai.isBoosting = true;
+                }
+            } else {
+                // Если добыча исчезла, переходим в режим блуждания
+                ai.state = 'wandering';
+                ai.stateTimer = 60 + Math.random() * 60;
+            }
+        } else if (ai.state === 'fleeing') {
+            const threatInfo = findNearestThreat(ai, 400);
+            if (threatInfo.threat) {
+                const angleToThreat = Math.atan2(threatInfo.threat.y - ai.y, threatInfo.threat.x - ai.x);
+                ai.targetX = ai.x - Math.cos(angleToThreat) * 200;
+                ai.targetY = ai.y - Math.sin(angleToThreat) * 200;
+                // Включаем буст при бегстве
+                if (threatInfo.dist < 200 && ai.boostEnergy > 20) {
+                    ai.isBoosting = true;
+                }
+            }
+        } else if (ai.state === 'wandering') {
+            // Проверяем, достигли ли цели
+            const distToTarget = distance(ai.x, ai.y, ai.targetX, ai.targetY);
+            if (distToTarget < 50 || Math.random() < 0.02) {
+                // Ищем ближайший орб
+                const orbInfo = findNearestOrb(ai, ORB_SEARCH_RADIUS);
+                if (orbInfo.orb && orbInfo.dist < 300) {
+                    ai.targetX = orbInfo.orb.x;
+                    ai.targetY = orbInfo.orb.y;
+                } else {
+                    // Новая случайная цель
+                    ai.targetX = ai.x + (Math.random() - 0.5) * 400;
+                    ai.targetY = ai.y + (Math.random() - 0.5) * 400;
+                }
+            }
+        }
+        
+        // Проверка и избегание краев карты (более плавное)
+        let edgeAvoidX = 0, edgeAvoidY = 0;
+        const edgePadding = 150;
+        
+        if (ai.x < edgePadding) {
+            edgeAvoidX = (edgePadding - ai.x) / edgePadding;
+        } else if (ai.x > GAME_WIDTH - edgePadding) {
+            edgeAvoidX = -(ai.x - (GAME_WIDTH - edgePadding)) / edgePadding;
+        }
+        
+        if (ai.y < edgePadding) {
+            edgeAvoidY = (edgePadding - ai.y) / edgePadding;
+        } else if (ai.y > GAME_HEIGHT - edgePadding) {
+            edgeAvoidY = -(ai.y - (GAME_HEIGHT - edgePadding)) / edgePadding;
+        }
+        
+        // Избегание астероидов (добавлен страх астероидов)
+        let asteroidAvoidX = 0, asteroidAvoidY = 0;
+        const ASTEROID_AVOID_RANGE = 300;
+        
+        for (let asteroid of asteroids) {
+            const dist = distance(ai.x, ai.y, asteroid.x, asteroid.y);
+            if (dist < ASTEROID_AVOID_RANGE) {
+                // Чем ближе астероид, тем сильнее избегание
+                const avoidAngle = Math.atan2(ai.y - asteroid.y, ai.x - asteroid.x);
+                const force = (ASTEROID_AVOID_RANGE - dist) / ASTEROID_AVOID_RANGE;
+                // Умножаем на страх астероидов (0.7-1.0)
+                asteroidAvoidX += Math.cos(avoidAngle) * force * 150 * ai.asteroidFear;
+                asteroidAvoidY += Math.sin(avoidAngle) * force * 150 * ai.asteroidFear;
+            }
+        }
+        
+        // Избегание собственного хвоста
+        let tailAvoidX = 0, tailAvoidY = 0;
+        const lookX = ai.x + Math.cos(ai.angle) * LOOKAHEAD_DIST;
+        const lookY = ai.y + Math.sin(ai.angle) * LOOKAHEAD_DIST;
+        
+        for (let i = 10; i < ai.segments.length && i < 40; i += 5) {
+            const seg = ai.segments[i];
+            const d = distance(lookX, lookY, seg.x, seg.y);
+            if (d < AVOID_DIST) {
+                const avoidAngle = Math.atan2(lookY - seg.y, lookX - seg.x);
+                tailAvoidX += Math.cos(avoidAngle) * (AVOID_DIST - d) / AVOID_DIST;
+                tailAvoidY += Math.sin(avoidAngle) * (AVOID_DIST - d) / AVOID_DIST;
+            }
+        }
+        
+        // Избегание других ИИ червей
+        let aiAvoidX = 0, aiAvoidY = 0;
+        
+        for (let other of aiWorms) {
+            if (other.id === ai.id || other.isDead) continue;
+            
+            const d = distance(ai.x, ai.y, other.x, other.y);
+            if (d < AI_AVOID_DIST) {
+                // Рассчитываем вектор отталкивания
+                const avoidAngle = Math.atan2(ai.y - other.y, ai.x - other.x);
+                const force = (AI_AVOID_DIST - d) / AI_AVOID_DIST;
+                
+                aiAvoidX += Math.cos(avoidAngle) * force * 80;
+                aiAvoidY += Math.sin(avoidAngle) * force * 80;
+            }
+        }
+        
+        // Вычисляем желаемый угол
+        let desiredAngle = Math.atan2(
+            ai.targetY - ai.y + edgeAvoidY * 100 + tailAvoidY * 50 + aiAvoidY + asteroidAvoidY,
+            ai.targetX - ai.x + edgeAvoidX * 100 + tailAvoidX * 50 + aiAvoidX + asteroidAvoidX
+        );
+        
+        // Плавный поворот с индивидуальной скоростью
+        let angleDiff = normAngle(desiredAngle - ai.angle);
+        const maxTurn = ai.turnSpeed;
+        angleDiff = Math.max(-maxTurn, Math.min(maxTurn, angleDiff));
+        ai.angle = normAngle(ai.angle + angleDiff);
+        
+        // Управление скоростью и бустом
+        if (ai.isBoosting && ai.boostEnergy > 0 && ai.length > 20) {
+            ai.speed = BOOST_SPEED * (0.9 + Math.random() * 0.2);
+            ai.boostEnergy = Math.max(0, ai.boostEnergy - BOOST_COST * 0.7);
+            ai.length = Math.max(20, ai.length - 0.05);
+        } else {
+            ai.speed = PLAYER_SPEED * (0.8 + Math.random() * 0.4);
+            ai.isBoosting = false;
+            ai.boostEnergy = Math.min(100, ai.boostEnergy + BOOST_RECOVERY * 0.5);
+        }
+        
+        // Движение
+        ai.x += Math.cos(ai.angle) * ai.speed;
+        ai.y += Math.sin(ai.angle) * ai.speed;
+        
+        // Границы
+        ai.x = Math.max(50, Math.min(ai.x, GAME_WIDTH - 50));
+        ai.y = Math.max(50, Math.min(ai.y, GAME_HEIGHT - 50));
+        
+        // Обновление сегментов
+        if (ai.segments.length > 0) {
+            const aiTargetBaseSize = 8 + (ai.length - 50) * 0.015;
+            ai.baseSize = Math.min(16, aiTargetBaseSize);
+            ai.segments.unshift({
+                x: ai.x,
+                y: ai.y,
+                size: ai.baseSize
+            });
+            if (ai.segments.length > ai.length) ai.segments.pop();
+            for (let i = 0; i < ai.segments.length; i++) {
+                ai.segments[i].size = Math.max(5, ai.baseSize - i * 0.02);
+            }
+        }
+    }
+}
+
+function checkOrbCollisions() {
+    for (let i = orbs.length - 1; i >= 0; i--) {
+        const orb = orbs[i];
+        const dist = distance(player.x, player.y, orb.x, orb.y);
+        
+        if (dist < 15) {
+            player.length += 0.004 * player.maxLength;
+            player.maxLength = Math.max(player.maxLength, player.length);
+            player.orbsCollected++;
+            player.currentCombo++;
+            player.bestCombo = Math.max(player.bestCombo, player.currentCombo);
+            
+            // EK логика: каждые 130 орбов → 1 EK, максимум 3/сеанс
+            if (player.orbsCollected % EK_ORBS_REQUIRED === 0 && sessionEK < EK_SESSION_LIMIT) {
+              sessionEK++;
+              safeAwardGameEK(1, player.x, player.y);
+              spawnFloatingText('+1 EK', player.x, player.y - 16, '#ffd54f');
+            }
+            
+            // Награда каждые 30 орбов
+            if (player.orbsCollected % ORBS_PER_REWARD === 0) {
+                earnedRewards++;
+                const reward = safeGetOfflinePercent(3);
+                totalEarnedKSPT += reward;
+                
+                spawnFloatingText(`+${reward.toFixed(2)} KSPT`, player.x, player.y, '#00e5ff');
+                safeAwardGameReward(reward, player.x, player.y);
+                
+                createParticles(player.x, player.y, '#00e5ff', 15);
+                playSound('grow');
+                gameVibrate([100, 50, 100]);
+            } else {
+                playSound('orb');
+                gameVibrate(30);
+            }
+            
+            orbs.splice(i, 1);
+            orbs.push({
+                x: Math.random() * GAME_WIDTH,
+                y: Math.random() * GAME_HEIGHT,
+                size: ORB_SIZE,
+                color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+                glow: Math.random() * 0.5 + 0.5
+            });
+            
+            createParticles(orb.x, orb.y, orb.color, 8);
+            break;
+        }
+        
+        for (let ai of aiWorms) {
+            if (ai.isDead) continue;
+            const aiDist = distance(ai.x, ai.y, orb.x, orb.y);
+            if (aiDist < 15) {
+                ai.length += 0.004 * ai.maxLength;
+                ai.maxLength = Math.max(ai.maxLength, ai.length);
+                
+                orbs.splice(i, 1);
+                orbs.push({
+                    x: Math.random() * GAME_WIDTH,
+                    y: Math.random() * GAME_HEIGHT,
+                    size: ORB_SIZE,
+                    color: `hsl(${Math.random() * 360}, 100%, 70%)`,
+                    glow: Math.random() * 0.5 + 0.5
+                });
+                break;
+            }
+        }
+    }
+}
+
+function checkAsteroidCollisions() {
+    // Проверка столкновения игрока с астероидами
+    for (let asteroid of asteroids) {
+        const dist = distance(player.x, player.y, asteroid.x, asteroid.y);
+        if (dist < player.baseSize + asteroid.size) {
+            playerDie();
+            return;
+        }
+    }
+    
+    // Проверка столкновения ИИ с астероидами
+    for (let ai of aiWorms) {
+        if (ai.isDead) continue;
+        
+        for (let asteroid of asteroids) {
+            const dist = distance(ai.x, ai.y, asteroid.x, asteroid.y);
+            if (dist < ai.baseSize + asteroid.size) {
+                killWorm(ai, null); // Убиваем ИИ астероидом
+                break;
+            }
+        }
+    }
+}
+
+function checkWormCollisions() {
+    for (let i = 15; i < player.segments.length; i += 3) {
+        const seg = player.segments[i];
+        const dist = distance(player.x, player.y, seg.x, seg.y);
+        if (dist < 12) {
+            playerDie();
+            return;
+        }
+    }
+    
+    if (player.isDead) return;
+    
+    for (let ai of aiWorms) {
+        if (ai.isDead) continue;
+        
+        // Проверка столкновения головы игрока с телом ИИ
+        for (let j = 10; j < ai.segments.length; j += 3) {
+            const seg = ai.segments[j];
+            const dist = distance(player.x, player.y, seg.x, seg.y);
+            if (dist < 12) {
+                playerDie();
+                return;
+            }
+        }
+        
+        // Проверка столкновения головы ИИ с телом игрока
+        for (let j = 10; j < player.segments.length; j += 3) {
+            const seg = player.segments[j];
+            const dist = distance(ai.x, ai.y, seg.x, seg.y);
+            if (dist < 12) {
+                killWorm(ai, player);
+                break;
+            }
+        }
+        
+        const headDist = distance(player.x, player.y, ai.x, ai.y);
+        if (headDist < 20) {
+            if (player.length < ai.length) {
+                playerDie();
+                return;
+            } else if (player.length > ai.length) {
+                killWorm(ai, player);
+            }
+        }
+    }
+    
+    // Проверка столкновений между ИИ червями
+    for (let i = 0; i < aiWorms.length; i++) {
+        const ai1 = aiWorms[i];
+        if (ai1.isDead) continue;
+        
+        for (let j = i + 1; j < aiWorms.length; j++) {
+            const ai2 = aiWorms[j];
+            if (ai2.isDead) continue;
+            
+            // Проверка головы ai1 с телом ai2
+            for (let k = 10; k < ai2.segments.length; k += 3) {
+                const seg = ai2.segments[k];
+                const dist = distance(ai1.x, ai1.y, seg.x, seg.y);
+                if (dist < 12) {
+                    killWorm(ai1, ai2);
+                    break;
+                }
+            }
+            
+            if (ai1.isDead) continue;
+            
+            // Проверка головы ai2 с телом ai1
+            for (let k = 10; k < ai1.segments.length; k += 3) {
+                const seg = ai1.segments[k];
+                const dist = distance(ai2.x, ai2.y, seg.x, seg.y);
+                if (dist < 12) {
+                    killWorm(ai2, ai1);
+                    break;
+                }
+            }
+            
+            // Проверка столкновения голов
+            const headDist = distance(ai1.x, ai1.y, ai2.x, ai2.y);
+            if (headDist < 20) {
+                if (ai1.length < ai2.length) {
+                    killWorm(ai1, ai2);
+                } else if (ai1.length > ai2.length) {
+                    killWorm(ai2, ai1);
+                }
+            }
+        }
+    }
+}
+
+function killWorm(worm, killer) {
+    if (worm.isDead) return;
+    
+    worm.isDead = true;
+    
+    if (killer === player) {
+        player.kills++;
+        player.currentCombo += 5;
+        player.bestCombo = Math.max(player.bestCombo, player.currentCombo);
+        
+        const reward = safeGetOfflinePercent(1);
+        totalEarnedKSPT += reward;
+        
+        spawnFloatingText(`+${reward.toFixed(2)} KSPT`, worm.x, worm.y, '#ff9800');
+        safeAwardGameReward(reward, worm.x, worm.y);
+        
+        playSound('kill');
+        gameVibrate([100, 50, 100]);
+    }
+    
+    for (let i = 0; i < worm.length / 3; i++) {
+        const segIndex = Math.floor(i * 3);
+        if (segIndex < worm.segments.length) {
+            const seg = worm.segments[segIndex];
+            orbs.push({
+                x: seg.x + (Math.random() - 0.5) * 20,
+                y: seg.y + (Math.random() - 0.5) * 20,
+                size: ORB_SIZE * 1.5,
+                color: worm.color,
+                glow: 1
+            });
+        }
+    }
+    
+    createParticles(worm.x, worm.y, worm.color, 30);
+    playSound('crash');
+    
+    setTimeout(() => {
+        if (!gameRunning) return;
+        
+        worm.isDead = false;
+        let newX, newY;
+        let attempts = 0;
+        do {
+            newX = Math.random() * GAME_WIDTH;
+            newY = Math.random() * GAME_HEIGHT;
+            attempts++;
+        } while (distance(player.x, player.y, newX, newY) < 400 && attempts < 20);
+        
+        worm.x = newX;
+        worm.y = newY;
+        worm.length = 50 + Math.random() * 50;
+        worm.maxLength = worm.length;
+        worm.boostEnergy = 50 + Math.random() * 50;
+        worm.lastTurnTime = 0;
+        worm.stuckCounter = 0;
+        
+        worm.segments = [];
+        for (let j = 0; j < worm.length; j++) {
+            worm.segments.push({
+                x: worm.x - Math.cos(worm.angle) * j * 1.5,
+                y: worm.y - Math.sin(worm.angle) * j * 1.5,
+                size: Math.max(5, worm.baseSize - j * 0.02)
+            });
+        }
+    }, 5000);
+}
+
+function playerDie() {
+    if (player.isDead) return;
+    
+    player.isDead = true;
+    player.currentCombo = 0;
+    
+    for (let i = 0; i < player.length / 3; i++) {
+        const segIndex = Math.floor(i * 3);
+        if (segIndex < player.segments.length) {
+            const seg = player.segments[segIndex];
+            orbs.push({
+                x: seg.x + (Math.random() - 0.5) * 20,
+                y: seg.y + (Math.random() - 0.5) * 20,
+                size: ORB_SIZE * 1.5,
+                color: player.color,
+                glow: 1
+            });
+        }
+    }
+    
+    createParticles(player.x, player.y, player.color, 40);
+    playSound('crash');
+    gameVibrate([200, 100, 200]);
+    
+    setTimeout(() => {
+        endGame();
+    }, 1000);
+}
+
+function endGame() {
+    gameRunning = false;
+    
+    const timeSurvived = Math.floor((Date.now() - startTime) / 1000);
+    
+    finalLengthEl.textContent = Math.floor(player.maxLength);
+    finalOrbsEl.textContent = player.orbsCollected;
+    finalComboEl.textContent = player.bestCombo;
+    finalTimeEl.textContent = `${timeSurvived}s`;
+    finalKillsEl.textContent = player.kills;
+    earnedKSPTEl.textContent = totalEarnedKSPT.toFixed(2);
+    earnedEKElem.textContent = sessionEK; // Показываем EK
+    
+    gameOverScreen.style.display = 'block';
+    
+    if (animationId) {
+        cancelAnimationFrame(animationId);
+        animationId = null;
+    }
+}
+
+/* ========== ЭФФЕКТЫ ========== */
+function createParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+        const angle = Math.random() * Math.PI * 2;
+        const speed = 1 + Math.random() * 3;
+        const size = 2 + Math.random() * 4;
+        const life = 0.5 + Math.random() * 0.5;
+        
+        particles.push({
+            x, y,
+            vx: Math.cos(angle) * speed,
+            vy: Math.sin(angle) * speed,
+            life: life,
+            maxLife: life,
+            color: color,
+            size: size,
+            rotation: 0,
+            rotationSpeed: (Math.random() - 0.5) * 0.1
+        });
+    }
+}
+
+function spawnFloatingText(text, x, y, color = '#00e676') {
+    floatingTexts.push({
+        text, x, y,
+        color,
+        alpha: 1,
+        vy: -1,
+        life: 1
+    });
+}
+
+function updateParticles() {
+    for (let i = particles.length - 1; i >= 0; i--) {
+        const p = particles[i];
+        p.x += p.vx;
+        p.y += p.vy;
+        p.vy += 0.05;
+        p.life -= 0.015;
+        p.rotation += p.rotationSpeed;
+        
+        if (p.life <= 0) {
+            particles.splice(i, 1);
+        }
+    }
+}
+
+function updateFloatingTexts() {
+    for (let i = floatingTexts.length - 1; i >= 0; i--) {
+        const text = floatingTexts[i];
+        text.y += text.vy;
+        text.alpha -= 0.015;
+        text.vy *= 0.95;
+        
+        if (text.alpha <= 0) {
+            floatingTexts.splice(i, 1);
+        }
+    }
+}
+
+/* ========== UI ========== */
+function updateUI() {
+    lengthEl.textContent = Math.floor(player.length);
+    orbsEl.textContent = player.orbsCollected;
+    
+    boostBar.style.width = player.boostEnergy + '%';
+    
+    if (player.boostEnergy < 20) {
+        boostBar.style.background = '#ff4081';
+    } else if (player.boostEnergy < 50) {
+        boostBar.style.background = '#ff9800';
+    } else {
+        boostBar.style.background = 'linear-gradient(90deg, var(--accent), var(--accent-2))';
+    }
+}
+
+function updateLeaderboard() {
+    const allPlayers = [
+        { ...player, score: Math.floor(player.length) * 10 + player.kills * 100 }
+    ];
+    
+    for (let ai of aiWorms) {
+        if (!ai.isDead) {
+            allPlayers.push({
+                ...ai,
+                score: Math.floor(ai.length) * 10
+            });
+        }
+    }
+    
+    allPlayers.sort((a, b) => b.score - a.score);
+    
+    const playerRank = allPlayers.findIndex(p => p.id === 0) + 1;
+    rankEl.textContent = `#${playerRank}`;
+    
+    let html = '';
+    for (let i = 0; i < Math.min(allPlayers.length, 5); i++) {
+        const p = allPlayers[i];
+        const isYou = p.id === 0;
+        const rank = i + 1;
+        
+        html += `
+            <div class="leaderboard-entry ${isYou ? 'you' : ''}">
+                <div class="rank">#${rank}</div>
+                <div class="name">${p.name}</div>
+                <div class="score">${p.score}</div>
+            </div>
+        `;
+    }
+    
+    leaderboardEntries.innerHTML = html;
+}
+
+function updateRadar() {
+    const radar = document.getElementById('radar');
+    radar.innerHTML = '<div class="radar-center"></div>';
+
+    const RADAR_SIZE = 110;
+    const radarScale = RADAR_SIZE / 600;
+    const center = RADAR_SIZE / 2;
+
+    // === ORBS ===
+    for (let orb of orbs) {
+        const dx = orb.x - player.x;
+        const dy = orb.y - player.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 300) {
+            const angle = Math.atan2(dy, dx);
+            const radarDist = dist * radarScale;
+
+            const x = center + Math.cos(angle) * radarDist;
+            const y = center + Math.sin(angle) * radarDist;
+
+            if (x >= 0 && x <= RADAR_SIZE && y >= 0 && y <= RADAR_SIZE) {
+                const dot = document.createElement('div');
+                dot.className = 'radar-dot';
+                dot.style.left = x + 'px';
+                dot.style.top = y + 'px';
+                dot.style.background = orb.color;
+                dot.style.opacity = 0.7;
+                radar.appendChild(dot);
+            }
+        }
+    }
+
+    // === AI WORMS ===
+    for (let ai of aiWorms) {
+        if (ai.isDead) continue;
+
+        const dx = ai.x - player.x;
+        const dy = ai.y - player.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist < 400) {
+            const angle = Math.atan2(dy, dx);
+            const radarDist = dist * radarScale;
+
+            const x = center + Math.cos(angle) * radarDist;
+            const y = center + Math.sin(angle) * radarDist;
+
+            if (x >= 0 && x <= RADAR_SIZE && y >= 0 && y <= RADAR_SIZE) {
+                const dot = document.createElement('div');
+                dot.className = 'radar-dot';
+                dot.style.left = x + 'px';
+                dot.style.top = y + 'px';
+                dot.style.background = ai.color;
+                dot.style.width = '8px';
+                dot.style.height = '8px';
+                dot.style.opacity = 0.9;
+                radar.appendChild(dot);
+            }
+        }
+    }
+}
+
+/* ========== ОТРИСОВКА ========== */
+function draw() {
+    // Очистка холста
+    ctx.fillStyle = '#0a0a1a';
+    ctx.fillRect(0, 0, VIEW_WIDTH, VIEW_HEIGHT);
+    
+    // Рисование звездного фона
+    drawStars();
+    
+    // Перевод координат для камеры
+    ctx.save();
+    ctx.translate(-cameraX, -cameraY);
+    
+    // Рисование астероидов
+    drawAsteroids();
+    
+    // Рисование орбов
+    drawOrbs();
+    
+    // Рисование ИИ червей
+    for (let ai of aiWorms) {
+        if (!ai.isDead) {
+            drawWorm(ai, ai === getLargestWorm());
+        }
+    }
+    
+    // Рисование игрока
+    if (!player.isDead && player.isInitialized) {
+        drawWorm(player, player === getLargestWorm());
+    }
+    
+    // Рисование частиц
+    drawParticles();
+    
+    // Рисование всплывающего текста
+    drawFloatingTexts();
+    
+    ctx.restore();
+}
+
+function drawStars() {
+    const time = Date.now() * 0.001;
+    
+    // Рисуем только звезды в видимой области
+    const startX = Math.max(0, Math.floor(cameraX / 10) * 10);
+    const startY = Math.max(0, Math.floor(cameraY / 10) * 10);
+    const endX = Math.min(GAME_WIDTH, cameraX + VIEW_WIDTH + 100);
+    const endY = Math.min(GAME_HEIGHT, cameraY + VIEW_HEIGHT + 100);
+    
+    for (let star of stars) {
+        // Проверяем, находится ли звезда в видимой области
+        if (star.x < startX || star.x > endX || star.y < startY || star.y > endY) {
+            continue;
+        }
+        
+        const screenX = star.x - cameraX;
+        const screenY = star.y - cameraY;
+        
+        // Мерцание звезд
+        const twinkle = Math.sin(time * star.twinkleSpeed) * 0.3 + 0.7;
+        
+        ctx.globalAlpha = star.brightness * twinkle;
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, star.size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        // Большие звезды имеют свечение
+        if (star.size > 1.5) {
+            ctx.globalAlpha = star.brightness * twinkle * 0.3;
+            ctx.beginPath();
+            ctx.arc(screenX, screenY, star.size * 2, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+    ctx.globalAlpha = 1;
+}
+
+function drawAsteroids() {
+    for (let asteroid of asteroids) {
+        if (asteroid.x < cameraX - 50 || asteroid.x > cameraX + VIEW_WIDTH + 50 ||
+            asteroid.y < cameraY - 50 || asteroid.y > cameraY + VIEW_HEIGHT + 50) {
+            continue;
+        }
+        
+        const screenX = asteroid.x;
+        const screenY = asteroid.y;
+        
+        ctx.fillStyle = asteroid.color;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, asteroid.size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.shadowColor = 'rgba(106, 17, 203, 0.5)';
+        ctx.shadowBlur = 10;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, asteroid.size + 2, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.shadowBlur = 0;
+        
+        ctx.fillStyle = 'rgba(0, 0, 0, 0.3)';
+        ctx.beginPath();
+        ctx.arc(screenX - asteroid.size * 0.3, screenY - asteroid.size * 0.3, asteroid.size * 0.4, 0, Math.PI * 2);
+        ctx.fill();
+    }
+}
+
+function drawOrbs() {
+    for (let orb of orbs) {
+        if (orb.x < cameraX - 50 || orb.x > cameraX + VIEW_WIDTH + 50 ||
+            orb.y < cameraY - 50 || orb.y > cameraY + VIEW_HEIGHT + 50) {
+            continue;
+        }
+        
+        const screenX = orb.x;
+        const screenY = orb.y;
+        
+        ctx.shadowColor = orb.color;
+        ctx.shadowBlur = 15 * orb.glow;
+        ctx.fillStyle = orb.color;
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, orb.size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.shadowBlur = 0;
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(screenX, screenY, orb.size * 0.5, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.globalAlpha = 0.3 + Math.sin(Date.now() * 0.005 + orb.x) * 0.2;
+        ctx.fillStyle = 'white';
+        ctx.beginPath();
+        ctx.arc(screenX - orb.size * 0.3, screenY - orb.size * 0.3, orb.size * 0.3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.globalAlpha = 1;
+    }
+}
+
+function drawWorm(worm, isLargest) {
+    if (worm.segments.length === 0) return;
+    
+    for (let i = worm.segments.length - 1; i >= 0; i--) {
+        const seg = worm.segments[i];
+        const progress = i / worm.segments.length;
+        const size = seg.size * (0.8 + progress * 0.2);
+        
+        if (seg.x < cameraX - 100 || seg.x > cameraX + VIEW_WIDTH + 100 ||
+            seg.y < cameraY - 100 || seg.y > cameraY + VIEW_HEIGHT + 100) {
+            continue;
+        }
+        
+        const gradient = ctx.createRadialGradient(seg.x, seg.y, 0, seg.x, seg.y, size);
+        const color = worm.color;
+        gradient.addColorStop(0, color);
+        gradient.addColorStop(0.7, color);
+        gradient.addColorStop(1, `rgba(${parseInt(color.slice(1,3),16)}, ${parseInt(color.slice(3,5),16)}, ${parseInt(color.slice(5,7),16)}, 0.3)`);
+        
+        ctx.fillStyle = gradient;
+        ctx.beginPath();
+        ctx.arc(seg.x, seg.y, size, 0, Math.PI * 2);
+        ctx.fill();
+        
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.arc(seg.x, seg.y, size, 0, Math.PI * 2);
+        ctx.stroke();
+        
+        if (i % 5 === 0 && size > 5) {
+            ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+            ctx.lineWidth = 1;
+            ctx.beginPath();
+            ctx.arc(seg.x, seg.y, size * 0.8, 0, Math.PI * 2);
+            ctx.stroke();
+        }
+    }
+    
+    const head = worm.segments[0];
+    if (!head) return;
+    
+    ctx.shadowColor = worm.color;
+    ctx.shadowBlur = 20;
+    ctx.fillStyle = worm.color;
+    ctx.beginPath();
+    ctx.arc(head.x, head.y, head.size, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.shadowBlur = 0;
+    
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(head.x, head.y, head.size * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    
+    const eyeOffset = head.size * 0.3;
+    const eyeSize = head.size * 0.2;
+    
+    ctx.fillStyle = '#222';
+    ctx.beginPath();
+    ctx.arc(head.x - eyeOffset, head.y - eyeOffset * 0.5, eyeSize, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.beginPath();
+    ctx.arc(head.x + eyeOffset, head.y - eyeOffset * 0.5, eyeSize, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.fillStyle = 'white';
+    ctx.beginPath();
+    ctx.arc(head.x - eyeOffset - eyeSize * 0.3, head.y - eyeOffset * 0.5 - eyeSize * 0.3, eyeSize * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    ctx.beginPath();
+    ctx.arc(head.x + eyeOffset - eyeSize * 0.3, head.y - eyeOffset * 0.5 - eyeSize * 0.3, eyeSize * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    
+    // Корона для самого большого червя
+    if (isLargest) {
+        ctx.save();
+        ctx.translate(head.x, head.y - head.size - 10);
+        
+        ctx.fillStyle = 'gold';
+        ctx.beginPath();
+        for (let i = 0; i < 5; i++) {
+            const angle = (i * Math.PI * 2) / 5;
+            const spikeX = Math.cos(angle) * 10;
+            const spikeY = Math.sin(angle) * 10;
+            ctx.lineTo(spikeX, spikeY);
+        }
+        ctx.closePath();
+        ctx.fill();
+        
+        ctx.shadowColor = 'gold';
+        ctx.shadowBlur = 10;
+        ctx.strokeStyle = 'gold';
+        ctx.lineWidth = 2;
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+        
+        ctx.restore();
+    }
+    
+    if (worm.isBoosting) {
+        for (let i = 0; i < 3; i++) {
+            const trailX = head.x - Math.cos(worm.angle) * (10 + i * 5);
+            const trailY = head.y - Math.sin(worm.angle) * (10 + i * 5);
+            const trailSize = head.size * (0.5 - i * 0.1);
+            
+            const trailGradient = ctx.createRadialGradient(trailX, trailY, 0, trailX, trailY, trailSize);
+            trailGradient.addColorStop(0, '#ff9800');
+            trailGradient.addColorStop(1, 'rgba(255, 152, 0, 0)');
+            
+            ctx.fillStyle = trailGradient;
+            ctx.beginPath();
+            ctx.arc(trailX, trailY, trailSize, 0, Math.PI * 2);
+            ctx.fill();
+        }
+    }
+}
+
+function drawParticles() {
+    for (let p of particles) {
+        ctx.globalAlpha = p.life / p.maxLife;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+        ctx.fill();
+    }
+    ctx.globalAlpha = 1;
+}
+
+function drawFloatingTexts() {
+    for (let text of floatingTexts) {
+        ctx.globalAlpha = text.alpha;
+        ctx.fillStyle = text.color;
+        ctx.font = 'bold 14px Arial';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(text.text, text.x, text.y);
+    }
+    ctx.globalAlpha = 1;
+}
+
+function getLargestWorm() {
+    let largest = player;
+    let maxLength = player.length;
+    
+    for (let ai of aiWorms) {
+        if (!ai.isDead && ai.length > maxLength) {
+            maxLength = ai.length;
+            largest = ai;
+        }
+    }
+    
+    return largest;
+}
+
+/* ========== ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ========== */
+function distance(x1, y1, x2, y2) {
+    const dx = x2 - x1;
+    const dy = y2 - y1;
+    return Math.sqrt(dx * dx + dy * dy);
+}
+
+/* ========== ИГРОВОЙ ЦИКЛ ========== */
+function gameLoop() {
+    updateGame();
+    draw();
+    animationId = requestAnimationFrame(gameLoop);
+}
+
+/* ========== УПРАВЛЕНИЕ ========== */
+// Ускорение
+document.getElementById('boostBtn').addEventListener('mousedown', () => {
+    if (!gameRunning || gamePaused || player.isDead) return;
+    player.isBoosting = true;
+    playSound('boost');
+});
+
+document.getElementById('boostBtn').addEventListener('mouseup', () => {
+    player.isBoosting = false;
+});
+
+document.getElementById('boostBtn').addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    if (!gameRunning || gamePaused || player.isDead) return;
+    player.isBoosting = true;
+    playSound('boost');
+});
+
+document.getElementById('boostBtn').addEventListener('touchend', (e) => {
+    e.preventDefault();
+    player.isBoosting = false;
+});
+
+// Пауза
+document.getElementById('pauseBtn').addEventListener('click', function() {
+    if (!gameRunning) return;
+    gamePaused = !gamePaused;
+    this.textContent = gamePaused ? 'Resume' : 'Pause';
+    playSound('orb');
+});
+
+// Выход
+document.getElementById('exitBtn').addEventListener('click', function() {
+    safeExitGame();
+});
+
+// Кнопки Game Over
+document.getElementById('playAgainBtn').addEventListener('click', function() {
+    gameOverScreen.style.display = 'none';
+    
+    try {
+        (window.parent || window.top).postMessage({ type: 'kspt_new_round' }, '*');
+    } catch(e) {}
+    
+    initGame();
+});
+
+document.getElementById('exitToMenuBtn').addEventListener('click', function() {
+    safeExitGame();
+});
+
+// Управление клавиатурой
+document.addEventListener('keydown', function(e) {
+    if (!gameRunning) return;
+    
+    switch(e.key) {
+        case ' ':
+        case 'w':
+        case 'W':
+            if (!player.isDead) {
+                player.isBoosting = true;
+                playSound('boost');
+            }
+            break;
+        case 'p':
+        case 'P':
+            gamePaused = !gamePaused;
+            document.getElementById('pauseBtn').textContent = gamePaused ? 'Resume' : 'Pause';
+            playSound('orb');
+            break;
+        case 'r':
+        case 'R':
+            initGame();
+            break;
+    }
+});
+
+document.addEventListener('keyup', function(e) {
+    switch(e.key) {
+        case ' ':
+        case 'w':
+        case 'W':
+            player.isBoosting = false;
+            break;
+    }
+});
+
+// Пауза при скрытии вкладки
+document.addEventListener('visibilitychange', function() {
+    if (document.hidden && gameRunning) {
+        gamePaused = true;
+        document.getElementById('pauseBtn').textContent = 'Resume';
+    }
+});
+
+/* ========== ЗАПУСК ИГРЫ ========== */
+function startGame() {
+    setupJoystick();
+    initGame();
+}
+
+window.addEventListener('load', startGame);
+</script>
+</body>
+</html>

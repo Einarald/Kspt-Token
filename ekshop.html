@@ -1,0 +1,267 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>EK Shop</title>
+<link rel="stylesheet" href="css/style.css">
+<style>
+  .shop-grid { display:grid; grid-template-columns: repeat(2,1fr); gap:12px; padding:12px; }
+  .shop-card { background:#161616; border-radius:12px; padding:10px; text-align:center; }
+  .shop-card img { width:100%; height:120px; object-fit:contain; border-radius:8px; background:rgba(255,255,255,0.02); cursor:pointer; }
+  .shop-title { font-weight:bold; margin:8px 0; }
+  .shop-price { color:#ffd54f; font-weight:bold; margin-top:6px; }
+  .buy-btn { margin-top:8px; padding:8px; background:#2e7d32; color:#fff; border-radius:8px; cursor:pointer; border:none; width:100%; }
+  .owned { background:#333;color:#bbb; cursor:default; }
+</style>
+</head>
+<body>
+
+<div style="padding:14px; max-width:420px; margin:0 auto;">
+  <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px;">
+    <img src="ek.png" style="width:36px;height:36px;" onerror="this.src='kspt.png'">
+    <div style="font-weight:bold; font-size:18px;">EK Shop</div>
+    <div style="margin-left:auto;">
+      <button onclick="window.close()" style="background:#444;color:#fff;padding:8px;border-radius:8px;">Close</button>
+    </div>
+  </div>
+
+  <div id="shopGrid" class="shop-grid"></div>
+</div>
+
+<script>
+const SHOP_ITEMS = [
+  { id:'skin_tetris', title:'Tetris KSPT', price:40, incomePerHour:40, type:'skin', frames:['tetrisik.png','tetrisik1.png'] },
+  { id:'skin_joystick', title:'Cosmic Joystick', price:75, incomePerHour:55, type:'skin', frames:['dzoi.png','dzoi1.png'] },
+  { id:'skin_snake', title:'Snake Token', price:110, incomePerHour:108, type:'skin', frames:['zmej.png','zmej1.png'] },
+  { id:'bg_club', title:'Computer Club', price:65, incomePerHour:0, type:'background', frames:['cosmops.png'] }
+];
+
+function loadD(){
+  try {
+    const raw = localStorage.getItem('d');
+    if (raw) return JSON.parse(raw);
+
+    const def = { tokens:0, ek:0 };
+    localStorage.setItem('d', JSON.stringify(def));
+    return def;
+
+  } catch(e){
+    return { tokens:0, ek:0 };
+  }
+}
+
+function saveD(d){
+  localStorage.setItem('d', JSON.stringify(d));
+}
+
+function getOwned(){
+  const raw = localStorage.getItem('ekshop_owned');
+  return raw ? JSON.parse(raw) : {};
+}
+
+function setOwned(owned){
+  localStorage.setItem('ekshop_owned', JSON.stringify(owned));
+}
+
+function showToast(msg){
+  alert(msg);
+}
+
+function renderShop(){
+  const grid = document.getElementById('shopGrid');
+  grid.innerHTML = '';
+  const dObj = loadD();
+  const owned = getOwned();
+
+  SHOP_ITEMS.forEach(item => {
+    const card = document.createElement('div');
+    card.className = 'shop-card';
+    const img = document.createElement('img');
+    img.src = item.frames && item.frames.length ? item.frames[0] : '';
+    img.dataset.frame = '0';
+    img.onclick = () => {
+      if (!item.frames || item.frames.length <= 1) return;
+      let idx = Number(img.dataset.frame) || 0;
+      idx = (idx + 1) % item.frames.length;
+      img.dataset.frame = String(idx);
+      img.src = item.frames[idx];
+    };
+
+    const title = document.createElement('div');
+    title.className = 'shop-title';
+    title.textContent = item.title;
+
+    const price = document.createElement('div');
+    price.className = 'shop-price';
+    price.textContent = `${item.price} EK`;
+
+    const btn = document.createElement('button');
+    btn.className = 'buy-btn';
+    btn.textContent = owned[item.id] ? 'Owned' : 'Buy';
+    if (owned[item.id]) btn.classList.add('owned');
+
+    btn.onclick = () => {
+
+  if (owned[item.id]) {
+    showToast('Already owned');
+    return;
+  }
+
+  let d = loadD();
+
+  if ((Number(d.ek)||0) < item.price) {
+    showToast('Not enough EK');
+    return;
+  }
+
+  d.ek -= item.price;
+  saveD(d);
+
+  owned[item.id] = true;
+  setOwned(owned);
+
+  // СИНХРОНИЗАЦИЯ С ОСНОВНЫМ localStorage.d
+  try {
+    let main = JSON.parse(localStorage.getItem('d') || '{}');
+    main.ek = d.ek;
+    main.ekshop_owned = owned;
+    localStorage.setItem('d', JSON.stringify(main));
+  } catch(e){}
+
+    renderShop();
+  showToast(`Purchased ${item.title}`);
+  syncWithMainGame();
+};
+
+    card.appendChild(img);
+    card.appendChild(title);
+    card.appendChild(price);
+    card.appendChild(btn);
+    if (owned[item.id]) {
+
+  const equipBtn = document.createElement('button');
+  equipBtn.className = 'buy-btn';
+  equipBtn.style.marginTop = '6px';
+
+  let d = loadD();
+  d.ekshop_selected = d.ekshop_selected || {};
+
+  const selected =
+    (item.type === 'skin' && d.ekshop_selected.skin === item.id) ||
+    (item.type === 'background' && d.ekshop_selected.bg === item.id);
+
+  equipBtn.textContent = selected ? 'Equipped' : 'Equip';
+
+  equipBtn.onclick = () => {
+  let d2 = loadD();
+  d2.ekshop_selected = d2.ekshop_selected || {};
+
+  if (item.type === 'skin') {
+  d2.ekshop_selected.skin = item.id;
+  // Убрали сброс фона - теперь можно выбирать и скин и фон одновременно
+}
+if (item.type === 'background') {
+  d2.ekshop_selected.bg = item.id;
+  // Убрали сброс скина - теперь можно выбирать и скин и фон одновременно
+}
+
+  saveD(d2);
+
+  // СИНХРОНИЗАЦИЯ
+  try {
+    localStorage.setItem('ekshop_selected', JSON.stringify(d2.ekshop_selected));
+    const owned = getOwned();
+    localStorage.setItem('ekshop_owned', JSON.stringify(owned));
+  } catch(e){
+    console.warn('ekshop localStorage sync failed', e);
+  }
+
+  syncWithMainGame();
+  renderShop();  
+};
+
+  card.appendChild(equipBtn);
+}
+
+    grid.appendChild(card);
+  });
+
+  const top = document.querySelector('div[style*="display:flex"]');
+  if (top){
+    let b = document.getElementById('ekBalanceDisplay');
+    if (!b){
+      b = document.createElement('div'); b.id='ekBalanceDisplay';
+      b.style.marginLeft = '12px'; b.style.fontWeight='600';
+      top.appendChild(b);
+    }
+    const d2 = loadD();
+    b.textContent = `Balance: ${Number(d2.ek||0)} EK`;
+  }
+}
+
+renderShop();
+
+// ===== ПОЛУЧАЕМ АКТУАЛЬНЫЙ d ИЗ ОСНОВНОЙ ИГРЫ =====
+window.addEventListener('message', (ev) => {
+  const msg = ev.data;
+  if (!msg || typeof msg !== 'object') return;
+
+  if (msg.type === 'kspt_init' && msg.d) {
+    try {
+      // сохраняем новый d
+      localStorage.setItem('d', JSON.stringify(msg.d));
+    } catch(e){}
+
+    // перерисовываем магазин
+    renderShop();
+  }
+});
+
+// Обработка обновлений из EK Shop
+window.addEventListener('message', function(event) {
+  const data = event.data;
+  if (data && data.type === 'ekshop_update') {
+    // Обновляем данные EK Shop
+    if (data.owned) {
+      localStorage.setItem('ekshop_owned', JSON.stringify(data.owned));
+    }
+    if (data.selected) {
+      localStorage.setItem('ekshop_selected', JSON.stringify(data.selected));
+    }
+    
+    // Обновляем UI игры
+    ui();
+  }
+});
+
+// Функция для отправки данных в основную игру
+function syncWithMainGame() {
+  try {
+    const owned = getOwned();
+    const dObj = loadD();
+    const selected = dObj.ekshop_selected || {};
+    
+    // Отправляем сообщение родительскому окну (если магазин открыт в iframe)
+    if (window.parent !== window) {
+      window.parent.postMessage({
+        type: 'ekshop_update',
+        owned: owned,
+        selected: selected
+      }, '*');
+    }
+    
+    // Также сохраняем в основном localStorage игры
+    const mainData = JSON.parse(localStorage.getItem('kspt') || '{}');
+    mainData.ekshop_owned = owned;
+    mainData.ekshop_selected = selected;
+    localStorage.setItem('kspt', JSON.stringify(mainData));
+  } catch(e) {
+    console.warn('Sync error:', e);
+  }
+}
+
+</script>
+
+</body>
+</html>

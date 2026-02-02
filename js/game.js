@@ -1,6 +1,65 @@
 // ==========================================
 // LOCALIZATION SYSTEM
 // ==========================================
+
+// ===== IVENTS SYSTEM =====
+const IVENTS_FILE = 'ivents.json';
+let currentIvent = null;
+
+// Фолбэк события для локального использования
+const FALLBACK_IVENTS = [
+  {
+    "id": "valentine2025",
+    "name": "День святого Валентина",
+    "description": "Забирайте награды каждый день в течение 7 дней и получите эксклюзивный скин!",
+    "startDate": "2025-02-14T00:00:00+02:00",
+    "endDate": "2025-02-20T23:59:59+02:00",
+    "type": "calendar",
+    "days": 7,
+    "rewards": [
+      { "day": 1, "type": "capsule", "name": "Бесплатная капсула" },
+      { "day": 2, "type": "noobBox", "name": "Нуб Бокс" },
+      { "day": 3, "type": "noobBox", "name": "Нуб Бокс" },
+      { "day": 4, "type": "capsule", "name": "Капсула" },
+      { "day": 5, "type": "noobBox", "name": "2 Нуб Бокса", "count": 2 },
+      { "day": 6, "type": "capsule", "name": "Капсула + Нуб Бокс" },
+      { "day": 7, "type": "goldCapsule", "name": "Золотая капсула" }
+    ],
+    "finalReward": {
+      "type": "skin",
+      "id": "crypto_heart",
+      "name": "Crypto-heart",
+      "description": "Эксклюзивный скин ко Дню святого Валентина"
+    }
+  }
+];
+
+// Загрузить события из файла
+async function loadIvents() {
+  const container = document.getElementById('iventContainer');
+  if (!container) return;
+
+  try {
+    // Пытаемся загрузить из файла (работает на сервере)
+    const response = await fetch(IVENTS_FILE);
+    if (!response.ok) throw new Error('Network response was not ok');
+    
+    const events = await response.json();
+    currentIvent = events[0] || FALLBACK_IVENTS[0];
+  } catch (error) {
+    console.warn('Ошибка загрузки событий, используем fallback:', error);
+    // Используем fallback для локального тестирования
+    currentIvent = null;
+  }
+
+  if (!currentIvent) {
+    container.innerHTML = '<div class="ivent-info">' + t('ivent_no_events') + '</div>';
+    return;
+  }
+
+  renderIvent(currentIvent);
+}
+
 const translations = {
   en: {
     // Main UI
@@ -102,6 +161,8 @@ const translations = {
     'cyber_android': 'KSPT: Cyber Android',
     'gold_skin_unlocked': 'Gold KSPT skin unlocked!',
     'cyber_skin_unlocked': 'KSPT: Cyber Android skin unlocked!',
+    'brb_skin': 'Big Red Button',
+    'brb_skin_desc': 'Price: 5,000,000 KSPT (+500 KSPT/h)',
     
     // Cards
     'company': 'Company',
@@ -147,6 +208,8 @@ const translations = {
     'current_regen': 'Current: {0}',
     'upgrade_to': 'Upgrade to {0} ({1} KSPT)',
     'buy_upgrade': 'Buy (+500) {0} KSPT',
+     'back_to_main': 'Back to Main',
+     'loading': 'Loading...',
     
     // Capsule
     'ancient_puzzle': 'Ancient Puzzle',
@@ -173,6 +236,10 @@ const translations = {
     'cyber_skin_unlocked': 'KSPT: Cyber Android unlocked!',
     'cat_skin_unlocked': 'Cat: KSPT skin unlocked!',
     'cat_music_unlocked': 'Cat\'s Yarn music unlocked!',
+    'ivent_title': 'Temporary Events',
+    'ivent_desc': 'Get rewards every day!',
+    'ivent_no_events': 'No events are active right now. Check back later.',
+    'ivent_error': 'Error loading events',
 
     // Noob Box
      'noob_box': 'Noob Box',
@@ -248,8 +315,46 @@ const translations = {
 
     // Promo codes
     'promo_fuse': 'Capsule cooldown skipped!',
-    'promo_already_used': 'Promo already used',
-    
+
+    // Cards Limited
+'limited_tab': 'Limited',
+'card_yes_title': 'Yes',
+'card_no_title': 'No',
+'card_stick_title': 'Stick',
+'card_backpack_title': 'Backpack',
+'card_journey_title': 'Journey',
+'card_challenge_title': 'Challenge',
+'card_bought': 'Bought',
+'card_purchase_expired': 'Purchase Time Expired',
+'card_limited_time': 'Limited Time! {0}',
+'card_income_per_hour': '+{0} KSPT/h',
+'card_buy': 'Buy {0} KSPT',
+
+// EK Shop
+'ek_shop_title': 'EK Shop',
+'close': 'Close',
+'not_enough_ek': 'Not enough EK',
+'already_owned': 'Already owned',
+'price_ek': '{0} EK',
+
+// Mini-games / Tickets (english)
+'games_arcade': 'Games Arcade',
+'play_mini_games_desc': 'Play mini-games to earn KSPT!',
+'tickets_label': '🎫 Tickets:',
+'tickets_left_today': 'You have {0} tickets left today',
+'next_ticket_in': 'Next ticket in: {0}',
+'available_games': 'Available games',
+'ticket_session_note': '1 ticket = 1 play session',
+'resume': 'Resume',
+
+// Events / Valentine
+'valentine_event_name': "Valentine's Day",
+'valentine_event_desc': 'Collect daily rewards for 7 days and earn an exclusive skin!',
+'free_capsule': 'Free capsule',
+'noob_box': 'Noob Box',
+'gold_capsule': 'Gold Capsule',
+'crypto_heart': 'Crypto-heart',
+'games': 'Games',
     
     // General
     'purchase_success': 'Purchase successful',
@@ -362,6 +467,8 @@ const translations = {
     'cyber_android': 'KSPT: Кибер Андроид',
     'gold_skin_unlocked': 'Скин Золотой KSPT разблокирован!',
     'cyber_skin_unlocked': 'Скин KSPT: Кибер Андроид разблокирован!',
+    'brb_skin': 'Большая Красная Кнопка',
+    'brb_skin_desc': 'Цена: 5,000,000 KSPT (+500 KSPT/ч)',
     
     // Cards
     'company': 'Компания',
@@ -407,6 +514,8 @@ const translations = {
     'current_regen': 'Текущий: {0}',
     'upgrade_to': 'Улучшить до {0} ({1} KSPT)',
     'buy_upgrade': 'Купить (+500) {0} KSPT',
+    'back_to_main': 'Вернуться в меню',
+    'loading': 'Загрузка...',
     
     // Capsule
     'ancient_puzzle': 'Древний пазл',
@@ -432,11 +541,15 @@ const translations = {
     'cyber_skin_unlocked': 'Скин KSPT: Кибер Андроид разблокирован!',
     'cat_skin_unlocked': 'Скин Cat: KSPT разблокирован!',
     'cat_music_unlocked': 'Музыка Cat\'s Yarn разблокирована!',
+     'ivent_title': 'Временные события',
+    'ivent_desc': 'Получайте награды каждый день!',
+    'ivent_no_events': 'В данный момент нет активных событий',
+    'ivent_error': 'Ошибка загрузки событий',
 
     // Noob Box
-     'noob_box': 'Нуб Кейс',
-'noob_box_desc': 'Особый ящик для новичков (+скин)',
-'noob_box_obtained': 'Нуб Кейс получен!',
+    'noob_box': 'Нуб Кейс',
+    'noob_box_desc': 'Особый ящик для новичков (+скин)',
+    'noob_box_obtained': 'Нуб Кейс получен!',
     
     // Market
     'balance': 'Баланс: ',
@@ -500,6 +613,92 @@ const translations = {
     'invalid_image': 'Пожалуйста, выберите валидное изображение',
     'my_token': 'Мой Токен',
     'token_desc': 'Опишите ваш токен...',
+
+    // Mini-Games
+'games_arcade': 'Игровая аркада',
+'play_mini_games_desc': 'Играйте в мини-игры и зарабатывайте KSPT!',
+'tickets_label': '🎫 Билеты:',
+'tickets_left_today': 'У вас осталось {0} билетов сегодня',
+'next_ticket_in': 'Следующий билет через: {0}',
+'available_games': 'Доступные игры',
+'ticket_session_note': '1 билет = 1 игровой сеанс',
+
+// Имена игр / описания
+'snake_game_title': 'Змейка',
+'snake_game_desc': 'Ешь яблоки, становись длиннее, зарабатывай KSPT!',
+
+'pingpong_title': 'Пинг-понг',
+'pingpong_desc': 'Защищайте ворота, набирайте очки, зарабатывайте KSPT!',
+
+'blocksfast_title': 'BlocksFast',
+'blocksfast_desc': 'Быстрая игра с блоками — как BlockBlast. Уничтожайте линии, собирайте комбо, зарабатывайте KSPT!',
+
+'slither_title': 'Slither — режим KSPT',
+'slither_desc': 'Классический slither.io-стиль — растите, поедая шарики, избегайте других, зарабатывайте KSPT!',
+'games': 'Игры',
+
+'back': 'Назад',
+
+// Общие кнопки / подсказки
+'pause': 'Пауза',
+'restart': 'Перезапустить',
+'exit': 'Выйти',
+'game_over': 'Игра окончена!',
+'play_again': 'Играть снова',
+'exit_to_menu': 'Выйти в меню',
+
+// Сообщения
+'not_enough_tickets': 'Недостаточно билетов!',
+'preview_15s': 'Превью 15с',
+
+// Cards Limited 
+'limited_tab': 'Лимитированные',
+'card_yes_title': 'Да',
+'card_no_title': 'Нет',
+'card_stick_title': 'Стик',
+'card_backpack_title': 'Рюкзак',
+'card_journey_title': 'Путешествие',
+'card_challenge_title': 'Испытание',
+'card_bought': 'Куплено',
+'card_purchase_expired': 'Время покупки истекло',
+'card_limited_time': 'Ограничено! {0}',
+'card_income_per_hour': '+{0} KSPT/ч',
+'card_buy': 'Купить за {0} KSPT',
+
+// EK Shop
+'ek_shop_title': 'Магазин EK',
+'close': 'Закрыть',
+'not_enough_ek': 'Недостаточно EK',
+'already_owned': 'Уже куплено',
+'price_ek': '{0} EK',
+
+// Mini-games / Tickets (russian)
+'games_arcade': 'Игровая аркада',
+'play_mini_games_desc': 'Играйте в мини-игры и зарабатывайте KSPT!',
+'tickets_label': '🎫 Билеты:',
+'tickets_left_today': 'У вас осталось {0} билетов сегодня',
+'next_ticket_in': 'Следующий билет через: {0}',
+'available_games': 'Доступные игры',
+'ticket_session_note': '1 билет = 1 игровой сеанс',
+'resume': 'Продолжить',
+
+// Events / Valentine
+'valentine_event_name': 'День святого Валентина',
+'valentine_event_desc': 'Забирайте награды каждый день в течение 7 дней и получите эксклюзивный скин!',
+'free_capsule': 'Бесплатная капсула',
+'noob_box': 'Нуб Бокс',
+'gold_capsule': 'Золотая капсула',
+'crypto_heart': 'Crypto-heart',
+
+// Статусы/метки в играх
+'player_label': 'Игрок',
+'ai_label': 'Компьютер',
+'speed_label': 'Скорость',
+'score_label': 'Счёт',
+'length_label': 'Длина',
+'lines_label': 'Линии',
+'level_label': 'Уровень',
+'combo_label': 'Комбо',
     
     // Promo codes
     'promo_skipfuse': 'Перезарядка капсулы пропущена!',
@@ -619,7 +818,8 @@ function updateSkinTexts() {
     'cookie': 40780,
     'ruka': 172080,
     'banditx': 542123,
-    'goldcoin': 1120000
+    'goldcoin': 1120000,
+    'brb': 5000000 
   };
   
   for (let skinId in skinPrice) {
@@ -977,6 +1177,17 @@ const defaultData = {
   tokens: 0,
   skin: "default",
   skins: {default: 1},
+
+ // NEW: Добавляем инициализацию limitedCards
+  limitedCards: {
+    yes: { owned: false, bought: false },
+    no: { owned: false, bought: false },
+    stick: { owned: false, bought: false, appearedAt: 0, boughtAt: 0 },
+    backpack: { owned: false, bought: false, appearedAt: 0, boughtAt: 0 },
+    journey: { owned: false, level: -1 },
+    challenge: { owned: false }
+  },
+
   x2: false,
   lastLogin: Date.now(),
   wonX10: false,
@@ -1036,6 +1247,7 @@ const defaultData = {
       buttonsEnabled: true
     }
   },
+
   market: {
     introSeen: false,
     account: { name: "Trader", desc: "Crypto enthusiast" },
@@ -1071,6 +1283,9 @@ const defaultData = {
     },
     personalToken: null
   },
+
+  ivents: {},
+
   lang: 'en'
 };
 
@@ -1088,6 +1303,41 @@ try {
   d = JSON.parse(JSON.stringify(defaultData));
 }
 
+// Загрузка данных из EK Shop
+function loadEkshopData() {
+  try {
+    const ekshopSelected = localStorage.getItem('ekshop_selected');
+    const ekshopOwned = localStorage.getItem('ekshop_owned');
+    
+    if (ekshopSelected) {
+      const selected = JSON.parse(ekshopSelected);
+      if (selected.skin) {
+        d.ekshopSkin = selected.skin;
+      }
+      if (selected.bg) {
+        d.ekshopBg = selected.bg;
+      }
+    }
+    
+    if (typeof d !== 'undefined') {
+      if (d.ekshop_selected?.skin) {
+        d.ekshopSkin = d.ekshop_selected.skin;
+        d.skin = 'default';
+      }
+
+      if (d.ekshop_selected?.bg) {
+        d.ekshopBg = d.ekshop_selected.bg;
+        d.bg = 'default';
+      }
+    }
+  } catch(e) {
+    console.warn('Error loading EK Shop data:', e);
+  }
+}
+
+// Вызов функции после загрузки d
+loadEkshopData();
+
 // Load user tokens from localStorage
 try {
   const savedUserTokens = localStorage.getItem('kspt_user_tokens');
@@ -1103,74 +1353,66 @@ try {
 
 // FIXED FUNCTION: Corrected spread operator syntax
 function migrateData(oldData, defaultData) {
-  // Сначала создаем копию defaultData
-  const merged = JSON.parse(JSON.stringify(defaultData));
-  
-  // Если oldData пусто или не является объектом, возвращаем defaultData
-  if (!oldData || typeof oldData !== 'object') {
-    return merged;
-  }
-  
-  // Рекурсивно обновляем merged данными из oldData
-  for (const key in oldData) {
-    if (oldData.hasOwnProperty(key)) {
-      // Если это объект (но не массив) и в merged уже есть этот ключ
-      if (typeof oldData[key] === 'object' && oldData[key] !== null && 
-          !Array.isArray(oldData[key]) && 
-          merged[key] && typeof merged[key] === 'object') {
-        // Рекурсивно мержим вложенные объекты
-        merged[key] = { ...merged[key], ...oldData[key] };
+  // Создаём глубокую копию defaultData как базу
+  const merged = JSON.parse(JSON.stringify(defaultData || {}));
+
+  // Если oldData отсутствует или не объект — возвращаем базу
+  if (!oldData || typeof oldData !== 'object') return merged;
+
+  // Рекурсивный безопасный merge (source поверх target)
+  function deepMerge(target, source) {
+    for (const key in source) {
+      if (!Object.prototype.hasOwnProperty.call(source, key)) continue;
+      const sv = source[key];
+      const tv = target[key];
+
+      if (sv && typeof sv === 'object' && !Array.isArray(sv) && tv && typeof tv === 'object' && !Array.isArray(tv)) {
+        // оба — объекты -> рекурсивно мержим
+        deepMerge(tv, sv);
       } else {
-        // Иначе просто присваиваем значение
-        merged[key] = oldData[key];
+        // иначе просто перезаписываем
+        target[key] = sv;
       }
     }
   }
-  
-  // Дополнительные проверки и инициализации
-  if (!merged.skins) merged.skins = {default: 1};
+
+  deepMerge(merged, oldData);
+
+  // Дополнительные гарантии и инициализации (как было в оригинале)
+  if (!merged.skins) merged.skins = { default: 1 };
   if (!merged.skins.default) merged.skins.default = 1;
-  
+
   if (!merged.bonuses) merged.bonuses = defaultData.bonuses;
-  
   if (!merged.market) merged.market = defaultData.market;
-  
   if (!merged.settings) merged.settings = defaultData.settings;
-  
   if (!merged.cards) merged.cards = {};
-  
+
   // Инициализируем все карты, если они не существуют
-  const allCards = ['c1', 'c2', 'c3', 'c4', 'c5', 's1', 's2', 's3', 's4', 's5', 'g1', 'g2', 'g3'];
+  const allCards = ['c1','c2','c3','c4','c5','s1','s2','s3','s4','s5','g1','g2','g3'];
   allCards.forEach(cardKey => {
-    if (merged.cards[cardKey] === undefined) {
-      merged.cards[cardKey] = -1;
-    }
+    if (merged.cards[cardKey] === undefined) merged.cards[cardKey] = -1;
   });
-  
+
   if (!merged.lang) merged.lang = 'en';
-  
+
   if (!merged.market.ksptToken) merged.market.ksptToken = defaultData.market.ksptToken;
   if (merged.market.ksptToken && !merged.market.ksptToken.lastUserBuyPrice) {
     merged.market.ksptToken.lastUserBuyPrice = null;
     merged.market.ksptToken.lastUserSellPrice = null;
     merged.market.ksptToken.chartOffset = 0;
   }
-  
+
   if (!merged.market.banxToken) merged.market.banxToken = defaultData.market.banxToken;
   if (merged.market.banxToken && !merged.market.banxToken.lastUserBuyPrice) {
     merged.market.banxToken.lastUserBuyPrice = null;
     merged.market.banxToken.lastUserSellPrice = null;
     merged.market.banxToken.chartOffset = 0;
   }
-  
+
   if (!merged.market.jvmToken) merged.market.jvmToken = defaultData.market.jvmToken;
-  
+
   if (!merged.noobBox) merged.noobBox = defaultData.noobBox;
-  
-    if (!merged.noobBox) {
-    merged.noobBox = defaultData.noobBox;
-  }
-  
+
   return merged;
 }
 
@@ -1215,9 +1457,13 @@ const SKIN_INCOME = {
   gkspt: 10,           
   cyber_android: 15, 
   siulai: 20,
-  dirty: 10
-  
-};
+  dirty: 10,
+  crypto_heart: 14,
+  tetris: 40,
+  joystick: 55,        
+  snake: 108,
+  brb: 500
+  };
 
 // Card data - UPDATED WITH EXACT VALUES
 const CARDS = {
@@ -1288,6 +1534,14 @@ function processOfflineIncome() {
     }
 
     processOfflineMarket(minutes);
+
+      // NEW: Проверяем появление Backpack через 7 дней после Stick
+    if (d.limitedCards && d.limitedCards.stick.appearedAt > 0 && !d.limitedCards.backpack.appearedAt) {
+      const stickAppearedTime = d.limitedCards.stick.appearedAt;
+      if (now - stickAppearedTime >= 7 * 24 * 60 * 60 * 1000) {
+        d.limitedCards.backpack.appearedAt = now;
+      }
+    }
 
     d.lastLogin = now;
     save();
@@ -1437,7 +1691,35 @@ function getHourlyRate() {
     }
   }
   if(d.wonX10) rate += SKIN_INCOME.priz;
-  return rate;
+
+/* ===== EK SHOP INCOME START ===== */
+try {
+  // если используем localStorage
+  const ownedRaw = localStorage.getItem('ekshop_owned');
+  if (ownedRaw) {
+    const owned = JSON.parse(ownedRaw);
+
+    if (owned.skin_tetris) rate += 40;
+    if (owned.skin_joystick) rate += 55;
+    if (owned.skin_snake) rate += 108;
+  }
+} catch(e){}
+/* ===== EK SHOP INCOME END ===== */
+
+// NEW: Добавляем доход от лимитированных карточек
+if (d.limitedCards) {
+  if (d.limitedCards.yes.bought) rate += 10;
+  if (d.limitedCards.no.bought) rate += 10;
+  if (d.limitedCards.stick.bought) rate += 21;
+  if (d.limitedCards.backpack.bought) rate += 31;
+  if (d.limitedCards.journey.level >= 0) {
+    const journeyIncome = [71, 104, 163, 183, 268, 310];
+    rate += journeyIncome[d.limitedCards.journey.level];
+  }
+  if (d.limitedCards.challenge.owned) rate += 80;
+}
+
+return rate;
 }
 
 // ==========================================
@@ -1576,8 +1858,9 @@ function getSkinImage(skinId, euroVar = 1, artemVar = 0) {
     'gkspt': 'gkspt.png',                    
     'cyber_android': 'robotic.png', 
     'siulai': 'siulai.png',   
-    'dirty': 'dirty.png'
-    
+    'dirty': 'dirty.png',
+    'crypto_heart': 'heart.png',
+    'brb': 'knopka.png'
   };
   return skinImages[skinId] || 'kspt.png';
 }
@@ -1586,22 +1869,69 @@ function updateSkinImage() {
   const coin = document.getElementById("coin");
   if (!coin) return;
 
-  let imgName = getSkinImage(d.skin, d.euroVar, d.artemVar);
+  let imgName;
+  let currentSkinId = d.skin; // по умолчанию основной скин
+  
+  // ПРОВЕРЯЕМ: есть ли активный скин из EK Shop?
+  try {
+    const ekshopSelected = JSON.parse(localStorage.getItem('ekshop_selected') || '{}');
+    const ekshopOwned = JSON.parse(localStorage.getItem('ekshop_owned') || '{}');
+    
+    // Если в EK Shop выбран скин И он куплен
+    if (ekshopSelected.skin && ekshopOwned[ekshopSelected.skin]) {
+      currentSkinId = ekshopSelected.skin; // используем ID из EK Shop
+      // ОЧЕНЬ ВАЖНО: сохраняем, что скин из EK Shop активен
+      d.ekshopSkinActive = true;
+    } else {
+      d.ekshopSkinActive = false;
+    }
+  } catch(e) {
+    console.warn('EK Shop skin check failed:', e);
+    d.ekshopSkinActive = false;
+  }
 
-  if (coin.dataset.currentSkin !== d.skin) {
+  // Определяем картинку в зависимости от источника
+  if (currentSkinId.startsWith('skin_')) {
+    // Это скин из EK Shop
+    const ekshopSkinMap = {
+      'skin_tetris': 'tetrisik.png',
+      'skin_joystick': 'dzoi.png',
+      'skin_snake': 'zmej.png'
+    };
+    imgName = ekshopSkinMap[currentSkinId] || getSkinImage(d.skin, d.euroVar, d.artemVar);
+  } else {
+    // Это обычный скин
+    imgName = getSkinImage(d.skin, d.euroVar, d.artemVar);
+  }
+
+  if (coin.dataset.currentSkin !== currentSkinId) {
     coin.src = imgName;
-    coin.dataset.currentSkin = d.skin;
+    coin.dataset.currentSkin = currentSkinId;
     coin.dataset.toggle = "0";
     coin.dataset.stage = "0";
     coin.dataset.mystic = "0";
     coin.dataset.cookStage = "0";
-    coin.dataset.cyberStage = "0"
+    coin.dataset.cyberStage = "0";
   }
 }
 
-// NEW FUNCTION: Enhanced skin application
 function applySkin(skinId, variant = null) {
   console.log('applySkin called:', skinId, variant);
+
+  // Если это НЕ скин из EK Shop (не начинается с 'skin_'), 
+  // то сбрасываем выбор скина в EK Shop
+  if (!skinId.startsWith('skin_')) {
+    try {
+      const ekshopSelected = JSON.parse(localStorage.getItem('ekshop_selected') || '{}');
+      if (ekshopSelected.skin) {
+        ekshopSelected.skin = null;
+        localStorage.setItem('ekshop_selected', JSON.stringify(ekshopSelected));
+        d.ekshopSkinActive = false; // Добавлено: отмечаем, что скин EK Shop не активен
+      }
+    } catch(e) {
+      console.warn('Failed to clear EK Shop skin selection:', e); // Добавлено: логирование ошибок
+    }
+  }
   
   // Stop any skin animation timers
   if (window.skinAnimationTimer) {
@@ -1659,11 +1989,15 @@ function applySkin(skinId, variant = null) {
     coin.dataset.cookStage = "0";
   }
   
-  // Очистить любой существующий таймер анимации
-  if (window.skinAnimationTimer) {
+    // Очистить и при включённых анимациях — перезапустить таймер анимации
+if (window.skinAnimationTimer) {
   clearInterval(window.skinAnimationTimer);
   window.skinAnimationTimer = null;
 }
+// УДАЛЕНО для фикса проблемы с тапами
+// if (d.settings && d.settings.animation && d.settings.animation.skins) {
+//   window.skinAnimationTimer = setInterval(handleSkinAnimation, 800);
+// }
 
   // Auto-unlock backgrounds for certain skins
   if (skinId === 'cookie' && !d.ownedBgs.includes('chrisp')) {
@@ -1701,6 +2035,129 @@ function switchVariant(skinId) {
   }
   save();
   ui();
+}
+
+function handleTapSkinAnimation() {
+  if (d.settings && d.settings.animation && !d.settings.animation.skins) {
+    return;
+  }
+  
+  const coin = document.getElementById('coin');
+  if (!coin) return;
+
+  const currentSkin = coin.dataset.currentSkin || d.skin;
+  
+  switch(currentSkin) {
+    case "tung":
+      coin.src = coin.src.includes("tung1.png") ? "tung.png" : "tung1.png";
+      break;
+    case "space":
+      coin.src = coin.src.includes("sun.png") ? "moon.png" : "sun.png";
+      break;
+    case "pixe":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "pixe1.png" : "pixe.png";
+      break;
+    case "onion":
+      let stage = parseInt(coin.dataset.stage || "0", 10);
+      stage = (stage + 1) % 3;
+      coin.dataset.stage = stage;
+      if (stage === 0) coin.src = "onion.png";
+      if (stage === 1) coin.src = "onion1.png";
+      if (stage === 2) coin.src = "onion2.png";
+      break;
+    case "seri":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "seri1.png" : "seri.png";
+      break;
+    case "mystic":
+      let mysticStage = parseInt(coin.dataset.mystic || "0", 10);
+      mysticStage = (mysticStage + 1) % 4;
+      coin.dataset.mystic = mysticStage;
+      if (mysticStage === 0) coin.src = "piece1.png";
+      if (mysticStage === 1) coin.src = "piece2.png";
+      if (mysticStage === 2) coin.src = "piece3.png";
+      if (mysticStage === 3) coin.src = "piece.png";
+      break;
+    case "capsule":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "capskine1.png" : "capskine.png";
+      break;
+    case "cookie":
+      let cstage = parseInt(coin.dataset.cookStage || "0", 10);
+      cstage = (cstage + 1) % 3;
+      coin.dataset.cookStage = cstage;
+      if (cstage === 0) coin.src = "cook.png";
+      else if (cstage === 1) coin.src = "cook1.png";
+      else if (cstage === 2) coin.src = "cook2.png";
+      break;
+    case "artem":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "artem1.png" : "artem.png";
+      break;
+    case "euro":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "e2.png" : "e1.png";
+      break;
+    case "ruka":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "ruka1.png" : "ruka.png";
+      break;
+    case "banditx":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "banditx1.png" : "banditx.png";
+      break;
+    case "gkspt":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "gkspt1.png" : "gkspt.png";
+      break;
+    case "cyber_android":
+      let cyberStage = parseInt(coin.dataset.cyberStage || "0", 10);
+      cyberStage = (cyberStage + 1) % 4;
+      coin.dataset.cyberStage = cyberStage;
+      if (cyberStage === 0) coin.src = "robotic.png";
+      else if (cyberStage === 1) coin.src = "robotic1.png";
+      else if (cyberStage === 2) coin.src = "robotic2.png";
+      else coin.src = "robotic3.png";
+      break;
+    case "dirty":
+      let dirtyStage = parseInt(coin.dataset.dirtyStage || "0", 10);
+      dirtyStage = (dirtyStage + 1) % 3;
+      coin.dataset.dirtyStage = dirtyStage;
+      if (dirtyStage === 0) coin.src = "dirty.png";
+      else if (dirtyStage === 1) coin.src = "dirty1.png";
+      else coin.src = "dirty2.png";
+      break;
+    case "siulai":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "siulai1.png" : "siulai.png";
+      break;
+    case "crypto_heart":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "heart1.png" : "heart.png";
+      break;
+    case "tetris":
+    case "skin_tetris":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "tetrisik1.png" : "tetrisik.png";
+      break;
+    case "joystick":
+    case "skin_joystick":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "dzoi1.png" : "dzoi.png";
+      break;
+    case "snake":
+    case "skin_snake":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "zmej1.png" : "zmej.png";
+      break;
+    case "brb":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "knopka1.png" : "knopka.png";
+      break;
+    default:
+      break;
+  }  
 }
 
 function handleSkinAnimation() {
@@ -1798,6 +2255,29 @@ case "cyber_android":
     coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
     coin.src = coin.dataset.toggle === "1" ? "siulai1.png" : "siulai.png";
     break;
+  case "crypto_heart":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "heart1.png" : "heart.png";
+      break;
+  case "tetris":
+  case "skin_tetris":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "tetrisik1.png" : "tetrisik.png";
+      break;
+    case "joystick":
+    case "skin_joystick":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "dzoi1.png" : "dzoi.png";
+      break;
+    case "snake":
+    case "skin_snake":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "zmej1.png" : "zmej.png";
+      break;
+   case "brb":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "knopka1.png" : "knopka.png";
+      break;
 
   default:
   break;
@@ -1815,7 +2295,8 @@ function updateSkinButtons() {
     "skinCardSiulai": 'siulai',
     "skinCardGkspt": 'gkspt',
     "skinCardCyberAndroid": 'cyber_android',
-    "skinCardDirty": 'dirty'
+    "skinCardDirty": 'dirty',
+    "skinCardCryptoHeart": 'crypto_heart'
   };
   
   for (const [cardId, skinKey] of Object.entries(secretSkins)) {
@@ -1825,7 +2306,7 @@ function updateSkinButtons() {
     }
   }
   
-  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android"];
+  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android",  "brb"];
   
   skins.forEach(s => {
     const button = document.getElementById("skin-" + s);
@@ -1869,12 +2350,16 @@ function updateSkinButtons() {
       button.className = "";
       button.onclick = () => applySkin(s);
     } else {
-      const prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240, euro:780, space:1210, kostia:0, pixe:3215, onion:10110, cookie:40780, metka:0, seri:0, mystic:0, capsule:0, artem:0, ruka:172080, banditx:542123, goldcoin:1120000};
+      const prices = {what:1, burger:10, joost:30, dog:80, diam:100, tung:240, euro:780, space:1210, kostia:0, pixe:3215, onion:10110, cookie:40780, metka:0, seri:0, mystic:0, capsule:0, artem:0, ruka:172080, banditx:542123, goldcoin:1120000, brb: 5000000};
       
       if (s === "mystic") {
     button.textContent = d.puzzleDone ? t('select') : t('locked_complete');
     button.className = d.puzzleDone ? "" : "owned";
     button.onclick = d.puzzleDone ? () => applySkin('mystic') : null;
+} else if (s === "crypto_heart") {
+    button.textContent = d.skins[s] ? (d.skin === s ? t('active') : t('select')) : t('locked');
+    button.className = d.skins[s] ? (d.skin === s ? "active" : "") : "owned";
+    button.onclick = d.skins[s] ? () => applySkin('crypto_heart') : null;
 } else if (s === "gkspt" || s === "cyber_android") {
     button.textContent = d.skins[s] ? t('select') : t('locked');
     button.className = d.skins[s] ? "" : "owned";
@@ -1891,6 +2376,21 @@ function updateSkinButtons() {
     button.textContent = d.skins[s] ? t('select') : t('locked');
     button.className = d.skins[s] ? "" : "owned";
     button.onclick = d.skins[s] ? () => applySkin('siulai') : null;
+  } else if (s === "crypto_heart") {
+    if (d.skin === s) {
+      button.textContent = t('active');
+      button.className = "active";
+    } else if (d.skins && d.skins[s]) {
+      button.textContent = t('select');
+      button.className = "";
+      button.onclick = () => applySkin(s);
+    } else {
+      button.textContent = t('locked');
+      button.className = "owned";
+      button.onclick = null;
+    }
+    return;
+
 } else if (s !== "kostia" && s !== "metka" && s !== "seri") {
     let cost = prices[s];
     if (d.bonuses.discounts && d.bonuses.discounts[s] && Date.now() < d.bonuses.discounts[s]) {
@@ -1901,13 +2401,14 @@ function updateSkinButtons() {
     }
     button.className = "";
     button.onclick = () => buySkin(s, cost);
+
 } else {
     button.textContent = t('locked_promo');
     button.className = "owned";
     button.onclick = null;
-      }
-    }
-  });
+}
+}
+});
 }
 
 function updateSkinPreviews() {
@@ -1937,7 +2438,12 @@ function updateSkinPreviews() {
     'gkspt': 'gkspt.png',                
     'cyber_android': 'robotic.png',
     'dirty': 'dirty.png',
-    'siulai': 'siulai.png'
+    'siulai': 'siulai.png',
+    'crypto_heart': 'heart.png',
+    'tetris': 'tetrisik.png',
+    'joystick': 'dzoi.png',
+    'snake': 'zmej.png',
+    'brb': 'knopka.png'  
   };
   
    for (const [skin, img] of Object.entries(skinImageMap)) {
@@ -1992,7 +2498,34 @@ function updateBackground() {
     if (d.boost.active && now >= d.boost.end) {
       d.boost.active = false;
     }
+
+    // Проверяем фон из EK Shop (только если не выбран основной фон)
+    try {
+      const ekshopSelected = JSON.parse(localStorage.getItem('ekshop_selected') || '{}');
+      const ekshopOwned = JSON.parse(localStorage.getItem('ekshop_owned') || '{}');
+
+      // Если выбран основной фон (не default), то используем его
+      const userHasOwnBg = !!(d && d.bg && d.bg !== 'default');
+      
+      // Если выбран скин из EK Shop, то НЕ применяем фон из EK Shop, даже если он выбран
+      // если только пользователь явно не выбрал фон в EK Shop
+      const hasEkshopSkinSelected = ekshopSelected.skin && ekshopOwned[ekshopSelected.skin];
+      const hasEkshopBgSelected = ekshopSelected.bg && ekshopOwned[ekshopSelected.bg];
+      
+      // Применяем фон из EK Shop только если:
+      // 1. Пользователь не выбрал основной фон (d.bg === 'default')
+      // 2. В EK Shop явно выбран фон (hasEkshopBgSelected)
+      // 3. В EK Shop НЕ выбран скин (или выбран, но также явно выбран фон)
+      if (!userHasOwnBg && hasEkshopBgSelected && ekshopSelected.bg === 'bg_club') {
+        body.style.backgroundImage = "url('cosmops.png')";
+        body.style.backgroundColor = "transparent";
+        return;
+      }
+    } catch(e) {
+      console.warn('EK Shop background check failed:', e);
+    }
     
+    // Используем основной фон
     switch(d.bg) {
       case "default":
         body.style.backgroundImage = "none";
@@ -2032,7 +2565,6 @@ function updateBackground() {
         document.body.style.backgroundSize = "cover";
         document.body.style.backgroundPosition = "center";
         break;
-      // NEW BACKGROUND: xfone.png for banditx skin
       case "xfone":
         body.style.backgroundImage = "url('xfone.png')";
         body.style.backgroundColor = "transparent";
@@ -2234,6 +2766,329 @@ function renderCardsTab(tab) {
   updateCardTexts();
 }
 
+// NEW: Render Limited tab
+function renderLimitedTab() {
+  const container = document.getElementById('cards-content');
+  if (!container) return;
+  
+  container.innerHTML = '';
+  
+  // Проверяем состояние limited карточек
+  const l = d.limitedCards || {
+    yes: { owned: false, bought: false },
+    no: { owned: false, bought: false },
+    stick: { owned: false, bought: false, appearedAt: 0, boughtAt: 0 },
+    backpack: { owned: false, bought: false, appearedAt: 0, boughtAt: 0 },
+    journey: { owned: false, level: -1 },
+    challenge: { owned: false }
+  };
+  
+  const now = Date.now();
+  
+  // Определяем, какая из Yes/No куплена
+  const yesNoBought = l.yes.bought || l.no.bought;
+  
+  // Проверяем, появилась ли Stick (должна появиться после покупки Yes или No)
+  const stickAppeared = yesNoBought || l.stick.appearedAt > 0;
+  const stickTimeLeft = stickAppeared && l.stick.appearedAt > 0 ? 
+    (l.stick.appearedAt + 7 * 24 * 60 * 60 * 1000) - now : 0;
+  const stickAvailable = stickAppeared && stickTimeLeft > 0 && !l.stick.bought;
+  
+  // Проверяем, появилась ли Backpack (через 7 дней после появления Stick)
+  const backpackAppeared = l.backpack.appearedAt > 0;
+  const backpackTimeLeft = backpackAppeared ? 
+    (l.backpack.appearedAt + 7 * 24 * 60 * 60 * 1000) - now : 0;
+  const backpackAvailable = backpackAppeared && backpackTimeLeft > 0 && !l.backpack.bought;
+  
+  // Journey доступна только если куплена Stick
+  const journeyAvailable = l.stick.bought && l.journey.level < 5;
+  const journeyData = [
+    { price: 14000, income: 71 },
+    { price: 21000, income: 104 },
+    { price: 36000, income: 163 },
+    { price: 51000, income: 183 },
+    { price: 72000, income: 268 },
+    { price: 108000, income: 310 }
+  ];
+  const journeyLevel = l.journey.level >= 0 ? l.journey.level : 0;
+  
+  // Challenge доступна только если journey.level >= 5
+  const challengeAvailable = l.journey.level >= 5;
+  
+  let html = '<div class="cards-grid">';
+  
+  // Карточка Yes
+  html += `
+    <div class="card-item ${l.yes.bought ? 'owned' : (l.no.bought ? 'disabled' : '')}">
+      <img src="yes.png" class="card-item-image" onerror="this.src='dontwhat.png'">
+      <div class="card-item-title">Yes</div>
+      <div class="card-sub">+10 KSPT/h</div>
+      ${l.yes.bought ? 
+        '<button class="card-item-button active" disabled>Bought</button>' :
+        (l.no.bought ?
+          '<button class="card-item-button owned" disabled>Purchase Time Expired</button>' :
+          '<button class="card-item-button" onclick="buyLimitedCard(\'yes\', 10000)">Buy 10000 KSPT</button>'
+        )
+      }
+    </div>
+  `;
+  
+  // Карточка No
+  html += `
+    <div class="card-item ${l.no.bought ? 'owned' : (l.yes.bought ? 'disabled' : '')}">
+      <img src="no.png" class="card-item-image" onerror="this.src='dontwhat.png'">
+      <div class="card-item-title">No</div>
+      <div class="card-sub">+10 KSPT/h</div>
+      ${l.no.bought ? 
+        '<button class="card-item-button active" disabled>Bought</button>' :
+        (l.yes.bought ?
+          '<button class="card-item-button owned" disabled>Purchase Time Expired</button>' :
+          '<button class="card-item-button" onclick="buyLimitedCard(\'no\', 10000)">Buy 10000 KSPT</button>'
+        )
+      }
+    </div>
+  `;
+  
+  // Карточка Stick (появляется после покупки Yes или No)
+  if (stickAppeared) {
+    html += `
+      <div class="card-item ${l.stick.bought ? 'owned' : (!stickAvailable ? 'disabled' : '')}">
+        <img src="stick.png" class="card-item-image" onerror="this.src='dontwhat.png'">
+        <div class="card-item-title">Stick</div>
+        <div class="card-sub">+21 KSPT/h</div>
+        ${l.stick.bought ? 
+          '<button class="card-item-button active" disabled>Bought</button>' :
+          (stickAvailable ?
+            `<button class="card-item-button" onclick="buyLimitedCard('stick', 22000)">Buy 22000 KSPT</button>
+             <div class="card-sub" style="color:#ff9800; margin-top:5px;">Limited Time! ${formatTime(stickTimeLeft)}</div>` :
+            '<button class="card-item-button owned" disabled>Purchase Time Expired</button>'
+          )
+        }
+      </div>
+    `;
+  }
+  
+  // Карточка Backpack (появляется через 7 дней после Stick)
+  if (backpackAppeared) {
+    html += `
+      <div class="card-item ${l.backpack.bought ? 'owned' : (!backpackAvailable ? 'disabled' : '')}">
+        <img src="backpack.png" class="card-item-image" onerror="this.src='dontwhat.png'">
+        <div class="card-item-title">Backpack</div>
+        <div class="card-sub">+31 KSPT/h</div>
+        ${l.backpack.bought ? 
+          '<button class="card-item-button active" disabled>Bought</button>' :
+          (backpackAvailable ?
+            `<button class="card-item-button" onclick="buyLimitedCard('backpack', 31000)">Buy 31000 KSPT</button>
+             <div class="card-sub" style="color:#ff9800; margin-top:5px;">Limited Time! ${formatTime(backpackTimeLeft)}</div>` :
+            '<button class="card-item-button owned" disabled>Purchase Time Expired</button>'
+          )
+        }
+      </div>
+    `;
+  }
+  
+  // Карточка Journey (доступна только если есть Stick)
+  if (l.stick.bought) {
+    html += `
+      <div class="card-item">
+        <img src="journey.png" class="card-item-image" onerror="this.src='dontwhat.png'">
+        <div class="card-item-title">Journey</div>
+        <div class="card-sub">Level ${journeyLevel + 1}/6</div>
+        <div class="card-sub">+${journeyData[journeyLevel].income} KSPT/h</div>
+        ${journeyAvailable ? 
+          `<button class="card-item-button" onclick="buyJourneyLevel(${journeyLevel})">Upgrade ${journeyData[journeyLevel].price} KSPT</button>` :
+          '<button class="card-item-button active" disabled>Max Level</button>'
+        }
+      </div>
+    `;
+  }
+  
+  // Карточка Challenge (автоматически выдается при 5 уровне Journey)
+  if (challengeAvailable) {
+    html += `
+      <div class="card-item">
+        <img src="records.png" class="card-item-image" onerror="this.src='dontwhat.png'">
+        <div class="card-item-title">Challenge</div>
+        <div class="card-sub">+80 KSPT/h</div>
+        <button class="card-item-button active" disabled>Acquired</button>
+      </div>
+    `;
+  }
+  
+  html += '</div>';
+  container.innerHTML = html;
+}
+
+// Вспомогательная функция для форматирования времени
+function formatTime(ms) {
+  if (ms <= 0) return "Expired";
+  const days = Math.floor(ms / (1000 * 60 * 60 * 24));
+  const hours = Math.floor((ms % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+  const minutes = Math.floor((ms % (1000 * 60 * 60)) / (1000 * 60));
+  return `${days}d ${hours}h ${minutes}m`;
+}
+
+// NEW: Функция покупки лимитированных карточек
+function buyLimitedCard(type, price) {
+  if (!d.limitedCards) {
+    d.limitedCards = {
+      yes: { owned: false, bought: false },
+      no: { owned: false, bought: false },
+      stick: { owned: false, bought: false, appearedAt: 0, boughtAt: 0 },
+      backpack: { owned: false, bought: false, appearedAt: 0, boughtAt: 0 },
+      journey: { owned: false, level: -1 },
+      challenge: { owned: false }
+    };
+  }
+  
+  const now = Date.now();
+  
+  // Проверяем, достаточно ли KSPT
+  if (d.tokens < price) {
+    showToast(t('not_enough_kspt'));
+    return;
+  }
+  
+  // Обработка покупки в зависимости от типа
+  switch(type) {
+    case 'yes':
+      if (d.limitedCards.yes.bought || d.limitedCards.no.bought) return;
+      d.tokens -= price;
+      d.limitedCards.yes = { owned: true, bought: true };
+      
+      // Появляется Stick
+      if (!d.limitedCards.stick.appearedAt) {
+        d.limitedCards.stick.appearedAt = now;
+      }
+      break;
+      
+    case 'no':
+      if (d.limitedCards.yes.bought || d.limitedCards.no.bought) return;
+      d.tokens -= price;
+      d.limitedCards.no = { owned: true, bought: true };
+      
+      // Появляется Stick
+      if (!d.limitedCards.stick.appearedAt) {
+        d.limitedCards.stick.appearedAt = now;
+      }
+      break;
+      
+    case 'stick':
+      // Проверяем, доступна ли для покупки
+      if (!d.limitedCards.stick.appearedAt || d.limitedCards.stick.bought) return;
+      
+      const stickTimeLeft = (d.limitedCards.stick.appearedAt + 7 * 24 * 60 * 60 * 1000) - now;
+      if (stickTimeLeft <= 0) {
+        showToast("Purchase Time Expired");
+        return;
+      }
+      
+      d.tokens -= price;
+      d.limitedCards.stick = {
+        owned: true,
+        bought: true,
+        appearedAt: d.limitedCards.stick.appearedAt,
+        boughtAt: now
+      };
+      
+      // Появляется Backpack через 7 дней
+      setTimeout(() => {
+        if (!d.limitedCards.backpack.appearedAt) {
+          d.limitedCards.backpack.appearedAt = Date.now();
+          save();
+          if (document.getElementById('offlineShop')?.classList.contains('active')) {
+            renderLimitedTab();
+          }
+        }
+      }, 7 * 24 * 60 * 60 * 1000);
+      break;
+      
+    case 'backpack':
+      // Проверяем, доступна ли для покупки
+      if (!d.limitedCards.backpack.appearedAt || d.limitedCards.backpack.bought) return;
+      
+      const backpackTimeLeft = (d.limitedCards.backpack.appearedAt + 7 * 24 * 60 * 60 * 1000) - now;
+      if (backpackTimeLeft <= 0) {
+        showToast("Purchase Time Expired");
+        return;
+      }
+      
+      d.tokens -= price;
+      d.limitedCards.backpack = {
+        owned: true,
+        bought: true,
+        appearedAt: d.limitedCards.backpack.appearedAt,
+        boughtAt: now
+      };
+      break;
+  }
+  
+  showToast(t('purchase_success'));
+  save();
+  
+  // Обновляем UI
+  if (document.getElementById('offlineShop')?.classList.contains('active')) {
+    renderLimitedTab();
+  }
+  ui();
+}
+
+// NEW: Функция прокачки Journey
+function buyJourneyLevel(currentLevel) {
+  if (!d.limitedCards || !d.limitedCards.stick.bought) return;
+  
+  const journeyData = [
+    { price: 14000, income: 71 },
+    { price: 21000, income: 104 },
+    { price: 36000, income: 163 },
+    { price: 51000, income: 183 },
+    { price: 72000, income: 268 },
+    { price: 108000, income: 310 }
+  ];
+  
+  const nextLevel = currentLevel + 1;
+  if (nextLevel >= journeyData.length) return;
+  
+  const price = journeyData[nextLevel].price;
+  
+  if (d.tokens < price) {
+    showToast(t('not_enough_kspt'));
+    return;
+  }
+  
+  d.tokens -= price;
+  d.limitedCards.journey.level = nextLevel;
+  
+  // Проверяем, достигнут ли 5 уровень
+  if (nextLevel >= 5) {
+    // Выдаем золотую капсулу
+    if (!d.goldCapsule) d.goldCapsule = { obtained: false, opened: false, taps: 0, lastOpen: 0 };
+    d.goldCapsule.obtained = true;
+    d.goldCapsule.opened = false;
+    d.goldCapsule.taps = 0;
+    
+    // Выдаем карточку Challenge
+    d.limitedCards.challenge.owned = true;
+    
+    // Показываем сообщение
+    showToast("Quest completed! This is your reward.");
+    
+    // Автоматически открываем золотую капсулу
+    setTimeout(() => {
+      startGoldCapsuleSequence();
+    }, 1000);
+  }
+  
+  showToast(t('purchase_success'));
+  save();
+  
+  // Обновляем UI
+  if (document.getElementById('offlineShop')?.classList.contains('active')) {
+    renderLimitedTab();
+  }
+  ui();
+}
+
 // NEW FUNCTION: Show card tab
 function showCardTab(tab) {
   // Update active tab
@@ -2247,12 +3102,17 @@ function showCardTab(tab) {
   if (tab === 'company') headerImg.src = 'cardik.png';
   else if (tab === 'sport') headerImg.src = 'cardik1.png';
   else if (tab === 'games') headerImg.src = 'cardik2.png';
+  else if (tab === 'limited') headerImg.src = 'cardik3.png';
   
   // Render cards for this tab
-  renderCardsTab(tab);
+  if (tab === 'limited') {
+    renderLimitedTab();
+  } else {
+    renderCardsTab(tab);
+  }
+  
   updateCardTexts();
   updateCardUI();
-
 }
 
 function updateCardUI() {
@@ -3363,7 +4223,10 @@ function disable3DEffect() {
 // В функции initGame() добавьте вызов init3DCoin после инициализации настроек:
 function initGame() {
   console.log('initGame called');
-  // ... существующий код ...
+
+ // Инициализация вкладок событий
+  showIventTab('puzzle'); // По умолчанию показываем пазлы
+}
   
     // 3D эффект монеты - ИСПРАВЛЕННАЯ ЛОГИКА
   const coin3dEnabled = d.settings && d.settings.animation && d.settings.animation.coin3d !== false;
@@ -3395,13 +4258,16 @@ if (coin3dEnabled) {
     coinContainer.classList.remove('three-d-enabled');
   }
 
+   if (document.getElementById('capsuleScreen')?.classList.contains('active')) {
+    showIventTab('puzzle');
+  }
+
    // Сброс трансформации
     const coin3d = document.getElementById('coin3d');
     if (coin3d) {
       coin3d.style.transform = 'none';
     }
   }
-}
 
 
 function updateBuyCooldownInfo() {
@@ -4511,6 +5377,8 @@ function openScreen(id) {
   if (id === 'settings') {
     showSettingsSub('main');
   }
+
+  document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
   
   document.querySelectorAll(".nav-item").forEach(n => n.classList.remove("active"));
   if (id === 'main') {
@@ -4522,6 +5390,25 @@ function openScreen(id) {
     }
     hideCustomKeyboard();
     marketInitialized = false;
+    } else if (id === 'games') {
+    // подсветить Games в навигации
+    document.getElementById('navGames')?.classList.add("active");
+
+    // если был запущен интервал обновления рынка — остановим его
+    if (marketUpdateInterval) {
+      clearInterval(marketUpdateInterval);
+      marketUpdateInterval = null;
+      console.debug('market: interval stopped (from games)');
+    }
+
+    // убрать кастомную клавиатуру (как в других ветках)
+    hideCustomKeyboard();
+    marketInitialized = false;
+
+    // при необходимости инициализировать список игр (если есть функция)
+    if (typeof initGames === 'function') {
+      try { initGames(); } catch(e){ console.warn('initGames error', e); }
+    }
   } else if (id === 'market') {
   document.getElementById('navMarket')?.classList.add("active");
   if (!marketUpdateInterval) {
@@ -4565,15 +5452,34 @@ function showSettingsSub(sub) {
 function toggleAnimationSetting(setting, value) {
   if (!d.settings) d.settings = {};
   if (!d.settings.animation) d.settings.animation = {};
-  
+
   d.settings.animation[setting] = value;
   save();
-}
+
+  // Если меняем именно анимацию скинов — старт/стоп таймера
+  // Если меняем именно анимацию скинов — старт/стоп таймера
+// УДАЛЕНО для фикса проблемы с тапами
+// if (setting === 'skins') {
+//    if (value) {
+//      if (!window.skinAnimationTimer) {
+//        window.skinAnimationTimer = setInterval(handleSkinAnimation, 800);
+//        console.debug('skinAnimationTimer started (toggle)');
+//      }
+//    } else {
+//      if (window.skinAnimationTimer) {
+//        clearInterval(window.skinAnimationTimer);
+//        window.skinAnimationTimer = null;
+//        console.debug('skinAnimationTimer stopped (toggle)');
+//      }
+//    }
+// }
+
+} // <--- ВОТ ЭТУ СКОБКУ НУЖНО ДОБАВИТЬ
 
 function toggleVibrationSetting(setting, value) {
   if (!d.settings) d.settings = {};
   if (!d.settings.vibration) d.settings.vibration = {};
-  
+   
   d.settings.vibration[setting] = value;
   save();
 }
@@ -4660,9 +5566,9 @@ if (coin) {
     showTapFloat(e, earned);
     
     // Handle skin animation only on tap if enabled
-    if (d.settings && d.settings.animation && d.settings.animation.skins) {
-      handleSkinAnimation();
-    }
+if (d.settings && d.settings.animation && d.settings.animation.skins) {
+  handleTapSkinAnimation();
+}
     
     coin.classList.add('anim');
     setTimeout(() => coin.classList.remove('anim'), 80);
@@ -5269,13 +6175,14 @@ function checkPromo() {
   d.goldCapsule.taps = 0;
   d.goldCapsule.lastOpen = Date.now();
 
-  save();
-  showToast(t('gold_capsule_obtained')); // добавим перевод ниже
+    save();
+  showToast(t('gold_capsule_obtained'));
   input.value = "";
 
   // Запускаем интерфейс открытия золотой капсулы
   startGoldCapsuleSequence();
   return;
+
   } else if (code === "tap2x") {
     d.bonuses.tap2x = { active: true, end: Date.now() + 30 * 60 * 1000 };
     message = "x2 tap boost for 30 minutes!";
@@ -5571,7 +6478,7 @@ function openCapsule() {
           break;
           
         case 'discount':
-          const skins = ["what", "burger", "joost", "dog", "diam", "tung", "euro", "space", "pixe", "onion", "cookie"];
+          const skins = ["what", "burger", "joost", "dog", "diam", "tung", "euro", "space", "pixe", "onion", "cookie", "ruka", "banditx", "goldcoin", "brb"];
           skins.forEach(s => {
             d.bonuses.discounts[s] = Date.now() + 24 * 60 * 60 * 1000;
           });
@@ -6016,9 +6923,56 @@ function placePuzzlePieces2() {
   }
   if (placed) {
     showToast("Puzzle pieces placed!");
-    save();
-    ui();
+      save();
+  checkSecondPuzzleCompletion();
+  updateSecondPuzzleUI();
+  ui();
   }
+}
+
+// Это для игр
+// вставь в kspt/js/games.js (в конце или рядом с другими функциями экранов)
+function startGame(name){
+  const container = document.getElementById('gameContainer');
+  const frameHolder = document.getElementById('gameFrameContainer');
+  if(!container || !frameHolder) return console.error('gameContainer/gameFrameContainer not found');
+
+  // очистить старый iframe (если был)
+  frameHolder.innerHTML = '';
+
+  // создать iframe
+  const iframe = document.createElement('iframe');
+  iframe.id = 'gameIframe';
+  iframe.style.width = '100%';
+  iframe.style.height = 'calc(100vh - 64px)'; // подогнать под высоту шапки; при желании поменяй
+  iframe.style.border = '0';
+  iframe.allow = 'fullscreen'; // если нужно
+
+  // выбрать путь к игре (путь относительно index.html)
+  if(name === 'snake') iframe.src = 'games/snake.html';
+  else if(name === 'pingpong' || name === 'pong') iframe.src = 'games/pingpong.html';
+  else {
+    console.warn('Unknown game:', name);
+    iframe.src = 'about:blank';
+  }
+
+  frameHolder.appendChild(iframe);
+
+  // показать экран игры
+  // Если у тебя есть функция openScreen(name) — можно её вызвать:
+  if(typeof openScreen === 'function'){ openScreen('gameContainer'); }
+  else { container.style.display = 'block'; }
+
+  // (опционально) фокус на iframe
+  setTimeout(()=> iframe.contentWindow && iframe.contentWindow.focus(), 300);
+}
+
+function exitGame(){
+  const frameHolder = document.getElementById('gameFrameContainer');
+  const container = document.getElementById('gameContainer');
+  if(frameHolder) frameHolder.innerHTML = ''; // удаляем iframe — освобождает память
+  if(typeof openScreen === 'function'){ openScreen('games'); } // вернуться в список игр, если есть
+  else if(container) container.style.display = 'none';
 }
 
 // ==========================================
@@ -6146,6 +7100,19 @@ function stopMusic() {
 
 function equipBackground(bg) {
   if (!d.ownedBgs.includes(bg)) return;
+
+  // Если это НЕ фон из EK Shop, сбрасываем выбор фона в EK Shop
+  if (bg !== 'bg_club') {
+    try {
+      const ekshopSelected = JSON.parse(localStorage.getItem('ekshop_selected') || '{}');
+      if (ekshopSelected.bg) {
+        ekshopSelected.bg = null;
+        localStorage.setItem('ekshop_selected', JSON.stringify(ekshopSelected));
+      }
+    } catch(e) {
+      console.warn('Failed to clear EK Shop background selection:', e);
+    }
+  }
   
   d.bg = bg;
   showToast(formatTemplate(t('bg_equipped'), [bg]));
@@ -6249,6 +7216,15 @@ function initGame() {
         ensureMusicPlays();
     }
 
+      // Запускать авто-анимацию скинов при старте (если включено в настройках)
+// УДАЛЕНО для фикса проблемы с тапами
+// if (d.settings && d.settings.animation && d.settings.animation.skins) {
+//   if (!window.skinAnimationTimer) {
+//     window.skinAnimationTimer = setInterval(handleSkinAnimation, 800);
+//     console.debug('skinAnimationTimer started (init)');
+//   }
+// }
+
     // Auto-save every 10 seconds
     setInterval(save, 10000);
 
@@ -6261,6 +7237,652 @@ function initGame() {
         }
     }, 1000);
 }
+
+// ==========================================
+// IVENTS SYSTEM FUNCTIONS
+// ==========================================
+
+// Показать вкладку (пазлы или события)
+function showIventTab(tab) {
+  const puzzleTab = document.getElementById('puzzleTab');
+  const iventTab = document.getElementById('iventTab');
+  
+  const tabPuzzle = document.getElementById('tabPuzzle');
+  const tabIvent = document.getElementById('tabIvent');
+  
+  // Обновляем кнопки
+  if (tabPuzzle) tabPuzzle.style.background = tab === 'puzzle' ? '#2e7d32' : '#444';
+  if (tabIvent) tabIvent.style.background = tab === 'ivent' ? '#2e7d32' : '#444';
+  
+  if (tab === 'puzzle') {
+    if (puzzleTab) puzzleTab.style.display = 'block';
+    if (iventTab) iventTab.style.display = 'none';
+  } else {
+    if (puzzleTab) puzzleTab.style.display = 'none';
+    if (iventTab) iventTab.style.display = 'block';
+    
+    // Загружаем события напрямую без fetch
+    loadIventsDirect(); // Убедитесь, что эта функция существует
+  }
+}
+
+function loadIventsDirect() {
+  const container = document.getElementById('iventContainer');
+  if (!container) return;
+
+  // Используем FALLBACK_IVENTS напрямую
+  currentIvent = null;
+
+  if (!currentIvent) {
+    container.innerHTML = '<div class="ivent-info">' + t('ivent_no_events') + '</div>';
+    return;
+  }
+
+  renderIvent(currentIvent);
+}
+
+// Загрузить события из файла
+async function loadIvents() {
+  const container = document.getElementById('iventContainer');
+  if (!container) return;
+
+  try {
+    const response = await fetch(IVENTS_FILE);
+    if (!response.ok) throw new Error('Network response was not ok');
+
+    const events = await response.json();
+    currentIvent = events[0] || FALLBACK_IVENTS[0];
+  } catch (error) {
+    console.warn('Ошибка загрузки событий, используем fallback:', error);
+    currentIvent = null;
+  }
+
+  if (!currentIvent) {
+    container.innerHTML = '<div class="ivent-info">' + t('ivent_no_events') + '</div>';
+    return;
+  }
+
+  renderIvent(currentIvent);
+}
+
+// Отобразить событие
+function renderIvent(ivent) {
+  const container = document.getElementById('iventContainer');
+  if (!container) return;
+
+  const progress = d.ivents && d.ivents[ivent.id] ? d.ivents[ivent.id] : { claimedDays: [], lastClaimDate: null };
+  const currentDay = getCurrentIventDay(ivent);
+
+  // изображения по типам
+  const rewardImages = {
+    'capsule': 'capsule.png',
+    'noobBox': 'noob.png',
+    'goldCapsule': 'cagold.png',
+    'skin': 'heart.png'
+  };
+
+  // строим HTML дней (calendarHtml) — ВАЖНО: сначала calendarHtml, затем вставляем в шаблон
+  let calendarHtml = '';
+  for (let day = 1; day <= ivent.days; day++) {
+    const reward = (ivent.rewards || []).find(r => r.day === day) || {};
+    const isClaimed = progress.claimedDays && progress.claimedDays.includes(day);
+    const isCurrent = day === currentDay && !isClaimed;
+    const isMissed = day < currentDay && !isClaimed;
+    const isFuture = day > currentDay;
+
+    // картинка: если будущее — показываем knowdont.png (чтобы не знать), если пропущен/получен — показываем реальную награду
+    let dayImage = 'knowdont.png';
+    if (isClaimed || isMissed || isCurrent) {
+      dayImage = rewardImages[reward.type] || 'question.png';
+      // если 7-й — гарантируем heart
+      if (day === 7 && reward.type === 'skin') dayImage = 'heart.png';
+    }
+
+    // классы и кнопка
+    let cls = 'ivent-day';
+    if (isClaimed) cls += ' redeemed';
+    else if (isMissed) cls += ' missed';
+    else if (isCurrent) cls += ' current';
+    else if (isFuture) cls += ' future';
+
+    const buttonHtml = isClaimed
+      ? '<div style="color:#2e7d32; font-weight:bold;">✅</div>'
+      : (isCurrent
+         ? `<button onclick="claimIventReward(${day})" style="margin-top:6px;background:#ff9800;border:none;padding:6px 10px;border-radius:6px;color:#000;font-weight:bold;">Открыть</button>`
+         : '');
+
+    calendarHtml += `
+      <div class="${cls}" style="min-width:72px; text-align:center; margin-right:8px;">
+        <div style="font-weight:bold; margin-bottom:6px;">${day}</div>
+        <img src="${dayImage}" style="width:58px;height:58px;object-fit:contain;border-radius:8px;">
+        <div style="font-size:11px; margin-top:6px; color:#aaa;">
+          ${isClaimed ? 'Открыт' : (isMissed ? 'Пропущен' : (isCurrent ? 'Текущий' : 'Скоро'))}
+        </div>
+        ${buttonHtml}
+      </div>
+    `;
+  }
+
+  // основной шаблон с прокруткой
+  let html = `
+    <div class="ivent-info">
+      <div style="font-weight:bold; margin-bottom:5px;">${ivent.name}</div>
+      <div style="opacity:0.7; font-size:12px;">${ivent.description}</div>
+      <div style="font-size:11px; color:#ff9800; margin-top:5px;">
+        День ${Math.min(currentDay, ivent.days)} из ${ivent.days}
+      </div>
+    </div>
+
+    <div class="ivent-scroll">
+      <div class="ivent-calendar">
+        ${calendarHtml}
+      </div>
+    </div>
+  `;
+
+  // если все дни получены и нет пропусков — показываем финальное окно со "золотой рамкой"
+  const allClaimed = ivent.days === (progress.claimedDays ? progress.claimedDays.length : 0);
+  const noMissed = checkNoMissedDays(progress, ivent.days);
+  if (allClaimed && noMissed && ivent.finalReward) {
+    const skinId = ivent.finalReward.id || 'crypto_heart';
+    const got = d.skins && d.skins[skinId];
+    html += `
+      <div class="ivent-skin-reward">
+        <div class="gold-frame">
+          <img src="${rewardImages['skin'] || 'heart.png'}" alt="${ivent.finalReward.name}" style="width:110px; height:110px; border-radius:14px;">
+        </div>
+        <div style="font-weight:bold; color:#ffb74d; font-size:18px; margin-top:10px;">${ivent.finalReward.name}</div>
+        <div style="font-size:12px; opacity:0.8; margin-top:6px;">${ivent.finalReward.description || ''}</div>
+        ${!got ? `<button onclick="claimFinalReward('${skinId}')" style="margin-top:12px;background:#ff9800;color:#000;padding:10px 18px;border-radius:10px;border:none;font-weight:bold;">🎁 Получить скин</button>` :
+                `<div style="margin-top:12px;color:#2e7d32;font-weight:bold;">✅ Скин уже получен!</div>`}
+      </div>
+    `;
+  }
+
+html += `<div class="ivent-countdown" id="iventCountdownWrapper" style="display:none; margin-top:10px; font-size:13px; color:#ffb74d;">
+  Скоро? <span id="iventCountdown">00:00:00</span>
+</div>`;
+
+    container.innerHTML = html;
+
+  // Запустить/обновить таймер до следующей доступной награды (если нужно)
+  startIventCountdown(ivent);
+}
+
+let __iventCountdownInterval = null;
+
+function startIventCountdown(ivent) {
+  // Очистка предыдущего интервала
+  if (__iventCountdownInterval) {
+    clearInterval(__iventCountdownInterval);
+    __iventCountdownInterval = null;
+  }
+
+  if (!ivent) return;
+  const progress = d.ivents && d.ivents[ivent.id] ? d.ivents[ivent.id] : { claimedDays: [], lastClaimDate: null };
+  if (!progress.lastClaimDate) {
+    // нет даты — ничего не показываем
+    const wrap = document.getElementById('iventCountdownWrapper');
+    if (wrap) wrap.style.display = 'none';
+    return;
+  }
+
+  const ms24 = 24 * 60 * 60 * 1000;
+  function updateOnce() {
+    const now = Date.now();
+    const elapsed = now - progress.lastClaimDate;
+    const remaining = ms24 - elapsed;
+
+    // Если время вышло — остановить таймер и перерендерить событие
+    if (remaining <= 0) {
+      const wrap = document.getElementById('iventCountdownWrapper');
+      if (wrap) wrap.style.display = 'none';
+      clearInterval(__iventCountdownInterval);
+      __iventCountdownInterval = null;
+       renderIvent(ivent);
+      // перерисуем — теперь станет доступен следующий день
+      return;
+    }
+
+    // Формат HH:MM:SS
+    const hrs = Math.floor(remaining / (1000 * 60 * 60));
+    const mins = Math.floor((remaining % (1000 * 60 * 60)) / (1000 * 60));
+    const secs = Math.floor((remaining % (1000 * 60)) / 1000);
+    const fmt = `${String(hrs).padStart(2,'0')}:${String(mins).padStart(2,'0')}:${String(secs).padStart(2,'0')}`;
+
+    let el = document.getElementById('iventCountdown');
+    let wrap = document.getElementById('iventCountdownWrapper');
+    if (!wrap) {
+      // создать контейнер если его нет
+      const container = document.getElementById('iventContainer');
+      if (container) {
+        const html = `<div class="ivent-countdown" id="iventCountdownWrapper" style="margin-top:10px; font-size:13px; color:#ffb74d;">
+          Скоро? <span id="iventCountdown">${fmt}</span>
+        </div>`;
+        container.insertAdjacentHTML('beforeend', html);
+        wrap = document.getElementById('iventCountdownWrapper');
+        el = document.getElementById('iventCountdown');
+      }
+    }
+    if (wrap) wrap.style.display = 'block';
+    if (el) el.textContent = fmt;
+  }
+
+  // Первый вызов сразу
+  updateOnce();
+  // Обновлять каждую секунду
+  __iventCountdownInterval = setInterval(updateOnce, 1000);
+}
+
+// Получить текущий день события
+function getCurrentIventDay(ivent) {
+  const progress = d.ivents[ivent.id] || { claimedDays: [], lastClaimDate: null };
+
+  // Если сегодня уже получали награду, возвращаем тот же день
+  const today = new Date().toDateString();
+  if (progress.lastClaimDate && new Date(progress.lastClaimDate).toDateString() === today) {
+    // Ищем последний полученный день (без ошибки)
+    const lastClaimed = Math.max(...(progress.claimedDays && progress.claimedDays.length ? progress.claimedDays : [0]));
+    return lastClaimed || 1;
+  }
+
+  // Если это первый вход, начинаем с 1
+  if (!progress.claimedDays || progress.claimedDays.length === 0) {
+    return 1;
+  }
+
+  // Возвращаем следующий день после последнего полученного
+  const lastClaimed = Math.max(...(progress.claimedDays));
+  return Math.min(lastClaimed + 1, ivent.days);
+}
+
+// ДОБАВЬТЕ эту функцию для проверки, можно ли получить награду:
+function canClaimIventReward(day) {
+  if (!currentIvent) return false;
+  const progress = d.ivents && d.ivents[currentIvent.id] ? d.ivents[currentIvent.id] : { claimedDays: [], lastClaimDate: null };
+
+  // Уже взяли?
+  if (progress.claimedDays && progress.claimedDays.includes(day)) return false;
+
+  // Разрешено только по порядку: можно брать только следующий день
+  const lastClaimed = (progress.claimedDays && progress.claimedDays.length) ? Math.max(...progress.claimedDays) : 0;
+  if (day !== lastClaimed + 1) return false;
+
+  // Проверка 24 часов от последнего получения:
+  const ms24 = 24 * 60 * 60 * 1000;
+  if (!progress.lastClaimDate) return true; // ничё не брали — можно
+  const now = Date.now();
+  return (now - progress.lastClaimDate) >= ms24;
+}
+
+// Получить награду за день
+// ОБНОВИТЕ функцию claimIventReward:
+
+function claimIventReward(day) {
+  if (!currentIvent) return;
+  if (!d.ivents) d.ivents = {};
+  if (!d.ivents[currentIvent.id]) d.ivents[currentIvent.id] = { claimedDays: [], lastClaimDate: null };
+  const progress = d.ivents[currentIvent.id];
+
+  // уже взяли?
+  if (progress.claimedDays && progress.claimedDays.includes(day)) {
+    showToast('Уже получено');
+    return;
+  }
+
+  // Проверяем 24-часовое правило и порядок
+  if (!canClaimIventReward(day)) {
+    showToast('Ещё не доступно');
+    return;
+  }
+
+  // проверка текущего дня
+  const currentDay = getCurrentIventDay(currentIvent);
+  if (day !== currentDay) {
+    // если пользователь хочет получить более ранний день — запрещаем
+    if (day > currentDay) { showToast('Ещё не доступно'); return; }
+    // если это прошедший день, можно пометить как пропущенный — но не выдаём
+  }
+
+  // пометить как полученный
+  progress.claimedDays.push(day);
+  progress.lastClaimDate = Date.now();
+
+  // найти награду
+  const reward = (currentIvent.rewards || []).find(r => r.day === day) || {};
+
+  // сразу выдаём содержимое в зависимости от типа (auto-open)
+  switch ((reward.type || '').toString()) {
+   case 'capsule':
+  // НЕ добавляем в счетчик, а сразу открываем
+  d.capsule.lastOpen = 0; // Сбрасываем таймер
+  d.capsule.firstOpen = false;
+  save();
+  showToast('Капсула получена!');
+  // Запускаем открытие сразу
+  setTimeout(() => startCapsuleSequence(), 500);
+  break;
+
+    case 'noobBox':
+  // Устанавливаем флаг, что бокс получен
+  if (!d.noobBox) d.noobBox = { obtained: false, opened: false, taps: 0, lastOpen: 0 };
+  d.noobBox.obtained = true;
+  d.noobBox.opened = false;
+  d.noobBox.taps = 0;
+  save();
+  showToast('Noob Box получен!');
+  // Запускаем открытие сразу
+  setTimeout(() => startNoobBoxSequence(), 500);
+  break;
+
+    case 'goldCapsule':
+  // Устанавливаем флаг, что золотая капсула получена
+  if (!d.goldCapsule) d.goldCapsule = { obtained: false, opened: false, taps: 0, lastOpen: 0 };
+  d.goldCapsule.obtained = true;
+  d.goldCapsule.opened = false;
+  d.goldCapsule.taps = 0;
+  save();
+  showToast('Золотая капсула получена!');
+  // Запускаем открытие сразу
+  setTimeout(() => startGoldCapsuleSequence(), 500);
+  break;
+
+    case 'skin':
+      // Если день даёт скин — добавим сразу в d.skins
+      if (!d.skins) d.skins = {};
+      const skinId = reward.id || (currentIvent.finalReward && currentIvent.finalReward.id);
+      if (skinId) {
+        d.skins[skinId] = 1;
+        // обновляем превью и интерфейс
+        if (typeof updateSkinPreviews === 'function') updateSkinPreviews();
+        if (typeof updateSkinButtons === 'function') updateSkinButtons();
+        showToast(`Скин ${reward.name || skinId} получен`);
+      } else {
+        showToast('Скин получен');
+      }
+      save();
+      break;
+
+    default:
+      // другие типы — например токены
+      if (reward.type === 'kspt' || reward.type === 'tokens') {
+        const v = reward.value || 0;
+        d.tokens = (d.tokens || 0) + v;
+        save();
+        showToast(`+${v} KSPT`);
+      } else {
+        showToast('Награда получена');
+        save();
+      }
+      break;
+  }
+
+  // сохраняем прогресс события и обновляем интерфейс
+  save();
+  renderIvent(currentIvent);
+  updateSkinPreviews && updateSkinPreviews();
+  ui && ui();
+}
+
+function claimFinalReward() {
+  if (!currentIvent) return;
+  if (!currentIvent.finalReward) return;
+  const skinId = currentIvent.finalReward.id;
+  if (!d.skins) d.skins = {};
+  if (d.skins[skinId]) {
+    showToast('Скин уже получен!');
+    return;
+  }
+
+  // Пометить в данных
+  d.skins[skinId] = 1;
+
+  // Обновить магазин — создаём карточку, если нужно
+  const skinsScreen = document.getElementById('skins');
+  if (skinsScreen) {
+    const skinCard = document.createElement('div');
+    skinCard.className = 'card skin-card';
+    skinCard.id = 'skinCard_' + skinId;
+    skinCard.innerHTML = `
+      <div class="card-img"><img id="skin-img-${skinId}" src="heart.png" /></div>
+      <div class="card-title">${currentIvent.finalReward.name}</div>
+      <div class="card-desc">${currentIvent.finalReward.description}</div>
+      <button onclick="selectSkin('${skinId}')" class="btn-select">${t('select')}</button>
+    `;
+    const lastCard = skinsScreen.querySelector('.card:last-of-type');
+    if (lastCard) skinsScreen.insertBefore(skinCard, lastCard.nextSibling);
+    else skinsScreen.appendChild(skinCard);
+  }
+
+  // Сохраняем и обновляем UI
+  save();
+  updateSkinButtons && updateSkinButtons();
+  updateSkinPreviews && updateSkinPreviews();
+  ui && ui();
+
+  showToast('🎉 Скин получен!');
+}
+
+// Обновить анимацию скина (добавьте в функцию handleSkinAnimation)
+// Найдите функцию handleSkinAnimation и добавьте:
+function handleSkinAnimation() {
+  if (d.settings && d.settings.animation && !d.settings.animation.skins) {
+    return;
+  }
+  
+  const coin = document.getElementById('coin');
+  if (!coin) return;
+
+  const currentSkin =
+  coin.dataset.currentSkin ||
+  d.ekshopSkin ||
+  d.skin;
+
+  // Добавляем анимацию для скинов из EK Shop
+  switch(currentSkin) {
+    // ... существующие скины ...
+    
+    case "skin_tetris":
+    case "tetris":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "tetrisik1.png" : "tetrisik.png";
+      break;
+      
+    case "skin_joystick":
+    case "joystick":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "dzoi1.png" : "dzoi.png";
+      break;
+      
+    case "skin_snake":
+    case "snake":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "zmej1.png" : "zmej.png";
+      break;
+    
+    // case "crypto_heart":
+     // coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+     // coin.src = coin.dataset.toggle === "1" ? "heart1.png" : "heart.png";
+     // break;
+      
+    // ... остальные скины ...
+  }
+}
+
+function checkNoMissedDays(progress, totalDays) {
+  if (!progress.claimedDays || progress.claimedDays.length !== totalDays) {
+    return false;
+  }
+  
+  // Проверяем, что все дни от 1 до totalDays присутствуют
+  for (let day = 1; day <= totalDays; day++) {
+    if (!progress.claimedDays.includes(day)) {
+      return false;
+    }
+  }
+  
+  return true;
+}
+
+// ===============================
+// MINI GAMES (Snake / Pong)
+// ===============================
+
+function startGame(gameName) {
+  const gameContainer = document.getElementById('gameContainer');
+  const frameContainer = document.getElementById('gameFrameContainer');
+
+  if (!gameContainer || !frameContainer) {
+    console.error('Game containers not found');
+    return;
+  }
+
+  // очистить старую игру
+  frameContainer.innerHTML = '';
+
+  // создать iframe
+  const iframe = document.createElement('iframe');
+  iframe.style.width = '100%';
+  iframe.style.height = '100%';
+  iframe.style.border = '0';
+
+  if (gameName === 'snake') {
+    iframe.src = 'games/snake.html';
+  } else if (gameName === 'pong' || gameName === 'pingpong') {
+    iframe.src = 'games/pingpong.html';
+  } else {
+    console.warn('Unknown game:', gameName);
+    return;
+  }
+
+  frameContainer.appendChild(iframe);
+
+  // показать экран с игрой
+  gameContainer.style.display = 'block';
+}
+
+// вызывается ИЗ ИГРЫ
+function exitGame() {
+  const frameContainer = document.getElementById('gameFrameContainer');
+  const gameContainer = document.getElementById('gameContainer');
+
+  if (frameContainer) frameContainer.innerHTML = '';
+  if (gameContainer) gameContainer.style.display = 'none';
+}
+
+// ===== EKSHOP MESSAGE FORCE SYNC =====
+window.addEventListener('message', function(ev) {
+  const data = ev.data;
+  if (!data || typeof data !== 'object') return;
+    // ===== KS: game control messages from iframe =====
+  try {
+    // mark game-over state (iframe should send when showing its Game Over UI)
+    if (data.type === 'kspt_game_over') {
+      gameOverActive = true;
+      // optional: remember which iframe/window sent it
+      window.__kspt_last_sender = ev.source;
+      return;
+    }
+
+    // iframe cleared game-over (e.g. returned to playing state)
+    if (data.type === 'kspt_clear_game_over') {
+      gameOverActive = false;
+      return;
+    }
+
+    // iframe requests a restart (user pressed "Restart" inside the iframe UI)
+    if (data.type === 'kspt_request_restart') {
+      // If parent thinks we're currently in Game Over screen — disallow restart button behavior
+      if (gameOverActive) {
+        showToast('Use Play Again or Exit To Menu'); // or t('...') if you prefer localization
+        // notify iframe so it can block its own restart flow if needed
+        try { ev.source.postMessage({ type: 'kspt_restart_denied', reason: 'game_over_active' }, '*'); } catch(e){}
+        return;
+      }
+
+      // check tickets
+      if (!gameTickets || gameTickets.current < 1) {
+        showToast('Not enough tickets to restart');
+        try { ev.source.postMessage({ type: 'kspt_restart_denied', reason: 'no_tickets' }, '*'); } catch(e){}
+        return;
+      }
+
+      // confirm with user (parent UI)
+      const ok = confirm('Are you sure? Cost: 1 Ticket.');
+      if (!ok) {
+        try { ev.source.postMessage({ type: 'kspt_restart_canceled' }, '*'); } catch(e){}
+        return;
+      }
+
+      // consume 1 ticket and notify iframe to actually restart
+      gameTickets.current = Math.max(0, Number(gameTickets.current) - 1);
+      if (!gameTickets.nextRefill) gameTickets.nextRefill = Date.now() + REFILL_INTERVAL_MS;
+      saveTickets();
+      updateTicketsUI();
+
+      try { ev.source.postMessage({ type: 'kspt_restart_confirmed' }, '*'); } catch(e){}
+      return;
+    }
+
+    // iframe requests "Play Again" from Game Over tab (separate flow from restart)
+    if (data.type === 'kspt_request_play_again') {
+      // when in gameOverActive, Play Again is allowed only if tickets >= 1
+      if (!gameTickets || gameTickets.current < 1) {
+        showToast('Not enough tickets to play again');
+        try { ev.source.postMessage({ type: 'kspt_play_denied', reason: 'no_tickets' }, '*'); } catch(e){}
+        return;
+      }
+
+      // consume ticket and notify iframe it's allowed to start a fresh run
+      gameTickets.current = Math.max(0, Number(gameTickets.current) - 1);
+      if (!gameTickets.nextRefill) gameTickets.nextRefill = Date.now() + REFILL_INTERVAL_MS;
+      saveTickets();
+      updateTicketsUI();
+
+      try { ev.source.postMessage({ type: 'kspt_play_confirmed' }, '*'); } catch(e){}
+      // clear gameOver flag — iframe will set it again when it reaches Game Over next time
+      gameOverActive = false;
+      return;
+    }
+  } catch (e) {
+    console.warn('kspt message handler failed', e);
+  }
+  // ===== end KS messages =====
+
+  if (data.type === 'ekshop_update') {
+    try {
+      if (data.owned) {
+        localStorage.setItem('ekshop_owned', JSON.stringify(data.owned));
+      }
+
+      if (data.selected) {
+        localStorage.setItem('ekshop_selected', JSON.stringify(data.selected));
+
+        if (typeof d !== 'undefined') {
+          d.ekshop_selected = data.selected;
+          d.ekshop_owned = data.owned || {};
+
+          if (data.selected.skin) {
+            d.ekshopSkin = data.selected.skin;
+            d.skin = 'default';
+          }
+
+          if (data.selected.bg) {
+            d.ekshopBg = data.selected.bg;
+            d.bg = 'default';
+          }
+
+          try { save(); } catch(e){}
+        }
+
+        try { ui(); } catch(e){}
+        try { updateBackground(); } catch(e){}
+      }
+    } catch(err) {
+      console.warn('ekshop_update handler failed', err);
+    }
+  }
+});
 
 // Запуск игры
 initGame();

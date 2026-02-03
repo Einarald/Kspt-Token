@@ -423,9 +423,13 @@ function safeAwardGameEK(amount, x = 0, y = 0) {
 
         // ================= GAME VARIABLES =================
         const canvas = document.getElementById('gameCanvas');
-        const ctx = canvas.getContext('2d');
-        const previewContainer = document.getElementById('previewContainer');
-        const linesEl = document.getElementById('lines');
+function getVisualCellSize() {
+  const rect = canvas.getBoundingClientRect();
+  return rect.width / GRID_SIZE;
+}
+const ctx = canvas.getContext('2d');
+const previewContainer = document.getElementById('previewContainer');
+const linesEl = document.getElementById('lines');
         const levelEl = document.getElementById('level');
         const comboEl = document.getElementById('combo');
         const gameOverScreen = document.getElementById('gameOverScreen');
@@ -973,13 +977,15 @@ function safeAwardGameEK(amount, x = 0, y = 0) {
                         previewCell.className = 'preview-cell';
                         if (!canPlace) previewCell.classList.add('invalid');
                         
-                        const cellX = (gridX + x) * CELL_SIZE;
-                        const cellY = (gridY + y) * CELL_SIZE;
-                        
-                        previewCell.style.left = `${cellX}px`;
-                        previewCell.style.top = `${cellY}px`;
-                        previewCell.style.width = `${CELL_SIZE}px`;
-                        previewCell.style.height = `${CELL_SIZE}px`;
+                        const visualCell = getVisualCellSize();
+
+const cellX = (gridX + x) * visualCell;
+const cellY = (gridY + y) * visualCell;
+
+previewCell.style.left = `${cellX}px`;
+previewCell.style.top = `${cellY}px`;
+previewCell.style.width = `${visualCell}px`;
+previewCell.style.height = `${visualCell}px`;
                         
                         previewContainer.appendChild(previewCell);
                     }
@@ -1167,8 +1173,9 @@ function safeAwardGameEK(amount, x = 0, y = 0) {
             
             // Update placement preview
             const rect = canvas.getBoundingClientRect();
-            const gridX = Math.floor((clientX - rect.left) / CELL_SIZE);
-            const gridY = Math.floor((clientY - rect.top) / CELL_SIZE);
+            const visualCell = getVisualCellSize();
+const gridX = Math.floor((clientX - rect.left) / visualCell);
+const gridY = Math.floor((clientY - rect.top) / visualCell);
             
             // Only update if grid position changed
             if (gridX !== draggedBlock.lastGridX || gridY !== draggedBlock.lastGridY) {
@@ -1186,8 +1193,9 @@ function safeAwardGameEK(amount, x = 0, y = 0) {
             
             if (clientX && clientY) {
                 const rect = canvas.getBoundingClientRect();
-                const gridX = Math.floor((clientX - rect.left) / CELL_SIZE);
-                const gridY = Math.floor((clientY - rect.top) / CELL_SIZE);
+                const visualCell = getVisualCellSize();
+const gridX = Math.floor((clientX - rect.left) / visualCell);
+const gridY = Math.floor((clientY - rect.top) / visualCell);
                 
                 const block = currentBlocks[draggedBlock.index];
                 if (block && canPlaceBlock(block.shape, gridX, gridY)) {
@@ -1216,8 +1224,9 @@ function safeAwardGameEK(amount, x = 0, y = 0) {
             
             if (!clientX || !clientY) return;
             
-            const gridX = Math.floor((clientX - rect.left) / CELL_SIZE);
-            const gridY = Math.floor((clientY - rect.top) / CELL_SIZE);
+            const visualCell = getVisualCellSize();
+const gridX = Math.floor((clientX - rect.left) / visualCell);
+const gridY = Math.floor((clientY - rect.top) / visualCell);
             
             const block = currentBlocks[selectedBlockIndex];
             if (block && canPlaceBlock(block.shape, gridX, gridY)) {
@@ -1454,5 +1463,90 @@ function safeAwardGameEK(amount, x = 0, y = 0) {
         // ================= INITIALIZE GAME =================
         initGame();
     </script>
+
+<script>
+(function(){
+  const BASE_W = 360;   // дизайн игры (тот, что у тебя в canvas width)
+  const BASE_H = 360;   // высота игрового поля — подправь если у тебя другое значение
+
+  function fitGameUI() {
+    const container = document.querySelector('.game-container') || document.body;
+    const header = document.querySelector('.game-header');
+    const headerH = header ? header.getBoundingClientRect().height : 0;
+
+    const availW = window.innerWidth;
+    const availH = window.innerHeight - headerH - 12; // немного запаса
+
+    // Вычисляем масштаб — чтобы всё поместилось: джойстик + кнопки + канвас
+    const scale = Math.min(availW / BASE_W, availH / (BASE_H + 160)); 
+    // (160 — пример зоны под джойстик+кнопки; если у тебя меньше/больше — поменяй)
+
+    // Применяем через CSS transform OR (лучше) масштабируем canvas и элементы напрямую:
+    // 1) если у тебя canvas с id gameCanvas — меняем его размеры пропорционально
+    const canvas = document.getElementById('gameCanvas');
+    if (canvas) {
+      canvas.style.width = Math.round(BASE_W * scale) + 'px';
+      canvas.style.height = Math.round(BASE_H * scale) + 'px';
+      // если внутри игры используются canvas.width/canvas.height — обнови их тоже
+      if (!canvas.dataset.kspt_scaled) {
+        // если внутренняя логика использует canvas.width (pixel buffer),
+        // оставь canvas.width = BASE_W * devicePixelRatio, но визуально меняем style
+        canvas.dataset.kspt_scaled = '1';
+      }
+    }
+
+    // 2) джойстик и кнопки — масштабируем wrapper
+    const joystick = document.getElementById('joystickArea');
+    if (joystick) {
+      joystick.style.transformOrigin = 'top center';
+      joystick.style.transform = `scale(${scale})`;
+      joystick.style.margin = '8px auto';
+    }
+
+    const btnRow = document.querySelector('.game-buttons') || document.querySelector('.game-buttons-row');
+    if (btnRow) {
+      btnRow.style.transformOrigin = 'top center';
+      btnRow.style.transform = `scale(${scale})`;
+      btnRow.style.marginTop = '10px';
+    }
+
+    // 3) центрируем контейнер
+    if (container) {
+      container.style.width = Math.round(BASE_W * scale) + 'px';
+      container.style.margin = '0 auto';
+      container.classList.add('kspt-safe-bottom');
+    }
+  }
+
+  // listen parent message to force recalculation (parent посылает размеры)
+  window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d && d.type === 'kspt_parent_viewport') {
+      // для точности — делаем fit через 50ms (после отрисовки)
+      setTimeout(fitGameUI, 50);
+    }
+  });
+
+  // resize on orientation / window resize
+  window.addEventListener('resize', fitGameUI);
+  window.addEventListener('orientationchange', () => setTimeout(fitGameUI, 120));
+  window.addEventListener('load', () => setTimeout(fitGameUI, 80));
+
+  // additionally: prevent overscroll inside iframe (iOS)
+  document.addEventListener('touchmove', function(e){
+    // allow touch for game controls (they are inside this iframe) — не отменяем,
+    // но предотвращаем внутреннюю "резину" страницы, если цель — не элемент управления.
+    // Если нужно сделать более тонко — можно разрешить touchmove для .joystick-bg:
+    const el = e.target;
+    if (el.closest && (el.closest('.joystick-bg') || el.closest('.game-buttons') || el.closest('canvas'))) {
+      // allow normal game interaction
+      return;
+    }
+    // otherwise prevent page overscroll
+    e.preventDefault();
+  }, { passive: false });
+})();
+</script>
+
 </body>
 </html>

@@ -242,6 +242,61 @@ function consumeTicketForCurrentGame() {
 // ОБЩИЕ ИГРОВЫЕ ФУНКЦИИ
 // ==========================================
 
+// ------------------------
+// Mobile game mode helpers
+// Paste this ABOVE function startGame(...) in js/games.js
+// ------------------------
+function enableMobileGameMode(iframe) {
+  try {
+    // Lock scroll / prevent overscroll
+    document.documentElement.style.overscrollBehavior = 'none';
+    document.body.style.overflow = 'hidden';
+    document.body.style.touchAction = 'none';
+
+    // add a class to body so CSS can adjust if needed
+    document.body.classList.add('kspt-mobile-game');
+
+    // compute a reasonable bottom-safe shrink in px (12% of height, clamped)
+    const shrink = Math.min(120, Math.max(64, Math.round(window.innerHeight * 0.12)));
+    const frameHolder = document.getElementById('gameFrameContainer') || iframe.parentElement;
+
+    if (frameHolder) {
+      frameHolder.style.paddingBottom = shrink + 'px';
+      // force iframe to fit into visible area
+      iframe.style.height = `calc(100vh - ${shrink}px)`;
+      iframe.style.display = 'block';
+      iframe.style.width = '100%';
+      iframe.style.maxHeight = '100%';
+    }
+    // small delay to ensure layout settles on iOS
+    setTimeout(() => window.scrollTo(0,0), 50);
+  } catch (e) {
+    console.warn('enableMobileGameMode failed', e);
+  }
+}
+
+function disableMobileGameMode() {
+  try {
+    document.documentElement.style.overscrollBehavior = '';
+    document.body.style.overflow = '';
+    document.body.style.touchAction = '';
+    document.body.classList.remove('kspt-mobile-game');
+
+    const frameHolder = document.getElementById('gameFrameContainer');
+    if (frameHolder) {
+      frameHolder.style.paddingBottom = '';
+      const iframe = frameHolder.querySelector('iframe');
+      if (iframe) {
+        iframe.style.height = '';
+        iframe.style.width = '';
+        iframe.style.maxHeight = '';
+      }
+    }
+  } catch (e) {
+    console.warn('disableMobileGameMode failed', e);
+  }
+}
+
 function startGame(gameType) {
   if (gameTickets.current <= 0) {
     showToast("Not enough tickets!");
@@ -268,33 +323,38 @@ function startGame(gameType) {
   }
 
   // iframe
-  const container = document.getElementById('gameFrameContainer');
-  container.innerHTML = `<iframe class="game-frame" src="games/${gameType}.html" allow="autoplay"></iframe>`;
-  const iframe = container.querySelector('iframe');
+const container = document.getElementById('gameFrameContainer');
+container.innerHTML = `<iframe class="game-frame" src="games/${gameType}.html" allow="autoplay"></iframe>`;
+const iframe = container.querySelector('iframe');
 
-  iframe.addEventListener('load', () => {
+iframe.addEventListener('load', () => {
+  try {
+    const hourly = (typeof getHourlyRate === 'function') ? getHourlyRate() : 0;
+    iframe.contentWindow.postMessage({ type: 'kspt_init', hourly }, '*');
+  } catch(e) {
+    console.warn('iframe init postMessage failed', e);
+  }
+
+  try { enableMobileGameMode(iframe); } catch(e){}
+
+  if (window.__kspt_hourly_updater) clearInterval(window.__kspt_hourly_updater);
+
+  window.__kspt_hourly_updater = setInterval(() => {
     try {
       const hourly = (typeof getHourlyRate === 'function') ? getHourlyRate() : 0;
-      iframe.contentWindow.postMessage({ type: 'kspt_init', hourly }, '*');
-    } catch(e) {
-      console.warn('iframe init postMessage failed', e);
-    }
-
-    if (window.__kspt_hourly_updater) clearInterval(window.__kspt_hourly_updater);
-
-    window.__kspt_hourly_updater = setInterval(() => {
-      try {
-        const hourly = (typeof getHourlyRate === 'function') ? getHourlyRate() : 0;
-        iframe.contentWindow.postMessage({ type: 'kspt_hourly_update', hourly }, '*');
-      } catch(e){}
-    }, 5000);
-  });
+      iframe.contentWindow.postMessage({ type: 'kspt_hourly_update', hourly }, '*');
+    } catch(e){}
+  }, 5000);
+});
 
   gameActive = true;
   startGameLoop();
 }
 
 function exitGame() {
+
+  try { disableMobileGameMode(); } catch(e){}
+
   try {
     // Останавливаем игровой флаг и главный цикл
     gameActive = false;

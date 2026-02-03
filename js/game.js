@@ -6958,19 +6958,24 @@ function startGame(name){
 
   frameHolder.appendChild(iframe);
 
-  // показать экран игры
-  // Если у тебя есть функция openScreen(name) — можно её вызвать:
-  if(typeof openScreen === 'function'){ openScreen('gameContainer'); }
-  else { container.style.display = 'block'; }
+iframe.addEventListener('load', () => {
+  try { enableMobileGameMode(iframe); } catch(e){}
+});
+
+// показать экран игры
+if (typeof openScreen === 'function') { openScreen('gameContainer'); }
+else { container.style.display = 'block'; }
 
   // (опционально) фокус на iframe
   setTimeout(()=> iframe.contentWindow && iframe.contentWindow.focus(), 300);
 }
 
 function exitGame(){
+  try { disableMobileGameMode(); } catch(e){}
+
   const frameHolder = document.getElementById('gameFrameContainer');
   const container = document.getElementById('gameContainer');
-  if(frameHolder) frameHolder.innerHTML = ''; // удаляем iframe — освобождает память
+  if(frameHolder) frameHolder.innerHTML = ''; // удаляем iframe
   if(typeof openScreen === 'function'){ openScreen('games'); } // вернуться в список игр, если есть
   else if(container) container.style.display = 'none';
 }

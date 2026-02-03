@@ -1569,6 +1569,33 @@ input:checked + .toggle-slider:before {
   cursor: not-allowed;
 }
 
+/* вставь рядом с глобальным стилем body */
+body.kspt-game-active{
+  position: fixed;
+  left: 0;
+  right: 0;
+  width: 100%;
+  overflow: hidden !important;
+  touch-action: none !important;
+  -webkit-user-select: none !important;
+  overscroll-behavior: none !important;
+}
+
+/* safe bottom padding helper (для джойстика) */
+.kspt-safe-bottom { padding-bottom: env(safe-area-inset-bottom, 12px); }
+
+/* Mobile-game helper (applied when enableMobileGameMode called) */
+.kspt-mobile-game {
+  overscroll-behavior: none;
+  -webkit-overflow-scrolling: auto;
+}
+
+/* Optional shrink visual (если захочешь включать класс) */
+#gameFrameContainer.kspt-shrink {
+  transform-origin: top center;
+  transition: transform 150ms ease;
+}
+
 </style>
 </head>
 

@@ -2,9 +2,24 @@
 <html>
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
     <title>Ping Pong - KSPT</title>
     <style>
+/* ===== SAFE AREA FIX (iPhone notch + home bar) ===== */
+html, body {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-top: env(safe-area-inset-top, 0);
+  box-sizing: border-box;
+}
+
+.kspt-safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+}
+
+.game-buttons {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+}
+
         body {
             margin: 0;
             padding: 0;
@@ -454,7 +469,8 @@ function safeGetOfflinePercent(percent) {
             let deltaY = clientY - centerY;
             
             // Limit to joystick bounds
-            const maxDistance = rect.width / 2 - 20;
+            const base = Math.min(rect.width, rect.height);
+const maxDistance = Math.max(1, Math.floor(base / 2) - 20);
             const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
             
             if (distance > maxDistance) {
@@ -466,7 +482,8 @@ function safeGetOfflinePercent(percent) {
             joystickCenter.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
             
             // Calculate direction (-1 to 1)
-            joystickDirection = deltaY / maxDistance;
+            let rawDir = deltaY / maxDistance;
+joystickDirection = Math.max(-1, Math.min(1, rawDir));
         }
 
         // Game functions
@@ -869,11 +886,16 @@ function gameVibrate(pattern) {
 
     // 2) джойстик и кнопки — масштабируем wrapper
     const joystick = document.getElementById('joystickArea');
-    if (joystick) {
-      joystick.style.transformOrigin = 'top center';
-      joystick.style.transform = `scale(${scale})`;
-      joystick.style.margin = '8px auto';
-    }
+if (joystick) {
+  const BASE_JOYSTICK = 150;
+  const size = Math.max(50, Math.round(BASE_JOYSTICK * scale));
+
+  joystick.style.width = size + 'px';
+  joystick.style.height = size + 'px';
+  joystick.style.margin = '8px auto';
+
+  joystick.style.transform = '';
+}
 
     const btnRow = document.querySelector('.game-buttons') || document.querySelector('.game-buttons-row');
     if (btnRow) {

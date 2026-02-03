@@ -2,9 +2,24 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>Snake Game - KSPT</title>
 <style>
+/* ===== SAFE AREA FIX (iPhone notch + home bar) ===== */
+html, body {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-top: env(safe-area-inset-top, 0);
+  box-sizing: border-box;
+}
+
+.kspt-safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+}
+
+.game-buttons {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+}
+
 :root { --accent: #00bcd4; --accent-2: #00e676; --bg:#111; --panel:#0b0b0b; }
 *{box-sizing:border-box}
 body{margin:0;padding:0;background:#000;color:#fff;font-family:Arial, sans-serif;overflow:hidden;}
@@ -573,7 +588,6 @@ function gameLoop(ts){
             accumulator -= moveInterval;
         }
     } else {
-        // ⭐ ВАЖНО — чистим накопленное время
         accumulator = 0;
     }
 
@@ -598,6 +612,8 @@ sessionEK = 0;
     score = 0;
     snakeLength = 3;
     moveInterval = 100;
+    lastTimestamp = performance.now();
+    accumulator = 0;
     gameRunning = true;
     gamePaused = false;
     sessionEK = 0;
@@ -784,11 +800,16 @@ window.addEventListener('load', initGame);
 
     // 2) джойстик и кнопки — масштабируем wrapper
     const joystick = document.getElementById('joystickArea');
-    if (joystick) {
-      joystick.style.transformOrigin = 'top center';
-      joystick.style.transform = `scale(${scale})`;
-      joystick.style.margin = '8px auto';
-    }
+if (joystick) {
+  const BASE_JOYSTICK = 150;
+  const size = Math.max(50, Math.round(BASE_JOYSTICK * scale));
+
+  joystick.style.width = size + 'px';
+  joystick.style.height = size + 'px';
+  joystick.style.margin = '8px auto';
+
+  joystick.style.transform = '';
+}
 
     const btnRow = document.querySelector('.game-buttons') || document.querySelector('.game-buttons-row');
     if (btnRow) {
@@ -832,6 +853,36 @@ window.addEventListener('load', initGame);
     // otherwise prevent page overscroll
     e.preventDefault();
   }, { passive: false });
+})();
+
+// ===== SWIPE CONTROL FOR SNAKE =====
+(function(){
+  const canvasEl = document.getElementById('gameCanvas') || document.querySelector('canvas');
+  if (!canvasEl) return;
+
+  let start = null;
+  const THRESH = 30;
+
+  canvasEl.addEventListener('touchstart', e=>{
+    const t = e.touches[0];
+    start = {x:t.clientX,y:t.clientY};
+  }, {passive:true});
+
+  canvasEl.addEventListener('touchend', e=>{
+    if(!start) return;
+    const t = e.changedTouches[0];
+    const dx = t.clientX - start.x;
+    const dy = t.clientY - start.y;
+    start = null;
+
+    if(Math.abs(dx) > Math.abs(dy)){
+      if(dx > THRESH && direction.x !== -1) direction={x:1,y:0};
+      if(dx < -THRESH && direction.x !== 1) direction={x:-1,y:0};
+    }else{
+      if(dy > THRESH && direction.y !== -1) direction={x:0,y:1};
+      if(dy < -THRESH && direction.y !== 1) direction={x:0,y:-1};
+    }
+  }, {passive:true});
 })();
 </script>
 

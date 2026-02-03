@@ -2,9 +2,24 @@
 <html lang="ru">
 <head>
 <meta charset="utf-8" />
-<meta name="viewport" content="width=device-width,initial-scale=1.0,maximum-scale=1.0,user-scalable=no" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
 <title>Slither: KSPT Mode</title>
 <style>
+/* ===== SAFE AREA FIX (iPhone notch + home bar) ===== */
+html, body {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-top: env(safe-area-inset-top, 0);
+  box-sizing: border-box;
+}
+
+.kspt-safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+}
+
+.game-buttons {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+}
+
 :root { 
     --accent: #00bcd4; 
     --accent-2: #00e676; 
@@ -759,6 +774,9 @@ function initGame() {
     gameOverScreen.style.display = 'none';
     
     if (animationId) cancelAnimationFrame(animationId);
+
+   __lastFrameTS = performance.now(); 
+
     animationId = requestAnimationFrame(gameLoop);
 }
 
@@ -1909,12 +1927,22 @@ function distance(x1, y1, x2, y2) {
 }
 
 /* ========== ИГРОВОЙ ЦИКЛ ========== */
-function gameLoop() {
-    updateGame();
+let __lastFrameTS = 0;
+
+function gameLoop(ts) {
+
+    if (!__lastFrameTS) __lastFrameTS = ts || performance.now();
+
+    let dt = (ts || performance.now()) - __lastFrameTS;
+
+    if (dt > 100) dt = 100;
+
+    __lastFrameTS = ts || performance.now();
+
+    updateGame(dt);
     draw();
     animationId = requestAnimationFrame(gameLoop);
 }
-
 /* ========== УПРАВЛЕНИЕ ========== */
 // Ускорение
 document.getElementById('boostBtn').addEventListener('mousedown', () => {
@@ -2053,11 +2081,16 @@ window.addEventListener('load', startGame);
 
     // 2) джойстик и кнопки — масштабируем wrapper
     const joystick = document.getElementById('joystickArea');
-    if (joystick) {
-      joystick.style.transformOrigin = 'top center';
-      joystick.style.transform = `scale(${scale})`;
-      joystick.style.margin = '8px auto';
-    }
+if (joystick) {
+  const BASE_JOYSTICK = 150;
+  const size = Math.max(50, Math.round(BASE_JOYSTICK * scale));
+
+  joystick.style.width = size + 'px';
+  joystick.style.height = size + 'px';
+  joystick.style.margin = '8px auto';
+
+  joystick.style.transform = '';
+}
 
     const btnRow = document.querySelector('.game-buttons') || document.querySelector('.game-buttons-row');
     if (btnRow) {

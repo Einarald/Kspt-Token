@@ -6944,7 +6944,7 @@ function startGame(name){
   const iframe = document.createElement('iframe');
   iframe.id = 'gameIframe';
   iframe.style.width = '100%';
-  iframe.style.height = 'calc(100vh - 64px)'; // подогнать под высоту шапки; при желании поменяй
+  iframe.style.height = 'calc(100vh - 64px - env(safe-area-inset-bottom,0px))';
   iframe.style.border = '0';
   iframe.allow = 'fullscreen'; // если нужно
 

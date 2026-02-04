@@ -781,16 +781,19 @@ function initGame() {
 }
 
 /* ========== ОБНОВЛЕНИЕ ИГРЫ ========== */
-function updateGame() {
+function updateGame(dt = 16.6667) {
     if (!gameRunning || gamePaused) return;
-    
-    // Плавное обновление камеры
+
+    // нормализация по времени: база = 16.6667 ms (60 FPS)
+    const frameScale = (typeof dt === 'number' && dt > 0) ? Math.min(dt, 100) / 16.6667 : 1;
+
+    // Плавное обновление камеры (оставляем как было)
     const targetCameraX = player.x - VIEW_WIDTH / 2;
     const targetCameraY = player.y - VIEW_HEIGHT / 2;
-    
+
     cameraX += (targetCameraX - cameraX) * 0.1;
     cameraY += (targetCameraY - cameraY) * 0.1;
-    
+
     cameraX = Math.max(0, Math.min(cameraX, GAME_WIDTH - VIEW_WIDTH));
     cameraY = Math.max(0, Math.min(cameraY, GAME_HEIGHT - VIEW_HEIGHT));
     
@@ -811,8 +814,8 @@ function updateGame() {
     }
     
     // Обновление позиции игрока
-    player.x += Math.cos(player.angle) * player.speed;
-    player.y += Math.sin(player.angle) * player.speed;
+    player.x += Math.cos(player.angle) * player.speed * frameScale;
+    player.y += Math.sin(player.angle) * player.speed * frameScale;
     
     player.x = Math.max(50, Math.min(player.x, GAME_WIDTH - 50));
     player.y = Math.max(50, Math.min(player.y, GAME_HEIGHT - 50));
@@ -862,7 +865,7 @@ function updateGame() {
     updateRadar();
 }
 
-function updateAI() {
+function updateAI(frameScale = 1) {
     const now = Date.now();
     const ORB_SEARCH_RADIUS = 400;
     const PREY_SEARCH_RADIUS = 300;
@@ -1120,8 +1123,8 @@ function updateAI() {
         }
         
         // Движение
-        ai.x += Math.cos(ai.angle) * ai.speed;
-        ai.y += Math.sin(ai.angle) * ai.speed;
+        ai.x += Math.cos(ai.angle) * ai.speed * frameScale;
+        ai.y += Math.sin(ai.angle) * ai.speed * frameScale;
         
         // Границы
         ai.x = Math.max(50, Math.min(ai.x, GAME_WIDTH - 50));

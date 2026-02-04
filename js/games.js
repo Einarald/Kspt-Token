@@ -163,22 +163,18 @@ function loadTickets() {
   applyRefillOnLoad();
 }
 
+// new behavior: when refill moment arrives, if tickets < max => set to max (not +1)
 function applyRefillOnLoad() {
   if (!gameTickets.nextRefill) return;
 
   const now = Date.now();
   if (now >= gameTickets.nextRefill) {
-    const delta = now - gameTickets.nextRefill;
-    const add = 1 + Math.floor(delta / REFILL_INTERVAL_MS);
-
-    gameTickets.current = Math.min(gameTickets.max, gameTickets.current + add);
-
-    if (gameTickets.current >= gameTickets.max) {
-      gameTickets.nextRefill = 0;
-    } else {
-      gameTickets.nextRefill += add * REFILL_INTERVAL_MS;
+    // если у игрока меньше максимума — ставим ровно max
+    if (gameTickets.current < gameTickets.max) {
+      gameTickets.current = gameTickets.max;
     }
-
+    // очистим nextRefill — дальше пополнение начнётся заново при списании билетов
+    gameTickets.nextRefill = 0;
     saveTickets();
   }
 }
@@ -187,22 +183,23 @@ function updateTicketsUI() {
   const now = Date.now();
 
   if (gameTickets.current < gameTickets.max) {
+    // если не запланирован refill — запланировать через 24ч (обычная логика)
     if (!gameTickets.nextRefill) {
       gameTickets.nextRefill = now + REFILL_INTERVAL_MS;
       saveTickets();
     }
 
+    // если время настало — НЕ прибавляем +1, а делаем current = max
     if (now >= gameTickets.nextRefill) {
-      gameTickets.current++;
-      if (gameTickets.current >= gameTickets.max) {
-        gameTickets.nextRefill = 0;
-      } else {
-        gameTickets.nextRefill += REFILL_INTERVAL_MS;
+      if (gameTickets.current < gameTickets.max) {
+        gameTickets.current = gameTickets.max;
       }
+      gameTickets.nextRefill = 0;
       saveTickets();
     }
   }
 
+  // --- DOM update (без изменений) ---
   const ticketCountElem = document.getElementById('ticketCount');
   const ticketsLeftElem = document.getElementById('ticketsLeft');
   if (ticketCountElem) ticketCountElem.textContent = gameTickets.current;

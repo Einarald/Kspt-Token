@@ -22,7 +22,7 @@ const FALLBACK_IVENTS = [
       { "day": 3, "type": "noobBox", "name": "Нуб Бокс" },
       { "day": 4, "type": "capsule", "name": "Капсула" },
       { "day": 5, "type": "noobBox", "name": "2 Нуб Бокса", "count": 2 },
-      { "day": 6, "type": "capsule", "name": "Капсула + Нуб Бокс" },
+      { "day": 6, "type": "capsule", "name": "Капсула" },
       { "day": 7, "type": "goldCapsule", "name": "Золотая капсула" }
     ],
     "finalReward": {
@@ -49,7 +49,7 @@ async function loadIvents() {
   } catch (error) {
     console.warn('Ошибка загрузки событий, используем fallback:', error);
     // Используем fallback для локального тестирования
-    currentIvent = null;
+    currentIvent = FALLBACK_IVENTS[0];
   }
 
   if (!currentIvent) {
@@ -7276,7 +7276,7 @@ function loadIventsDirect() {
   if (!container) return;
 
   // Используем FALLBACK_IVENTS напрямую
-  currentIvent = null;
+  currentIvent = FALLBACK_IVENTS[0];
 
   if (!currentIvent) {
     container.innerHTML = '<div class="ivent-info">' + t('ivent_no_events') + '</div>';
@@ -7299,7 +7299,7 @@ async function loadIvents() {
     currentIvent = events[0] || FALLBACK_IVENTS[0];
   } catch (error) {
     console.warn('Ошибка загрузки событий, используем fallback:', error);
-    currentIvent = null;
+    currentIvent = FALLBACK_IVENTS[0];
   }
 
   if (!currentIvent) {
@@ -7408,10 +7408,20 @@ html += `<div class="ivent-countdown" id="iventCountdownWrapper" style="display:
   Скоро? <span id="iventCountdown">00:00:00</span>
 </div>`;
 
-    container.innerHTML = html;
+      container.innerHTML = html;
 
-  // Запустить/обновить таймер до следующей доступной награды (если нужно)
-  startIventCountdown(ivent);
+  // Запустить таймер только если реально осталось время до следующей награды.
+  // Это предотвращает бесконечную рекурсию renderIvent <-> startIventCountdown.
+  const progressCheck = d.ivents && d.ivents[ivent.id] ? d.ivents[ivent.id] : { claimedDays: [], lastClaimDate: null };
+  const ms24 = 24 * 60 * 60 * 1000;
+  if (progressCheck.lastClaimDate && (Date.now() - progressCheck.lastClaimDate) < ms24) {
+    // если ещё не прошло 24 часа — запускаем отсчёт
+    startIventCountdown(ivent);
+  } else {
+    // иначе спрячем контейнер таймера (если он есть) — и не запускаем new countdown
+    const wrap = document.getElementById('iventCountdownWrapper');
+    if (wrap) wrap.style.display = 'none';
+  }
 }
 
 let __iventCountdownInterval = null;
@@ -7439,13 +7449,23 @@ function startIventCountdown(ivent) {
     const remaining = ms24 - elapsed;
 
     // Если время вышло — остановить таймер и перерендерить событие
-    if (remaining <= 0) {
+        if (remaining <= 0) {
       const wrap = document.getElementById('iventCountdownWrapper');
       if (wrap) wrap.style.display = 'none';
+
       clearInterval(__iventCountdownInterval);
       __iventCountdownInterval = null;
-       renderIvent(ivent);
-      // перерисуем — теперь станет доступен следующий день
+
+      // Обновим интерфейс ОДИН раз, асинхронно — чтобы избежать вложенного
+      // синхронного вызова renderIvent -> startIventCountdown -> ...
+      setTimeout(() => {
+        try {
+          renderIvent(ivent);
+        } catch (e) {
+          console.warn('renderIvent after countdown failed', e);
+        }
+      }, 60);
+
       return;
     }
 

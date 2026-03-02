@@ -1,0 +1,956 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+    <title>Ping Pong - KSPT</title>
+    <style>
+/* ===== SAFE AREA FIX (iPhone notch + home bar) ===== */
+html, body {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-top: env(safe-area-inset-top, 0);
+  box-sizing: border-box;
+}
+
+.kspt-safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+}
+
+.game-buttons {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+}
+
+        body {
+            margin: 0;
+            padding: 0;
+            background: #000;
+            color: white;
+            font-family: Arial, sans-serif;
+            overflow: hidden;
+            touch-action: manipulation;
+            -webkit-tap-highlight-color: transparent;
+        }
+        
+        .game-container {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            height: 100vh;
+            padding: 10px;
+            background: linear-gradient(135deg, #0b0b0b 0%, #1a1a1a 100%);
+        }
+        
+        .game-header {
+            display: flex;
+            justify-content: space-between;
+            width: 100%;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: rgba(0, 0, 0, 0.5);
+            border-radius: 10px;
+            border: 1px solid #00bcd4;
+        }
+        
+        .game-title {
+            color: #00e676;
+            font-weight: bold;
+            font-size: 18px;
+        }
+        
+        .game-stats {
+            display: flex;
+            gap: 15px;
+            font-size: 14px;
+        }
+        
+        canvas {
+    background: #111;
+    border: 2px solid #00bcd4;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    image-rendering: pixelated;
+    box-sizing: border-box;
+}
+        
+        .joystick-container {
+            position: relative;
+            width: 150px;
+            height: 150px;
+            margin-top: 20px;
+        }
+        
+        .joystick-bg {
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 188, 212, 0.1);
+            border-radius: 50%;
+            position: relative;
+            border: 2px solid #00bcd4;
+        }
+        
+        .joystick-center {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 40px;
+            height: 40px;
+            background: #00bcd4;
+            border-radius: 50%;
+            box-shadow: 0 0 10px rgba(0, 188, 212, 0.5);
+        }
+        
+        .game-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+            width: 100%;
+            justify-content: center;
+        }
+        
+        .game-buttons button {
+            padding: 12px 22px;
+            background: linear-gradient(135deg, #00e5ff, #00bcd4);
+            color: #000;
+            border: none;
+            border-radius: 12px;
+            cursor: pointer;
+            font-weight: bold;
+            font-size: 15px;
+            letter-spacing: 0.5px;
+            box-shadow:
+                0 0 10px rgba(0, 188, 212, 0.6),
+                inset 0 0 6px rgba(255, 255, 255, 0.3);
+            transition: 
+                transform 0.12s ease,
+                box-shadow 0.12s ease,
+                filter 0.12s ease;
+        }
+
+        .game-buttons button:hover {
+            filter: brightness(1.15);
+        }
+
+        .game-buttons button:active {
+            transform: scale(0.94);
+            box-shadow:
+                0 0 4px rgba(0, 188, 212, 0.4),
+                inset 0 0 10px rgba(0, 0, 0, 0.3);
+        }
+        
+        .game-buttons button:active {
+            transform: scale(0.95);
+        }
+
+/* --- ARROW BUTTONS: match neon style of game-buttons but with fixed size --- */
+.arrow-btn {
+  width: 70px;
+  height: 55px;
+  font-size: 26px;
+  background: linear-gradient(135deg, #00e5ff, #00bcd4);
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: bold;
+  box-shadow:
+    0 0 10px rgba(0, 188, 212, 0.6),
+    inset 0 0 6px rgba(255, 255, 255, 0.3);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.arrow-btn:active {
+  transform: scale(0.95);
+  box-shadow:
+    0 0 4px rgba(0,188,212,0.4),
+    inset 0 0 10px rgba(0,0,0,0.3);
+}
+        
+        .game-over {
+            display: none;
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 30px;
+            border-radius: 15px;
+            border: 2px solid #00e676;
+            text-align: center;
+            z-index: 100;
+            width: 80%;
+            max-width: 300px;
+        }
+        
+        .game-over h2 {
+            color: #ff4081;
+            margin-top: 0;
+        }
+        
+        .earned {
+            color: #00e676;
+            font-weight: bold;
+            font-size: 24px;
+            margin: 15px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <div class="game-title">🏓 Ping Pong</div>
+            <div class="game-stats">
+                <div>Player: <span id="playerScore">0</span></div>
+                <div>AI: <span id="aiScore">0</span></div>
+                <div>Speed: <span id="speed">100%</span></div>
+            </div>
+        </div>
+        
+        <canvas id="gameCanvas" width="360" height="360"></canvas>
+        
+        <div id="arrowControls" class="game-buttons" style="gap:10px; justify-content:center; margin:10px 0;">
+  <button id="upBtn" class="arrow-btn">▲</button>
+  <button id="downBtn" class="arrow-btn">▼</button>
+</div>
+        
+        <div class="game-buttons">
+            <button id="pauseBtn">Pause</button>
+            <button id="restartBtn">Restart (-1)</button>
+            <button id="exitBtn">Exit</button>
+        </div>
+    </div>
+    
+    <div class="game-over" id="gameOverScreen">
+        <h2>Game Over!</h2>
+        <div>Player Score: <span id="finalPlayerScore">0</span></div>
+        <div>AI Score: <span id="finalAiScore">0</span></div>
+        <div class="earned">+<span id="earnedKSPT">0.00</span> KSPT</div>
+        <div class="earned">+<span id="earnedEK">0</span> EK</div>
+        <button id="playAgainBtn" style="background:#00e676; margin-bottom:10px;">Play Again</button>
+        <button id="exitToMenuBtn" style="background:#ff4081;">Exit to Menu</button>
+    </div>
+    
+    <script>
+/* ===== helper: проверка билетов (localStorage) ===== */
+function getLocalTicketCount() {
+  try {
+    const raw = localStorage.getItem('kspt_tickets');
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (data && typeof data.current === 'number') return data.current;
+    // иногда структура была { current: N } или { current: "N" }
+    if (data && data.current != null) return Number(data.current) || 0;
+  } catch (e) {
+    // если iframe cross-origin — не можем прочитать, вернём null (не мешаем)
+    return null;
+  }
+  return null;
+}
+
+function ensureHasTicketOrWarn() {
+  const c = getLocalTicketCount();
+  if (c === null) {
+    // не можем проверить — разрешаем рестарт (родитель может контролировать)
+    return true;
+  }
+  if (c <= 0) {
+    // если есть postMessage handler — сообщим родителю
+    try { (window.parent || window.top).postMessage({ type: 'kspt_no_tickets' }, '*'); } catch(e){}
+    // локальное сообщение / тост
+    try { showToast && showToast("Not enough tickets!"); } catch(e){ alert("Not enough tickets!"); }
+    return false;
+  }
+  return true;
+}
+
+        // ==========================================
+        // PING PONG GAME - JavaScript код (ОТЛАДЖЕН)
+        // ==========================================
+
+        // ================= SAFE HOST HELPERS =================
+function isSameOrigin(win) {
+  try { void win.location.href; return true; } catch (e) { return false; }
+}
+
+function safeAwardGameReward(amount, x = 0, y = 0) {
+  try {
+    if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.awardGameReward === 'function') {
+      window.top.awardGameReward(Number(amount) || 0, x, y);
+      return;
+    }
+  } catch (e) { console.warn('safeAwardGameReward direct call failed', e); }
+
+  try {
+    (window.parent || window.top).postMessage({ type: 'kspt_award_reward', reward: Number(amount) || 0, x, y }, '*');
+    return;
+  } catch (e) { console.warn('safeAwardGameReward postMessage failed', e); }
+
+  console.log('Local reward fallback', amount, x, y);
+}
+
+function safeAwardGameEK(amount, x = 0, y = 0) {
+  try {
+    if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.awardGameEK === 'function') {
+      window.top.awardGameEK(Number(amount) || 0, x, y); return;
+    }
+  } catch(e) {}
+  try {
+    (window.parent || window.top).postMessage({ type: 'ek_award', amount: Number(amount)||0, x, y }, '*'); return;
+  } catch(e){}
+  console.log('Local EK fallback', amount, x, y);
+}
+
+function safeConsumeTicket() {
+  try {
+    if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.consumeTicketForCurrentGame === 'function') {
+      window.top.consumeTicketForCurrentGame();
+      return;
+    }
+  } catch (e) { console.warn('safeConsumeTicket direct call failed', e); }
+
+  try { (window.parent || window.top).postMessage({ type: 'kspt_consume_ticket' }, '*'); return; } catch (e) { console.warn('consumeTicket postMessage failed', e); }
+
+  console.log('consumeTicket fallback (no parent handler)');
+}
+
+// Запрос выхода/закрытия игры к хосту
+function safeExitGame() {
+  try {
+    if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.exitGame === 'function') {
+      window.top.exitGame();
+      return;
+    }
+  } catch (e) { console.warn('safeExitGame direct call failed', e); }
+
+  try { (window.parent || window.top).postMessage({ type: 'kspt_exit_game' }, '*'); return; } catch (e) { console.warn('safeExitGame postMessage failed', e); }
+
+  console.log('exitGame fallback (no parent handler)');
+}
+
+// внутри игры (snake.html / pingpong.html)
+window.__kspt_hourly = window.__kspt_hourly || 0;
+
+window.addEventListener('message', (ev) => {
+  const msg = ev.data;
+  if (!msg || typeof msg !== 'object') return;
+
+  if (msg.type === 'kspt_init' || msg.type === 'kspt_hourly_update') {
+    const h = Number(msg.hourly) || 0;
+    window.__kspt_hourly = h;
+  }
+
+  if (msg.type === 'kspt_no_tickets') {
+  gameRunning = false;
+  gamePaused = true;
+
+  // показываем Game Over экран
+  const gos = document.getElementById('gameOverScreen');
+  if (gos) gos.style.display = 'block';
+
+  alert("Not enough tickets!");
+}
+
+  if (msg.type === 'kspt_parent_set_game_over' && msg.blockButtons) {
+    document.getElementById('pauseBtn')?.setAttribute('disabled','true');
+    document.getElementById('restartBtn')?.setAttribute('disabled','true');
+    document.getElementById('exitBtn')?.setAttribute('disabled','true');
+  }
+});
+
+// обновим safeGetOfflinePercent внутри игры (fallback на received hourly)
+function safeGetOfflinePercent(percent) {
+  try {
+    // сначала попробовать верхний HOST (same-origin)
+    if (typeof HOST !== 'undefined' && HOST !== window && typeof HOST.getOfflinePercent === 'function') {
+      return Number(HOST.getOfflinePercent(percent)) || 0;
+    }
+  } catch (e) { /* ignore */ }
+
+  // fallback: если получили hourly через postMessage
+  if (typeof window.__kspt_hourly === 'number') {
+    return Math.round((window.__kspt_hourly * (percent/100)) * 100) / 100;
+  }
+
+  // последний fallback: читать localStorage (если в iframe доступен)
+  try {
+    const raw = localStorage.getItem('kspt_data') || localStorage.getItem('d') || null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.offlineHourly === 'number') {
+        return Math.round((parsed.offlineHourly * (percent/100)) * 100) / 100;
+      }
+    }
+  } catch(e) {}
+
+  return 0;
+}
+
+        // ------------------------------------------
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const playerScoreEl = document.getElementById('playerScore');
+        const aiScoreEl = document.getElementById('aiScore');
+        const speedEl = document.getElementById('speed');
+        const gameOverScreen = document.getElementById('gameOverScreen');
+        const finalPlayerScoreEl = document.getElementById('finalPlayerScore');
+        const finalAiScoreEl = document.getElementById('finalAiScore');
+        const earnedKSPTEl = document.getElementById('earnedKSPT');
+        const earnedEKElem = document.getElementById('earnedEK');
+
+        // Game variables
+        let gameRunning = true;
+        let animationId = null;
+        let gamePaused = false;
+        let playerScore = 0;
+        let aiScore = 0;
+        let gameSpeed = 1.0;
+        let ballHits = 0;
+        let earnedKSPT = 0;
+        let sessionEK = 0; // Добавлено: счетчик EK за сессию
+        const floatingTexts = [];
+
+        // Paddle variables
+        const PADDLE_WIDTH = 10;
+        const PADDLE_HEIGHT = 60;
+        const PADDLE_SPEED = 5;
+
+        let playerPaddle = {
+            x: 20,
+            y: canvas.height / 2 - PADDLE_HEIGHT / 2,
+            width: PADDLE_WIDTH,
+            height: PADDLE_HEIGHT,
+            speed: PADDLE_SPEED
+        };
+
+        let aiPaddle = {
+            x: canvas.width - 30,
+            y: canvas.height / 2 - PADDLE_HEIGHT / 2,
+            width: PADDLE_WIDTH,
+            height: PADDLE_HEIGHT,
+            speed: PADDLE_SPEED * 0.85
+        };
+
+        // Ball variables
+        let ball = {
+            x: canvas.width / 2,
+            y: canvas.height / 2,
+            radius: 8,
+            speedX: 4,
+            speedY: 2,
+            color: '#00e676'
+        };
+
+        let joystickDirection = 0;
+
+// кнопки
+const upBtn = document.getElementById('upBtn');
+const downBtn = document.getElementById('downBtn');
+
+upBtn.addEventListener('pointerdown', (e)=>{
+  e.preventDefault();
+  joystickDirection = -1;
+});
+
+downBtn.addEventListener('pointerdown', (e)=>{
+  e.preventDefault();
+  joystickDirection = 1;
+});
+
+upBtn.addEventListener('contextmenu', e => e.preventDefault());
+downBtn.addEventListener('contextmenu', e => e.preventDefault());
+
+document.addEventListener('pointerup', ()=>{
+  joystickDirection = 0;
+});
+
+// клавиатура
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'ArrowUp') joystickDirection = -1;
+  if (e.key === 'ArrowDown') joystickDirection = 1;
+});
+
+document.addEventListener('keyup', (e)=>{
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown')
+    joystickDirection = 0;
+});
+
+        // Game functions
+        function resetBall() {
+    ball.x = canvas.width / 2;
+    ball.y = canvas.height / 2;
+
+    // Базовая скорость — НЕ умножаем на gameSpeed здесь
+    ball.speedX = (Math.random() > 0.5 ? 1 : -1) * 4;
+    ball.speedY = (Math.random() * 2 - 1) * 3;
+}
+
+        function updatePaddles(frameScale = 1) {
+            // Update player paddle based on joystick
+            playerPaddle.y += joystickDirection * playerPaddle.speed * gameSpeed * frameScale;
+            
+            // Keep paddle in bounds
+            if (playerPaddle.y < 0) playerPaddle.y = 0;
+            if (playerPaddle.y > canvas.height - playerPaddle.height) {
+                playerPaddle.y = canvas.height - playerPaddle.height;
+            }
+            
+            // AI paddle follows ball
+            const aiPaddleCenter = aiPaddle.y + aiPaddle.height / 2;
+            if (aiPaddleCenter < ball.y - 10) {
+    aiPaddle.y += aiPaddle.speed * gameSpeed * frameScale;
+} else if (aiPaddleCenter > ball.y + 10) {
+    aiPaddle.y -= aiPaddle.speed * gameSpeed * frameScale;
+}
+            
+            // Keep AI paddle in bounds
+            if (aiPaddle.y < 0) aiPaddle.y = 0;
+            if (aiPaddle.y > canvas.height - aiPaddle.height) {
+                aiPaddle.y = canvas.height - aiPaddle.height;
+            }
+        }
+   
+        function spawnFloatingText(text, x, y, color = '#00e676') {
+            floatingTexts.push({
+                text,
+                x,
+                y,
+                alpha: 1,
+                rise: 0,
+                color
+            });
+        }
+
+        function updateBall(frameScale = 1) {
+            // Move ball
+            ball.x += ball.speedX * gameSpeed * frameScale;
+            ball.y += ball.speedY * gameSpeed * frameScale;
+            
+            // Ball collision with top wall
+if (ball.y - ball.radius < 0) {
+    ball.y = ball.radius; // вернуть внутрь
+    ball.speedY = Math.abs(ball.speedY);
+    playSound('bounce');
+    gameVibrate([50]);
+}
+
+// Ball collision with bottom wall
+if (ball.y + ball.radius > canvas.height) {
+    ball.y = canvas.height - ball.radius; // вернуть внутрь
+    ball.speedY = -Math.abs(ball.speedY);
+    playSound('bounce');
+    gameVibrate([50]);
+}
+            
+            // Ball collision with player paddle
+            if (ball.x - ball.radius < playerPaddle.x + playerPaddle.width &&
+                ball.x + ball.radius > playerPaddle.x &&
+                ball.y > playerPaddle.y &&
+                ball.y < playerPaddle.y + playerPaddle.height) {
+                
+                // Calculate hit position (from -1 to 1)
+                const hitPos = (ball.y - (playerPaddle.y + playerPaddle.height / 2)) / (playerPaddle.height / 2);
+                
+                // Change ball direction
+                ball.speedX = Math.abs(ball.speedX) * 1.008;
+                ball.speedY = hitPos * 5;
+                
+                // Make sure ball goes to the right
+                ball.x = playerPaddle.x + playerPaddle.width + ball.radius;
+                
+                // Award KSPT for hitting the ball (0.5% от offline income)
+                const reward = safeGetOfflinePercent(0.5);
+                earnedKSPT += reward;
+                spawnFloatingText(`+${reward.toFixed(2)}`, canvas.width / 2, canvas.height / 2, '#00e5ff');
+                safeAwardGameReward(reward, ball.x, ball.y);
+                
+                // При попадании мяча по ракетке игрока — шанс 1.3% +1 EK
+                if (Math.random() < 0.013) { // 1.3%
+                  sessionEK++;
+                  safeAwardGameEK(1, ball.x, ball.y);
+                  spawnFloatingText('+1 EK', ball.x - 10, ball.y - 10, '#ffd54f');
+                }
+                
+                playSound('apple');
+                gameVibrate([30]);
+            }        
+            // Ball collision with AI paddle
+            if (ball.x + ball.radius > aiPaddle.x &&
+                ball.x - ball.radius < aiPaddle.x + aiPaddle.width &&
+                ball.y > aiPaddle.y &&
+                ball.y < aiPaddle.y + aiPaddle.height) {
+                
+                const hitPos = (ball.y - (aiPaddle.y + aiPaddle.height / 2)) / (aiPaddle.height / 2);
+                
+                ball.speedX = -Math.abs(ball.speedX) * 1.05;
+                ball.speedY = hitPos * 5;
+                
+                ball.x = aiPaddle.x - ball.radius;
+                
+                ballHits++;
+                if (ballHits % 5 === 0) {
+                    gameSpeed = Math.min(gameSpeed + 0.03, 2.0);
+                    speedEl.textContent = Math.round(gameSpeed * 100) + '%';
+                }
+                
+                playSound('apple');
+                gameVibrate([30]);
+            }
+            
+            // Ball out of bounds (scoring)
+            if (ball.x - ball.radius < 0) {
+                // AI scores
+                aiScore++;
+                aiScoreEl.textContent = aiScore;
+                playSound('ai_goal');
+                gameVibrate([100, 50, 100]);
+                
+                if (aiScore >= 5) {
+                    endGame();
+                } else {
+                    resetBall();
+                }
+            } else if (ball.x + ball.radius > canvas.width) {
+                // Player scores
+                playerScore++;
+                playerScoreEl.textContent = playerScore;
+                
+                // Award KSPT for scoring
+                const reward = safeGetOfflinePercent(2.5);
+                earnedKSPT += reward;
+                spawnFloatingText(`+${reward.toFixed(2)}`, canvas.width / 2, canvas.height / 2, '#00e5ff');
+                safeAwardGameReward(reward, ball.x, ball.y);
+                playSound('player_goal');
+                gameVibrate([200, 100, 200]);
+                
+                if (playerScore >= 100) {
+                    endGame();
+                } else {
+                    resetBall();
+                }
+            }
+        }
+
+        function draw() {
+            // Clear canvas
+            ctx.fillStyle = '#111';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            
+            // Draw center line
+            ctx.strokeStyle = '#444';
+            ctx.lineWidth = 2;
+            ctx.setLineDash([5, 5]);
+            ctx.beginPath();
+            ctx.moveTo(canvas.width / 2, 0);
+            ctx.lineTo(canvas.width / 2, canvas.height);
+            ctx.stroke();
+            ctx.setLineDash([]);
+            
+            // Draw paddles
+            ctx.fillStyle = '#00bcd4';
+            ctx.fillRect(playerPaddle.x, playerPaddle.y, playerPaddle.width, playerPaddle.height);
+            
+            ctx.fillStyle = '#ff4081';
+            ctx.fillRect(aiPaddle.x, aiPaddle.y, aiPaddle.width, aiPaddle.height);
+            
+            // Draw ball
+            ctx.fillStyle = ball.color;
+            ctx.beginPath();
+            ctx.arc(ball.x, ball.y, ball.radius, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Draw score markers
+            ctx.fillStyle = '#00bcd4';
+            ctx.font = 'bold 20px Arial';
+            ctx.textAlign = 'center';
+            ctx.fillText(playerScore.toString(), canvas.width / 4, 30);
+            
+            ctx.fillStyle = '#ff4081';
+            ctx.fillText(aiScore.toString(), canvas.width * 3 / 4, 30);
+            
+            // Draw speed indicator
+            ctx.fillStyle = '#888';
+            ctx.font = '12px Arial';
+            ctx.fillText(`Speed: ${Math.round(gameSpeed * 100)}%`, canvas.width / 2, 30);
+            
+            // Draw ball hits
+            ctx.fillStyle = '#ff9800';
+            ctx.font = '10px Arial';
+            ctx.fillText(`Hits: ${ballHits}`, canvas.width / 2, canvas.height - 10);
+
+            // Floating rewards animation
+            for (let i = floatingTexts.length - 1; i >= 0; i--) {
+                const f = floatingTexts[i];
+
+                ctx.globalAlpha = f.alpha;
+                ctx.fillStyle = f.color;
+                ctx.font = 'bold 14px Arial';
+                ctx.textAlign = 'center';
+                ctx.fillText(f.text, f.x, f.y - f.rise);
+
+                f.rise += 0.5;
+                f.alpha -= 0.02;
+
+                if (f.alpha <= 0) {
+                    floatingTexts.splice(i, 1);
+                }
+            }
+            ctx.globalAlpha = 1;
+        }
+
+        function endGame() {
+  if (window.__kspt_gameOverHandled) return;
+  window.__kspt_gameOverHandled = true;
+
+  gameRunning = false;
+
+  // НЕ ДОБАВЛЯЕМ финальную награду, если награды уже начислялись по ходу игры.
+  // earnedKSPT += safeGetOfflinePercent(playerScore > aiScore ? 5 : 2);
+
+  finalPlayerScoreEl.textContent = playerScore;
+  finalAiScoreEl.textContent = aiScore;
+  earnedKSPTEl.textContent = earnedKSPT.toFixed(2);
+  
+  // Показываем количество EK
+  earnedEKElem.textContent = sessionEK;
+
+  // НЕ ВЫЗЫВАЕМ safeConsumeTicket() — билет уже списан при старте (games.js)
+  // safeConsumeTicket();
+
+  gameOverScreen.style.display = 'block';
+
+  if (playerScore > aiScore) {
+    playSound('win');
+    gameVibrate([200,100,200,100,200]);
+  } else {
+    playSound('lose');
+    gameVibrate([300,200,300]);
+  }
+
+  try { if (animationId) cancelAnimationFrame(animationId); } catch(e){}
+}
+
+let __lastTS = 0;
+
+function gameLoop(ts) {
+    if (!__lastTS) __lastTS = ts || performance.now();
+
+    let dt = (ts || performance.now()) - __lastTS;
+    if (dt > 100) dt = 100;
+
+    __lastTS = ts || performance.now();
+
+    const frameScale = dt / 16.6667; // база 60 FPS
+
+    if (!gamePaused && gameRunning) {
+        updatePaddles(frameScale);
+        updateBall(frameScale);
+        draw();
+    }
+
+    animationId = requestAnimationFrame(gameLoop);
+}
+
+        // Initialize game
+        function initGame() {
+            resetBall();
+            playerScore = 0;
+            aiScore = 0;
+            ballHits = 0;
+            gameSpeed = 1.0;
+            earnedKSPT = 0;
+            sessionEK = 0; // Сбрасываем счетчик EK
+            
+            playerScoreEl.textContent = '0';
+            aiScoreEl.textContent = '0';
+            speedEl.textContent = '100%';
+            
+            gameOverScreen.style.display = 'none';
+            gameRunning = true;
+            window.__kspt_gameOverHandled = false;
+            
+            // Reset paddle positions
+            playerPaddle.y = canvas.height / 2 - PADDLE_HEIGHT / 2;
+            aiPaddle.y = canvas.height / 2 - PADDLE_HEIGHT / 2;
+            
+            if (animationId) cancelAnimationFrame(animationId);
+            requestAnimationFrame(gameLoop);
+        }
+
+        // Button event listeners
+        document.getElementById('pauseBtn').addEventListener('click', function() {
+            gamePaused = !gamePaused;
+            this.textContent = gamePaused ? 'Resume' : 'Pause';
+            playSound('bounce');
+        });
+
+        document.getElementById('restartBtn').addEventListener('click', function() {
+  // Проверяем билеты локально
+  if (!ensureHasTicketOrWarn()) return;
+  
+  // Вместо прямого списания билета, запрашиваем новый раунд
+  // Родитель сам проверит билеты и спишет если нужно
+  try {
+    (window.parent || window.top).postMessage({ 
+      type: 'kspt_new_round'
+    }, '*');
+  } catch(e) {
+    console.warn('Failed to send new round message', e);
+  }
+  
+  // Запускаем игру
+  initGame();
+});
+
+document.getElementById('exitBtn').addEventListener('click', function() {
+    safeExitGame();
+});
+
+document.getElementById('playAgainBtn').addEventListener('click', function() {
+    gameOverScreen.style.display = 'none';
+
+    // сказать родителю: начинается новый раунд → нужен билет
+    try {
+        (window.parent || window.top).postMessage({ type: 'kspt_new_round' }, '*');
+    } catch(e){}
+
+    initGame();
+});
+
+document.getElementById('exitToMenuBtn').addEventListener('click', function() {
+    safeExitGame();
+});
+
+        // Заглушки для звуков и вибрации (если нет родительского окна)
+        function playSound(soundName) {
+            console.log('Sound:', soundName);
+        }
+
+        let userInteracted = false;
+
+// отмечаем первое взаимодействие (один раз)
+function markUserInteracted() {
+  userInteracted = true;
+}
+document.addEventListener('touchstart', markUserInteracted, { once: true, passive: true });
+document.addEventListener('mousedown', markUserInteracted, { once: true });
+
+function gameVibrate(pattern) {
+  if (!userInteracted) return; // браузер заблокирует вибрацию в неактивном фрейме
+  if (!('vibrate' in navigator)) return;
+  try {
+    navigator.vibrate(pattern);
+  } catch (e) {
+    // некоторые браузеры/сборки могут бросать интервенцию — просто игнорируем
+    console.warn('vibrate failed or blocked', e);
+  }
+}
+        // Локальная заглушка, НЕ обращаемся к window.top напрямую
+        window._local_awardGameReward = window._local_awardGameReward || function (reward, x, y) {
+          const r = Number(reward);
+          console.log('Reward awarded (local):', isNaN(r) ? reward : r.toFixed(2), 'KSPT at', x, y);
+        };
+
+        // Start the game
+        initGame();
+
+        // Handle visibility change (pause when tab not visible)
+        document.addEventListener('visibilitychange', function() {
+            if (document.hidden) {
+                gamePaused = true;
+                document.getElementById('pauseBtn').textContent = 'Resume';
+            }
+        });
+    </script>
+
+<script>
+(function(){
+  const BASE_W = 360;   // дизайн игры (тот, что у тебя в canvas width)
+  const BASE_H = 360;   // высота игрового поля — подправь если у тебя другое значение
+
+  function fitGameUI() {
+    const container = document.querySelector('.game-container') || document.body;
+    const header = document.querySelector('.game-header');
+    const headerH = header ? header.getBoundingClientRect().height : 0;
+
+    const availW = window.innerWidth;
+    const availH = window.innerHeight - headerH - 12; // немного запаса
+
+    // Вычисляем масштаб — чтобы всё поместилось: джойстик + кнопки + канвас
+    const scale = Math.min(availW / BASE_W, availH / (BASE_H + 160)); 
+    // (160 — пример зоны под джойстик+кнопки; если у тебя меньше/больше — поменяй)
+
+    // Применяем через CSS transform OR (лучше) масштабируем canvas и элементы напрямую:
+    // 1) если у тебя canvas с id gameCanvas — меняем его размеры пропорционально
+    const canvas = document.getElementById('gameCanvas');
+    if (canvas) {
+      canvas.style.width = Math.round(BASE_W * scale) + 'px';
+      canvas.style.height = Math.round(BASE_H * scale) + 'px';
+      // если внутри игры используются canvas.width/canvas.height — обнови их тоже
+      if (!canvas.dataset.kspt_scaled) {
+        // если внутренняя логика использует canvas.width (pixel buffer),
+        // оставь canvas.width = BASE_W * devicePixelRatio, но визуально меняем style
+        canvas.dataset.kspt_scaled = '1';
+      }
+    }
+
+    // 2) джойстик и кнопки — масштабируем wrapper
+    const joystick = document.getElementById('joystickArea');
+if (joystick) {
+  const BASE_JOYSTICK = 150;
+  const size = Math.max(50, Math.round(BASE_JOYSTICK * scale));
+
+  joystick.style.width = size + 'px';
+  joystick.style.height = size + 'px';
+  joystick.style.margin = '8px auto';
+
+  joystick.style.transform = '';
+}
+
+    const btnRow = document.querySelector('.game-buttons') || document.querySelector('.game-buttons-row');
+    if (btnRow) {
+      btnRow.style.transformOrigin = 'top center';
+      btnRow.style.transform = `scale(${scale})`;
+      btnRow.style.marginTop = '10px';
+    }
+
+    // 3) центрируем контейнер
+    if (container) {
+      container.style.width = Math.round(BASE_W * scale) + 'px';
+      container.style.margin = '0 auto';
+      container.classList.add('kspt-safe-bottom');
+    }
+  }
+
+  // listen parent message to force recalculation (parent посылает размеры)
+  window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d && d.type === 'kspt_parent_viewport') {
+      // для точности — делаем fit через 50ms (после отрисовки)
+      setTimeout(fitGameUI, 50);
+    }
+  });
+
+  // resize on orientation / window resize
+  window.addEventListener('resize', fitGameUI);
+  window.addEventListener('orientationchange', () => setTimeout(fitGameUI, 120));
+  window.addEventListener('load', () => setTimeout(fitGameUI, 80));
+
+  // additionally: prevent overscroll inside iframe (iOS)
+  document.addEventListener('touchmove', function(e){
+    // allow touch for game controls (they are inside this iframe) — не отменяем,
+    // но предотвращаем внутреннюю "резину" страницы, если цель — не элемент управления.
+    // Если нужно сделать более тонко — можно разрешить touchmove для .joystick-bg:
+    const el = e.target;
+    if (el.closest && (el.closest('.joystick-bg') || el.closest('.game-buttons') || el.closest('canvas'))) {
+      // allow normal game interaction
+      return;
+    }
+    // otherwise prevent page overscroll
+    e.preventDefault();
+  }, { passive: false });
+})();
+</script>
+
+</body>
+</html>

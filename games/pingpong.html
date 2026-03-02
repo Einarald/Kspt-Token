@@ -457,6 +457,9 @@ downBtn.addEventListener('pointerdown', (e)=>{
   joystickDirection = 1;
 });
 
+upBtn.addEventListener('contextmenu', e => e.preventDefault());
+downBtn.addEventListener('contextmenu', e => e.preventDefault());
+
 document.addEventListener('pointerup', ()=>{
   joystickDirection = 0;
 });
@@ -586,7 +589,7 @@ if (ball.y + ball.radius > canvas.height) {
                 
                 ballHits++;
                 if (ballHits % 5 === 0) {
-                    gameSpeed = Math.min(gameSpeed + 0.05, 2.0);
+                    gameSpeed = Math.min(gameSpeed + 0.03, 2.0);
                     speedEl.textContent = Math.round(gameSpeed * 100) + '%';
                 }
                 

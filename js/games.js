@@ -740,13 +740,7 @@ window.addEventListener('message', (ev) => {
   if (!msg || typeof msg !== 'object') return;
 
   if (msg.type === 'kspt_new_round') {
-    // === ИГНОРИРУЕМ если уже в Game Over ===
-    if (gameOverActive) {
-      console.log('Ignoring new_round - already in Game Over');
-      return;
-    }
-
-    // === ОБЫЧНЫЙ новый раунд (Restart из игры) ===
+    // === Проверяем билеты ===
     if (gameTickets.current <= 0) {
       try {
         const frameContainer = document.getElementById('gameFrameContainer');
@@ -764,7 +758,12 @@ window.addEventListener('message', (ev) => {
       return;
     }
 
-    // ТОЛЬКО если не в Game Over и есть билеты - списываем
+    // Сбрасываем Game Over если был активен
+    if (gameOverActive) {
+      setGameOver(false);
+    }
+
+    // Списываем билет
     gameTicketPending = true;
     consumeTicketForCurrentGame();
     return;

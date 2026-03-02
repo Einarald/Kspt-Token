@@ -692,13 +692,13 @@ const linesEl = document.getElementById('lines');
                 
                 // Calculate reward
                 let rewardPercent = 0;
-                if (totalCleared === 1) rewardPercent = 0.6;
-                else if (totalCleared === 2) rewardPercent = 1.4;
-                else if (totalCleared === 3) rewardPercent = 2.5;
-                else if (totalCleared === 4) rewardPercent = 3.0;
-                else if (totalCleared <= 6) rewardPercent = 4.0;
-                else if (totalCleared === 7) rewardPercent = 5.0;
-                else if (totalCleared === 8) rewardPercent = 7.0;
+                if (totalCleared === 1) rewardPercent = 5.0;
+                else if (totalCleared === 2) rewardPercent = 5.5;
+                else if (totalCleared === 3) rewardPercent = 7.5;
+                else if (totalCleared === 4) rewardPercent = 10.0;
+                else if (totalCleared <= 6) rewardPercent = 12.0;
+                else if (totalCleared === 7) rewardPercent = 15.0;
+                else if (totalCleared === 8) rewardPercent = 20.0;
                 
                 rewardPercent *= comboMultiplier;
                 
@@ -711,9 +711,9 @@ const linesEl = document.getElementById('lines');
                 spawnFloatingText(`+${reward.toFixed(2)} KSPT`, centerX, centerY, '#00e5ff');
                 safeAwardGameReward(reward, centerX, centerY);
                 
-                // для каждой очищенной линии шанс 5.5% получить +1 EK
+                // для каждой очищенной линии шанс 7.5% получить +1 EK
                 for (let i = 0; i < totalCleared; i++) {
-                  if (Math.random() < 0.055) { // 5.5%
+                  if (Math.random() < 0.075) { // 7.5%
                     totalEarnedEK++;
                     safeAwardGameEK(1, centerX, centerY - 20);
                     spawnFloatingText('+1 EK', centerX, centerY - 20, '#ffd54f');

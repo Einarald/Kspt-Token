@@ -897,8 +897,12 @@ function setupControls() {
     }
   });
 
-  document.getElementById('pauseBtn').addEventListener('click', togglePause);
+  document.getElementById('pauseBtn').addEventListener('click', () => { 
+    canVibrate = true; 
+    togglePause(); 
+  });
   document.getElementById('restartBtn').addEventListener('click', () => {
+    canVibrate = true;
     if (!ensureHasTicketOrWarn()) return;
     try { (window.parent || window.top).postMessage({ type: 'kspt_new_round' }, '*'); } catch(e){}
     restartGame();

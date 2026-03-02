@@ -822,8 +822,24 @@ function updateGame(dt = 16.6667) {
     cameraY = Math.max(0, Math.min(cameraY, GAME_HEIGHT - VIEW_HEIGHT));
     
     // Управление игроком через джойстик
+    // Управление игроком через джойстик (с ограничением резких поворотов)
     if (joystickActive) {
-        player.angle = joystickAngle;
+        // Ограничиваем максимальный поворот за кадр (защита от разворота на 180°)
+        let angleDiff = joystickAngle - player.angle;
+        
+        // Нормализуем разницу углов (-PI до PI)
+        while (angleDiff > Math.PI) angleDiff -= Math.PI * 2;
+        while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
+        
+        // Максимальный поворот за кадр: 0.15 радиан (~8.5 градусов)
+        const maxTurn = 0.15;
+        angleDiff = Math.max(-maxTurn, Math.min(maxTurn, angleDiff));
+        
+        player.angle += angleDiff;
+        
+        // Нормализуем итоговый угол
+        while (player.angle > Math.PI) player.angle -= Math.PI * 2;
+        while (player.angle < -Math.PI) player.angle += Math.PI * 2;
     }
     
     // Ускорение (буст)
@@ -866,6 +882,20 @@ function updateGame(dt = 16.6667) {
     // Обновление ИИ червей с улучшенной логикой
     updateAI(frameScale);
     
+    // Удаление старых орбов от смерти (через 30 секунд)
+    const now = Date.now();
+    const ORB_LIFETIME = 30000; // 30 секунд
+    for (let i = orbs.length - 1; i >= 0; i--) {
+        const orb = orbs[i];
+        if (orb.fromDeath && orb.spawnTime && (now - orb.spawnTime > ORB_LIFETIME)) {
+            // Плавное исчезновение (уменьшаем размер)
+            orb.glow -= 0.02;
+            if (orb.glow <= 0) {
+                orbs.splice(i, 1);
+            }
+        }
+    }
+    
     // Проверка столкновений с орбами
     checkOrbCollisions();
     
@@ -898,13 +928,14 @@ function updateAI(frameScale = 1) {
     const AVOID_DIST = 50;
     const AI_AVOID_DIST = 80;
     
-    // Вспомогательные функции
     function findNearestOrb(ai, maxDist) {
         let best = null, bestD = maxDist;
         for (let o of orbs) {
             const d = distance(ai.x, ai.y, o.x, o.y);
-            if (d < bestD) { 
-                bestD = d; 
+            // Приоритет орбам от смерти (в 1.5 раза привлекательнее)
+            const priority = o.fromDeath ? d / 1.5 : d;
+            if (priority < bestD) { 
+                bestD = priority; 
                 best = o; 
             }
         }
@@ -1093,34 +1124,91 @@ function updateAI(frameScale = 1) {
         }
         
         // Избегание собственного хвоста
+        // Избегание собственного хвоста (с защитой от спиралей)
         let tailAvoidX = 0, tailAvoidY = 0;
         const lookX = ai.x + Math.cos(ai.angle) * LOOKAHEAD_DIST;
         const lookY = ai.y + Math.sin(ai.angle) * LOOKAHEAD_DIST;
         
-        for (let i = 10; i < ai.segments.length && i < 40; i += 5) {
-            const seg = ai.segments[i];
-            const d = distance(lookX, lookY, seg.x, seg.y);
-            if (d < AVOID_DIST) {
-                const avoidAngle = Math.atan2(lookY - seg.y, lookX - seg.x);
-                tailAvoidX += Math.cos(avoidAngle) * (AVOID_DIST - d) / AVOID_DIST;
-                tailAvoidY += Math.sin(avoidAngle) * (AVOID_DIST - d) / AVOID_DIST;
+        // Проверяем только если не в спирали (счётчик поворотов)
+        ai.turnCounter = ai.turnCounter || 0;
+        const lastAngle = ai.lastAngle || ai.angle;
+        const angleDelta = Math.abs(normAngle(ai.angle - lastAngle));
+        
+        // Если постоянно поворачивает в одну сторону - игнорируем хвост
+        if (angleDelta > 0.05) {
+            ai.turnCounter++;
+        } else {
+            ai.turnCounter = Math.max(0, ai.turnCounter - 1);
+        }
+        ai.lastAngle = ai.angle;
+        
+        // Избегаем хвост только если не закручиваемся
+        if (ai.turnCounter < 30) {
+            for (let i = 20; i < ai.segments.length && i < 50; i += 8) {
+                const seg = ai.segments[i];
+                const d = distance(lookX, lookY, seg.x, seg.y);
+                if (d < AVOID_DIST) {
+                    const avoidAngle = Math.atan2(lookY - seg.y, lookX - seg.x);
+                    tailAvoidX += Math.cos(avoidAngle) * (AVOID_DIST - d) / AVOID_DIST;
+                    tailAvoidY += Math.sin(avoidAngle) * (AVOID_DIST - d) / AVOID_DIST;
+                }
             }
+        } else {
+            // Если закручиваемся - едем прямо вперёд
+            ai.turnCounter = 0;
+            ai.targetX = ai.x + Math.cos(ai.angle) * 300;
+            ai.targetY = ai.y + Math.sin(ai.angle) * 300;
         }
         
-        // Избегание других ИИ червей
+        // Избегание других ИИ червей (улучшенная логика)
         let aiAvoidX = 0, aiAvoidY = 0;
         
         for (let other of aiWorms) {
             if (other.id === ai.id || other.isDead) continue;
             
-            const d = distance(ai.x, ai.y, other.x, other.y);
-            if (d < AI_AVOID_DIST) {
-                // Рассчитываем вектор отталкивания
+            // Проверяем расстояние до головы
+            const headDist = distance(ai.x, ai.y, other.x, other.y);
+            if (headDist < AI_AVOID_DIST) {
                 const avoidAngle = Math.atan2(ai.y - other.y, ai.x - other.x);
-                const force = (AI_AVOID_DIST - d) / AI_AVOID_DIST;
-                
+                const force = (AI_AVOID_DIST - headDist) / AI_AVOID_DIST;
                 aiAvoidX += Math.cos(avoidAngle) * force * 80;
                 aiAvoidY += Math.sin(avoidAngle) * force * 80;
+            }
+            
+            // Проверяем расстояние до тела (каждый 5й сегмент)
+            for (let k = 5; k < other.segments.length; k += 5) {
+                const seg = other.segments[k];
+                const segDist = distance(lookX, lookY, seg.x, seg.y);
+                if (segDist < 60) {
+                    const avoidAngle = Math.atan2(lookY - seg.y, lookX - seg.x);
+                    const force = (60 - segDist) / 60;
+                    aiAvoidX += Math.cos(avoidAngle) * force * 120;
+                    aiAvoidY += Math.sin(avoidAngle) * force * 120;
+                }
+            }
+        }
+        
+        // Избегание ИГРОКА (его тела)
+        if (!player.isDead) {
+            // Проверяем расстояние до головы игрока
+            const playerHeadDist = distance(ai.x, ai.y, player.x, player.y);
+            if (playerHeadDist < AI_AVOID_DIST) {
+                const avoidAngle = Math.atan2(ai.y - player.y, ai.x - player.x);
+                const force = (AI_AVOID_DIST - playerHeadDist) / AI_AVOID_DIST;
+                aiAvoidX += Math.cos(avoidAngle) * force * 80;
+                aiAvoidY += Math.sin(avoidAngle) * force * 80;
+            }
+            
+            // Проверяем расстояние до тела игрока (каждый 5й сегмент)
+            for (let k = 5; k < player.segments.length; k += 5) {
+                const seg = player.segments[k];
+                const segDist = distance(lookX, lookY, seg.x, seg.y);
+                if (segDist < 60) {
+                    const avoidAngle = Math.atan2(lookY - seg.y, lookX - seg.x);
+                    const force = (60 - segDist) / 60;
+                    aiAvoidX += Math.cos(avoidAngle) * force * 120;
+                    aiAvoidY += Math.sin(avoidAngle) * force * 120;
+                }
             }
         }
         
@@ -1376,8 +1464,11 @@ function killWorm(worm, killer) {
         gameVibrate([100, 50, 100]);
     }
     
-    for (let i = 0; i < worm.length / 3; i++) {
-        const segIndex = Math.floor(i * 3);
+    // Ограничиваем максимум орбов до 100 (было worm.length / 3)
+    const maxOrbs = Math.min(100, worm.length / 3);
+    const now = Date.now();
+    for (let i = 0; i < maxOrbs; i++) {
+        const segIndex = Math.floor((i / maxOrbs) * worm.segments.length);
         if (segIndex < worm.segments.length) {
             const seg = worm.segments[segIndex];
             orbs.push({
@@ -1385,12 +1476,14 @@ function killWorm(worm, killer) {
                 y: seg.y + (Math.random() - 0.5) * 20,
                 size: ORB_SIZE * 1.5,
                 color: worm.color,
-                glow: 1
+                glow: 1,
+                spawnTime: now,  // Время создания
+                fromDeath: true  // Маркер что орб от смерти
             });
         }
     }
     
-    createParticles(worm.x, worm.y, worm.color, 30);
+    createParticles(worm.x, worm.y, worm.color, 15);
     playSound('crash');
     
     setTimeout(() => {
@@ -1407,7 +1500,7 @@ function killWorm(worm, killer) {
         
         worm.x = newX;
         worm.y = newY;
-        worm.length = 50 + Math.random() * 50;
+        worm.length = 150 + Math.random() * 200;
         worm.maxLength = worm.length;
         worm.boostEnergy = 50 + Math.random() * 50;
         worm.lastTurnTime = 0;

@@ -48,7 +48,6 @@ window.addEventListener('message', (event) => {
 
   try {
     if (msg.type === 'kspt_award_reward') {
-      // вызывает локальную функцию (она есть в games.js)
       if (typeof awardGameReward === 'function') {
         awardGameReward(Number(msg.reward) || 0, msg.x || 0, msg.y || 0);
       }
@@ -58,12 +57,38 @@ window.addEventListener('message', (event) => {
       }
     } else if (msg.type === 'kspt_exit_game') {
       if (typeof exitGame === 'function') exitGame();
+    } else if (msg.type === 'ek_award') {
+      if (typeof awardGameEK === 'function') {
+        awardGameEK(Number(msg.amount) || 0, msg.x || 0, msg.y || 0);
+      }
     }
-    else if (msg.type === 'ek_award') {
-  if (typeof awardGameEK === 'function') {
-    awardGameEK(Number(msg.amount) || 0, msg.x || 0, msg.y || 0);
-  }
-}
+    // --- NEW: синхронизация после покупок в EK Shop ---
+    else if (msg.type === 'ekshop_update') {
+      try {
+        // если магазин прислал явный EK — применим его
+        if (typeof msg.ek !== 'undefined') {
+          window.d = window.d || {};
+          window.d.ek = Number(msg.ek) || 0;
+          // сразу сохраним/перерисуем UI
+          if (typeof save === 'function') try { save(); } catch(e){}
+          if (typeof ui === 'function') try { ui(); } catch(e){}
+        } else {
+          // fallback: попробуем прочитать из localStorage.d или kspt
+          try {
+            const stored = localStorage.getItem('d') || localStorage.getItem('kspt');
+            if (stored) {
+              const parsed = JSON.parse(stored);
+              if (parsed && typeof parsed === 'object') {
+                window.d = Object.assign(window.d || {}, parsed);
+                if (typeof ui === 'function') try { ui(); } catch(e){}
+              }
+            }
+          } catch(e){}
+        }
+      } catch(e) {
+        console.warn('ekshop_update handling failed', e);
+      }
+    }
   } catch (e) {
     console.warn('message handler failed', e);
   }
@@ -233,6 +258,16 @@ window.addEventListener('message', (event) => {
       <div class="game-ticket">1 ticket</div>
     </div>
 
+<!-- Ghost Train -->
+<div class="game-item" onclick="startGame('train')">
+  <img src="train.png" class="game-icon">
+  <div class="game-info">
+    <div class="game-title">Ghost Train</div>
+    <div class="game-desc">Short 3D runner — collect boxes and avoid obstacles.</div>
+  </div>
+  <div class="game-ticket">1 ticket</div>
+</div>
+
   </div>
 
     <button class="back" onclick="openScreen('main')" data-lang-key="back">Back</button>
@@ -256,10 +291,11 @@ window.addEventListener('message', (event) => {
   </div>
 
   <!-- КНОПКИ ПЕРЕКЛЮЧЕНИЯ ВКЛАДОК -->
-  <div style="display: flex; justify-content: center; margin-bottom: 15px;">
-    <button id="tabPuzzle" onclick="showIventTab('puzzle')" style="margin-right: 10px; background: #2e7d32;">Пазлы</button>
-    <button id="tabIvent" onclick="showIventTab('ivent')" style="background: #444;">События</button>
-  </div>
+  <div style="display: flex; justify-content: center; margin-bottom: 15px; gap: 10px;">
+  <button id="tabPuzzle" onclick="showIventTab('puzzle')" style="background: #2e7d32;">Puzzles</button>
+  <button id="tabIvent" onclick="showIventTab('ivent')" style="background: #444;">Events</button>
+  <button id="tabKeys" onclick="showIventTab('keys')" style="background: #444;">Keys</button>
+</div>
 
   <!-- ВКЛАДКА ПАЗЛОВ (ПО УМОЛЧАНИЮ) -->
   <div id="puzzleTab">
@@ -332,20 +368,61 @@ window.addEventListener('message', (event) => {
     </div>
   </div>
 
-  <!-- ВКЛАДКА СОБЫТИЙ (СКРЫТА ПО УМОЛЧАНИЮ) -->
   <div id="iventTab" style="display:none;">
-    <!-- Временные события -->
     <div class="card">
-      <div class="card-title" data-lang-key="ivent_title">Временные события</div>
-      <div class="card-sub" data-lang-key="ivent_desc">Успей получить награды!</div>
-      
-      <div id="iventContainer">
-        <!-- Сюда будет вставляться содержимое события -->
-      </div>
+      <div class="card-title" data-lang-key="temp_events">Temporary Events</div>
+      <div class="card-sub" data-lang-key="hurry_rewards">Hurry up to get rewards!</div>
     </div>
+    
+    <div id="iventContainer"></div>
   </div>
 
-  <button class="back" onclick="openScreen('main')" data-lang-key="back">Back</button>
+  <div id="keysTab" style="display:none;">
+    <div class="keys-view card" style="text-align: center; margin-bottom: 15px;">
+      <div style="font-size: 18px; margin-bottom: 10px; font-weight: bold;">Your Keys</div>
+      <div style="display: flex; align-items: center; justify-content: center; position: relative;">
+        <button id="keyPrev" style="background: transparent; border: none; color: white; font-size: 24px; width: 40px; cursor: pointer;">←</button>
+        <div id="keyDisplay" style="margin: 0 20px; position: relative;">
+          <img id="currentKeyImg" src="blue.png" style="width: 100px; height: 100px; object-fit: contain;">
+          <div id="keyCounter" style="margin-top: 5px; font-size: 14px; color: #aaa;">0 / 0</div>
+        </div>
+        <button id="keyNext" style="background: transparent; border: none; color: white; font-size: 24px; width: 40px; cursor: pointer;">→</button>
+      </div>
+    </div>
+
+  <!-- Центральный блок: магазин выбранного ключа -->
+  <div id="keyShop" class="card" style="margin-bottom: 15px; min-height: 200px; position: relative;">
+    <div id="shopTitle" class="card-title" style="text-align: center; font-size: 20px;">Blue Shop</div>
+    <div id="shopItems" class="shop-items" style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 15px;">
+      <!-- Элементы магазина будут вставлены здесь -->
+    </div>
+    <button id="expandShopBtn" onclick="expandShop()" style="position: absolute; bottom: 10px; right: 10px; width: 40px; height: 40px; background: #333; border: none; border-radius: 50%; color: white; font-size: 20px; cursor: pointer;">+</button>
+  </div>
+
+  <!-- Нижний блок: Glitch Box -->
+  <div id="glitchBox" class="card" style="text-align: center; border: 2px solid #ff00ff;">
+    <div class="card-title" style="color: #ff00ff;">GLITCH BOX</div>
+    <div class="card-sub" style="color: #ff99ff; margin-bottom: 10px;">First open free! Cooldown: 20 days</div>
+    
+    <div id="glitchBoxVisual" style="position: relative; margin: 15px auto; width: 120px; height: 120px;">
+      <img id="glitchBoxImg" src="glitchbox.png" style="width: 100%; height: 100%; object-fit: contain; cursor: pointer;">
+      <div id="glitchBoxMultiplier" style="position: absolute; top: -10px; right: -10px; background: red; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">x1</div>
+    </div>
+    
+    <div id="glitchProgress" style="margin: 10px 0;">
+      <div style="background: #333; height: 10px; border-radius: 5px; overflow: hidden;">
+        <div id="glitchProgressBar" style="background: #ff00ff; height: 100%; width: 0%;"></div>
+      </div>
+      <div id="glitchTapCount" style="font-size: 12px; margin-top: 5px;">Taps: 0/30</div>
+    </div>
+    
+    <div id="glitchTimer" class="card-sub" style="color: #ffb74d; margin: 10px 0;">Ready to open!</div>
+    
+<button id="openGlitchBoxBtn" onclick="startGlitchBoxSequence()" style="background: #ff00ff; color: #000; font-weight: bold; padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer; width: 100%;">OPEN GLITCH BOX</button>
+  </div>
+</div>
+
+<button class="back" onclick="openScreen('main')" data-lang-key="back">Back</button>
 </div>
 
 <div id="settings" class="screen">
@@ -513,7 +590,7 @@ window.addEventListener('message', (event) => {
   <img src="siulaisong.png" style="width:30px; height:30px; border-radius:5px;">
   <div style="flex:1;">
     <div style="font-weight:bold; font-size:14px;">Cat's Yarn</div>
-    <div style="font-size:11px; opacity:0.6;" data-lang-key="locked">Locked</div>
+    <div style="font-size:11px; opacity:0.6;" data-lang-key="locked">Best Orchestral Piece</div>
   </div>
   <button onclick="previewMusic('siulai')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;"
           data-lang-key="preview">Play 15s</button>
@@ -531,6 +608,17 @@ window.addEventListener('message', (event) => {
   </div>
   <button onclick="previewMusic('funny')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;" data-lang-key="preview">Play 15s</button>
   <button id="btn-music-funny" class="owned" style="width:auto; padding:5px 10px; font-size:11px;">Locked</button>
+</div>
+
+<!-- Блок для Code Rhythm (Glitch Box Exclusive) -->
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px;">
+  <img src="coder.png" style="width:30px; height:30px; border-radius:5px;">
+  <div style="flex:1;">
+    <div style="font-weight:bold; font-size:14px;">Code Rhythm</div>
+    <div style="font-size:11px; opacity:0.6;">Glitch Box Exclusive</div>
+  </div>
+  <button onclick="previewMusic('code')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;" data-lang-key="preview">Play 15s</button>
+  <button id="btn-music-code" class="owned" style="width:auto; padding:5px 10px; font-size:11px;">Locked</button>
 </div>
     </div>
     <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
@@ -612,6 +700,14 @@ window.addEventListener('message', (event) => {
   <div class="card-title">Crazy Math</div>
   <div class="card-sub">Exclusive: Secret Gold Capsule only</div>
   <button id="bg-btn-math" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
+</div>
+
+<!-- Code Background (Glitch Box Exclusive) -->
+<div class="settings-section">
+  <div class="bg-preview" style="background-image: url('code.png');"></div>
+  <div class="card-title">Matrix Code</div>
+  <div class="card-sub">Glitch Box Exclusive</div>
+  <button id="bg-btn-code" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
 </div>
       
       <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
@@ -819,6 +915,21 @@ window.addEventListener('message', (event) => {
     </div>
   </div>
 
+  <!-- Glitch Box Exclusive Skins -->
+  <div class="card" id="skinCardCorrupted" style="display:none">
+    <img id="skin-img-corrupted" src="corr.png" class="card-img">
+    <div class="card-title">Corrupted</div>
+    <div class="card-sub">Glitch Box Exclusive (+20 KSPT/h)</div>
+    <button id="skin-corrupted" onclick="applySkin('corrupted')" data-lang-key="locked_glitch">LOCKED</button>
+  </div>
+
+  <div class="card" id="skinCardFailed" style="display:none">
+    <img id="skin-img-failed" src="fail.png" class="card-img">
+    <div class="card-title">System Failure</div>
+    <div class="card-sub">Glitch Box Exclusive (+35 KSPT/h)</div>
+    <button id="skin-failed" onclick="applySkin('failed')" data-lang-key="locked_glitch">LOCKED</button>
+  </div>
+
   <div class="card">
   <img id="skin-img-brb" src="dontwhat.png" class="card-img" onerror="this.src='dontwhat.png'">
   <div class="card-title">Big Red Button</div>
@@ -997,6 +1108,59 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   })();
 </script>
+
+<!-- Glitch Box Modal -->
+<div id="glitchModal" class="glitch-modal">
+  <div style="color: white; font-size: 24px; margin-bottom: 20px; text-align: center;">
+    <div id="glitchModalTitle">Tap the Glitch Box!</div>
+    <div id="glitchModalSubtitle" style="font-size: 14px; color: #ff99ff;">Tap 30 times to open!</div>
+  </div>
+  
+  <div class="glitch-box-container" id="glitchBoxContainer">
+    </div>
+  
+  <div style="margin-top: 20px; color: white; text-align: center;">
+    <div id="glitchModalTaps">Taps: 0/30</div>
+    <div id="glitchModalChance" style="font-size: 12px; color: #ffb74d; margin-top: 5px;">Chance to duplicate: 25%</div>
+  </div>
+  
+  </div>
+
+<!-- Full Shop Modal -->
+<div id="shopModal" class="shop-modal">
+  <div class="shop-modal-content">
+    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+      <div id="shopModalTitle" class="card-title" style="font-size: 24px;">Blue Shop</div>
+      <button onclick="closeShopModal()" style="background: none; border: none; color: white; font-size: 30px; cursor: pointer;">×</button>
+    </div>
+    
+    <div class="shop-modal-grid" id="shopModalGrid">
+      <!-- Full shop items will be inserted here -->
+    </div>
+  </div>
+</div>
+
+<!-- Glitch Reward Modal -->
+<div id="glitchRewardModal" class="reward-popup" style="display: none;">
+  <h2 style="color: #ff00ff;">GLITCH REWARD!</h2>
+  <img id="glitchRewardImg" class="reward-img" src="" alt="Reward">
+  <div id="glitchRewardText" style="margin-bottom: 20px; font-size: 18px;"></div>
+  <div id="glitchRewardDesc" style="font-size: 14px; color: #aaa; margin-bottom: 20px;"></div>
+  <button onclick="closeGlitchReward()" style="background: #ff00ff; color: #000;">Collect</button>
+</div>
+
+<!-- Fake Jackpot Modal -->
+<div id="fakeJackpotModal" class="warning-modal" style="display: none;">
+  <h1 style="color: gold; font-size: 40px;">JACKPOT!</h1>
+  <div id="fakeJackpotAmount" style="font-size: 30px; color: lime; margin: 20px 0;">10,000,000 KSPT</div>
+  <div style="font-size: 18px; color: #fff;">Congratulations! You won the jackpot!</div>
+</div>
+
+<!-- Tap Boost Indicator -->
+<div id="tapBoostIndicator" class="tap-boost-indicator">
+  <div>TAP BOOST ACTIVE</div>
+  <div id="tapBoostTimer" style="font-size: 12px;">05:00</div>
+</div>
 
 </body>
 </html>

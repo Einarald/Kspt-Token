@@ -65,7 +65,7 @@ function setGameOver(flag) {
       if (getComputedStyle(gameContainer).position === 'static') {
         gameContainer.style.position = 'relative';
       }
-      overlay = document.createElement('div');
+            overlay = document.createElement('div');
       overlay.id = overlayId;
       Object.assign(overlay.style, {
         position: 'absolute',
@@ -74,8 +74,8 @@ function setGameOver(flag) {
         width: '100%',
         height: '100%',
         zIndex: 9999,
-        background: 'rgba(0,0,0,0.5)', // Изменить на полупрозрачный
-        pointerEvents: 'auto' // ловим клики
+        background: 'rgba(0,0,0,0.0)', // прозрачный — чтобы не затемнять игру
+        pointerEvents: 'none' // пропускаем клики к iframe — игра сама отключит свои кнопки через postMessage
       });
       gameContainer.appendChild(overlay);
     }

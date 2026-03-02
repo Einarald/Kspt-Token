@@ -64,12 +64,13 @@ html, body {
         }
         
         canvas {
-            background: #111;
-            border: 2px solid #00bcd4;
-            border-radius: 10px;
-            margin-bottom: 20px;
-            image-rendering: pixelated;
-        }
+    background: #111;
+    border: 2px solid #00bcd4;
+    border-radius: 10px;
+    margin-bottom: 20px;
+    image-rendering: pixelated;
+    box-sizing: border-box;
+}
         
         .joystick-container {
             position: relative;
@@ -140,6 +141,31 @@ html, body {
         .game-buttons button:active {
             transform: scale(0.95);
         }
+
+/* --- ARROW BUTTONS: match neon style of game-buttons but with fixed size --- */
+.arrow-btn {
+  width: 70px;
+  height: 55px;
+  font-size: 26px;
+  background: linear-gradient(135deg, #00e5ff, #00bcd4);
+  color: #000;
+  border: none;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: bold;
+  box-shadow:
+    0 0 10px rgba(0, 188, 212, 0.6),
+    inset 0 0 6px rgba(255, 255, 255, 0.3);
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+.arrow-btn:active {
+  transform: scale(0.95);
+  box-shadow:
+    0 0 4px rgba(0,188,212,0.4),
+    inset 0 0 10px rgba(0,0,0,0.3);
+}
         
         .game-over {
             display: none;
@@ -183,11 +209,10 @@ html, body {
         
         <canvas id="gameCanvas" width="360" height="360"></canvas>
         
-        <div class="joystick-container" id="joystickArea">
-            <div class="joystick-bg">
-                <div class="joystick-center"></div>
-            </div>
-        </div>
+        <div id="arrowControls" class="game-buttons" style="gap:10px; justify-content:center; margin:10px 0;">
+  <button id="upBtn" class="arrow-btn">▲</button>
+  <button id="downBtn" class="arrow-btn">▼</button>
+</div>
         
         <div class="game-buttons">
             <button id="pauseBtn">Pause</button>
@@ -416,75 +441,36 @@ function safeGetOfflinePercent(percent) {
             color: '#00e676'
         };
 
-        // Joystick variables
-        let joystickActive = false;
         let joystickDirection = 0;
 
-        // Initialize joystick
-        const joystickArea = document.getElementById('joystickArea');
-        const joystickCenter = document.querySelector('.joystick-center');
+// кнопки
+const upBtn = document.getElementById('upBtn');
+const downBtn = document.getElementById('downBtn');
 
-        joystickArea.addEventListener('touchstart', handleJoystickStart);
-        joystickArea.addEventListener('touchmove', handleJoystickMove);
-        joystickArea.addEventListener('touchend', handleJoystickEnd);
+upBtn.addEventListener('pointerdown', (e)=>{
+  e.preventDefault();
+  joystickDirection = -1;
+});
 
-        joystickArea.addEventListener('mousedown', handleJoystickStart);
-        document.addEventListener('mousemove', handleJoystickMove);
-        document.addEventListener('mouseup', handleJoystickEnd);
+downBtn.addEventListener('pointerdown', (e)=>{
+  e.preventDefault();
+  joystickDirection = 1;
+});
 
-        function handleJoystickStart(e) {
-            e.preventDefault();
-            joystickActive = true;
-            updateJoystick(e);
-        }
+document.addEventListener('pointerup', ()=>{
+  joystickDirection = 0;
+});
 
-        function handleJoystickMove(e) {
-            if (!joystickActive) return;
-            e.preventDefault();
-            updateJoystick(e);
-        }
+// клавиатура
+document.addEventListener('keydown', (e)=>{
+  if (e.key === 'ArrowUp') joystickDirection = -1;
+  if (e.key === 'ArrowDown') joystickDirection = 1;
+});
 
-        function handleJoystickEnd(e) {
-            joystickActive = false;
-            joystickDirection = 0;
-            joystickCenter.style.transform = 'translate(-50%, -50%)';
-        }
-
-        function updateJoystick(e) {
-            const rect = joystickArea.getBoundingClientRect();
-            let clientX, clientY;
-            
-            if (e.type.includes('touch')) {
-                clientX = e.touches[0].clientX;
-                clientY = e.touches[0].clientY;
-            } else {
-                clientX = e.clientX;
-                clientY = e.clientY;
-            }
-            
-            const centerX = rect.left + rect.width / 2;
-            const centerY = rect.top + rect.height / 2;
-            
-            let deltaX = clientX - centerX;
-            let deltaY = clientY - centerY;
-            
-            // Limit to joystick bounds
-            const base = Math.min(rect.width, rect.height);
-const maxDistance = Math.max(1, Math.floor(base / 2) - 20);
-            const distance = Math.sqrt(deltaX * deltaX + deltaY * deltaY);
-            
-            if (distance > maxDistance) {
-                deltaX = (deltaX / distance) * maxDistance;
-                deltaY = (deltaY / distance) * maxDistance;
-            }
-            
-            // Update joystick center position
-            joystickCenter.style.transform = `translate(${deltaX}px, ${deltaY}px)`;
-            
-            // Calculate direction (-1 to 1)
-            let rawDir = deltaY / maxDistance;
-joystickDirection = Math.max(-1, Math.min(1, rawDir));
-        }
+document.addEventListener('keyup', (e)=>{
+  if (e.key === 'ArrowUp' || e.key === 'ArrowDown')
+    joystickDirection = 0;
+});
 
         // Game functions
         function resetBall() {
@@ -537,12 +523,21 @@ joystickDirection = Math.max(-1, Math.min(1, rawDir));
             ball.x += ball.speedX * gameSpeed * frameScale;
             ball.y += ball.speedY * gameSpeed * frameScale;
             
-            // Ball collision with top/bottom walls
-            if (ball.y - ball.radius < 0 || ball.y + ball.radius > canvas.height) {
-                ball.speedY = -ball.speedY;
-                playSound('bounce');
-                gameVibrate([50]);
-            }
+            // Ball collision with top wall
+if (ball.y - ball.radius < 0) {
+    ball.y = ball.radius; // вернуть внутрь
+    ball.speedY = Math.abs(ball.speedY);
+    playSound('bounce');
+    gameVibrate([50]);
+}
+
+// Ball collision with bottom wall
+if (ball.y + ball.radius > canvas.height) {
+    ball.y = canvas.height - ball.radius; // вернуть внутрь
+    ball.speedY = -Math.abs(ball.speedY);
+    playSound('bounce');
+    gameVibrate([50]);
+}
             
             // Ball collision with player paddle
             if (ball.x - ball.radius < playerPaddle.x + playerPaddle.width &&
@@ -554,7 +549,7 @@ joystickDirection = Math.max(-1, Math.min(1, rawDir));
                 const hitPos = (ball.y - (playerPaddle.y + playerPaddle.height / 2)) / (playerPaddle.height / 2);
                 
                 // Change ball direction
-                ball.speedX = Math.abs(ball.speedX) * 1.05; // Speed up slightly
+                ball.speedX = Math.abs(ball.speedX) * 1.008;
                 ball.speedY = hitPos * 5;
                 
                 // Make sure ball goes to the right

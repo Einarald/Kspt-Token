@@ -4895,10 +4895,12 @@ function initMarketUI() {
               <div style="font-size:11px;color:#aaa;">by ${tok.creatorName || tok.creatorId}</div>
             </div>
           </div>
+          ${tok.creatorId === _getMyId() ? `
           <div style="display:flex;gap:6px;">
             <button onclick="changeTokenIcon('${tok.firebaseId}')" style="background:#1565c0;font-size:12px;flex:1;">Change Icon</button>
             <button onclick="deletePersonalToken('${tok.firebaseId}')" style="background:#d32f2f;font-size:12px;flex:1;">${t('delete_token')}</button>
           </div>
+          ` : ''}
         </div>
       `).join('') : ''}
       <div style="font-size:11px;color:#555;margin-top:6px;">${t('delete_warning')} · Max 3 tokens</div>

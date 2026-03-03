@@ -4883,15 +4883,18 @@ function initMarketUI() {
     <div class="card">
       <div class="card-title">${t('personal_token')}</div>
       <div class="card-sub">${t('create_token_desc')}</div>
-      ${(function(){ const mine = (d.market.myTokens||[]).filter(t=>t.creatorId===_getMyId()); return mine.length < 3; })() ? `
+      ${(function(){ const mine = (d.market.myTokens||[]).filter(t=>String(t.creatorId)===_getMyId()); return mine.length < 3; })() ? `
         <button onclick="createPersonalToken()" style="background:#ff9800; color:#000; margin-bottom:10px;">${t('create_token')} (899 KSPT)</button>
       ` : `<div style="font-size:12px;color:#ff9800;margin-bottom:8px;">Max 3 tokens per user</div>`}
       ${(d.market.myTokens && d.market.myTokens.length > 0) ? d.market.myTokens.map(tok => `
-        <div style="border:1px solid #333;border-radius:10px;padding:8px;margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+        <div style="border:1px solid ${String(tok.creatorId) === _getMyId() ? '#ff9800' : '#333'};border-radius:10px;padding:8px;margin-top:8px;display:flex;flex-direction:column;gap:6px;">
           <div style="display:flex;align-items:center;gap:8px;">
             <img src="${tok.icon}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.src='kspt.png'">
-            <div>
-              <b>${tok.ticker}</b> — ${tok.name}
+            <div style="flex:1;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <b>${tok.ticker}</b> — ${tok.name}
+                ${String(tok.creatorId) === _getMyId() ? '<span style="font-size:10px;background:#ff9800;color:#000;padding:1px 6px;border-radius:8px;font-weight:bold;">MY TOKEN</span>' : ''}
+              </div>
               <div style="font-size:11px;color:#aaa;">by ${tok.creatorName || tok.creatorId}</div>
             </div>
           </div>
@@ -5201,7 +5204,7 @@ function confirmTokenCreation() {
     return;
   }
 
-  const myTokenCount = (d.market.myTokens || []).filter(t => t.creatorId === _getMyId()).length;
+  const myTokenCount = (d.market.myTokens || []).filter(t => String(t.creatorId) === _getMyId()).length;
   if (myTokenCount >= 3) {
     showToast('You can only create 3 tokens');
     return;
@@ -5287,7 +5290,7 @@ function editAccount() {
 }
 
 function createPersonalToken() {
-  const myTokens = d.market.myTokens || [];
+  const myTokens = (d.market.myTokens || []).filter(t => String(t.creatorId) === _getMyId());
   if (myTokens.length >= 3) {
     showToast('Max 3 tokens allowed');
     return;
@@ -5661,7 +5664,7 @@ function _tickMyTokens(now) {
 }
 
 function _getMyId() {
-  return (window.Telegram?.WebApp?.initDataUnsafe?.user?.id || localStorage.getItem('_kspt_uid') || 'local');
+  return String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id || localStorage.getItem('_kspt_uid') || 'local');
 }
 // ==========================================
 // ОСНОВНЫЕ ФУНКЦИОНАЛЬНЫЕ ФУНКЦИИ

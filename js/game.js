@@ -1356,7 +1356,8 @@ keys: {
       lastUpdate: Date.now(),
       chartOffset: 0
     },
-    personalToken: null
+    personalToken: null,
+    myTokens: []
   },
 
   ivents: {},
@@ -4026,6 +4027,17 @@ function initMarketReferences() {
   lastMarketUpdate = now;
 }
 
+function updatePriceCountdown() {
+  const el = document.getElementById('priceCountdown');
+  if (!el) return;
+  const now = Date.now();
+  const lastSync = d.market._lastPriceSync || now;
+  const interval = 28000;
+  const next = lastSync + interval;
+  const diff = Math.max(0, Math.ceil((next - now) / 1000));
+  el.textContent = diff > 0 ? diff + 's' : 'updating...';
+}
+
 function updateMarketPrices() {
   if (!document.getElementById("market")?.classList.contains("active")) {
     return;
@@ -4426,6 +4438,10 @@ function handleTokenImageSelection(file) {
       
       cropImage.src = e.target.result;
       cropZoom.value = 100;
+      cropData.x = 0;
+      cropData.y = 0;
+      cropData.scale = 100;
+      cropData.image = img; // ← сохраняем объект Image для applyCrop
       
       cropModal.classList.add('active');
       
@@ -4490,9 +4506,9 @@ function setupCropInteractions() {
 function updateCropImage() {
   const cropImage = document.getElementById('cropImage');
   if (!cropImage) return;
-  
   const scale = cropData.scale / 100;
-  cropImage.style.transform = `translate(${cropData.x}px, ${cropData.y}px) scale(${scale})`;
+  // -50% -50% центрирует изображение, затем применяем пользовательский сдвиг
+  cropImage.style.transform = `translate(calc(-50% + ${cropData.x}px), calc(-50% + ${cropData.y}px)) scale(${scale})`;
 }
 
 function cancelCrop() {
@@ -4515,18 +4531,48 @@ function applyCrop() {
   ctx.clip();
   
   const img = cropData.image;
+  if (!img || !img.naturalWidth) {
+    showToast(t('invalid_image'));
+    return;
+  }
   const scale = cropData.scale / 100;
   const containerSize = 300;
-  
-  const srcX = -cropData.x / scale;
-  const srcY = -cropData.y / scale;
-  const srcSize = containerSize / scale;
-  
-  ctx.drawImage(img, srcX, srcY, srcSize, srcSize, 0, 0, 200, 200);
-  
+
+  // Белый фон — PNG с прозрачностью не даёт чёрный в JPEG
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, 200, 200);
+
+  // Изображение в CSS: top:50% left:50%, transform: translate(calc(-50%+x), calc(-50%+y)) scale(s)
+  // Значит реальный left угол изображения = containerSize/2 - naturalWidth/2*scale + cropData.x ... нет,
+  // transform применяется к rendered размеру. Rendered размер = naturalWidth * scale (max-width:none)
+  const dispW = img.naturalWidth * scale;
+  const dispH = img.naturalHeight * scale;
+
+  // Левый верхний угол изображения в CSS-координатах контейнера:
+  const imgLeft = containerSize / 2 - dispW / 2 + cropData.x;
+  const imgTop  = containerSize / 2 - dispH / 2 + cropData.y;
+
+  // Переводим в пиксели исходного изображения
+  const srcX = Math.round(-imgLeft * (img.naturalWidth  / dispW));
+  const srcY = Math.round(-imgTop  * (img.naturalHeight / dispH));
+  const srcW = Math.round(containerSize * (img.naturalWidth  / dispW));
+  const srcH = Math.round(containerSize * (img.naturalHeight / dispH));
+
+  const cX = Math.max(0, srcX);
+  const cY = Math.max(0, srcY);
+  const cW = Math.min(srcW, img.naturalWidth  - cX);
+  const cH = Math.min(srcH, img.naturalHeight - cY);
+
+  const dstX = cX > srcX ? Math.round((cX - srcX) * (200 / srcW)) : 0;
+  const dstY = cY > srcY ? Math.round((cY - srcY) * (200 / srcH)) : 0;
+  const dstW = Math.round(cW * (200 / srcW));
+  const dstH = Math.round(cH * (200 / srcH));
+
+  ctx.drawImage(img, cX, cY, cW, cH, dstX, dstY, dstW, dstH);
+
   ctx.restore();
-  
-  const dataURL = canvas.toDataURL('image/png');
+
+  const dataURL = canvas.toDataURL('image/jpeg', 0.7);
   
   tokenImageCache = dataURL;
   localStorage.setItem('kspt_token_image_cache', dataURL);
@@ -4537,8 +4583,57 @@ function applyCrop() {
     preview.dataset.imageData = dataURL;
   }
   
+  // Смена иконки у существующего токена
+  if (window._changeIconTargetId) {
+    const fid = window._changeIconTargetId;
+    window._changeIconTargetId = null;
+    const tok = (d.market.myTokens || []).find(t => t.firebaseId === fid);
+    if (tok) {
+      tok.icon = dataURL;
+      if (d.market.personalToken && d.market.personalToken.firebaseId === fid) d.market.personalToken.icon = dataURL;
+      publishTokenToFirebase(tok);
+      localStorage.setItem('kspt_user_tokens', JSON.stringify(d.market.myTokens));
+      save();
+      marketInitialized = false;
+      updateMarketUI();
+    }
+  }
+
   cancelCrop();
   showToast(t('image_cropped'));
+}
+
+function selectDefaultTokenIcon(iconPath, el) {
+  // Снять выделение со всех
+  el.closest('div').querySelectorAll('img').forEach(i => i.style.border = '2px solid transparent');
+  el.style.border = '2px solid #ff9800';
+
+  const preview = document.getElementById('tokenImagePreview');
+  if (preview) {
+    preview.style.backgroundImage = `url('${iconPath}')`;
+    preview.dataset.imageData = iconPath;
+  }
+  tokenImageCache = iconPath;
+}
+
+function changeTokenIcon(firebaseId) {
+  let fileInput = document.getElementById('_changeIconInput');
+  if (!fileInput) {
+    fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.accept = 'image/*';
+    fileInput.id = '_changeIconInput';
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
+  }
+  fileInput.onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    window._changeIconTargetId = firebaseId;
+    handleTokenImageSelection(file);
+    fileInput.value = '';
+  };
+  fileInput.click();
 }
 
 function renderTradeView() {
@@ -4565,8 +4660,9 @@ function renderTradeView() {
     tokenIcon = "jvm.png";
     sellButtonText = formatTemplate(t('sell_token'), ['JVM']);
     priceFormat = 2;
-  } else if (selectedToken === 'personalToken') {
-    tokenData = d.market.personalToken;
+  } else if (selectedToken === 'personalToken' || selectedToken.startsWith('userToken_')) {
+    tokenData = getTokenData();
+    if (!tokenData) return;
     tokenName = tokenData.ticker || 'PERS';
     tokenIcon = tokenData.icon || 'what.png';
     sellButtonText = formatTemplate(t('sell_token'), [tokenData.ticker || 'PERS']);
@@ -4595,7 +4691,8 @@ function renderTradeView() {
         <span id="trade-price-value">${priceFormat === 2 ? formatNumber(tokenData.price, 2) : priceFormat === 5 ? formatNumber(tokenData.price, 5) : formatNumber(tokenData.price, 4)}</span> KSPT 
         <span id="trade-price-arrow" style="font-size:16px">${arrow}</span>
       </div>
-      <div style="text-align:center; color:#666; font-size:12px; margin-bottom:15px;">${t('live_price')}</div>
+      <div style="text-align:center; color:#666; font-size:12px; margin-bottom:5px;">${t('live_price')}</div>
+      <div style="text-align:center; font-size:11px; color:#555; margin-bottom:15px;">Next update: <span id="priceCountdown">—</span></div>
       
       <div class="chart-container" id="chartBox">
         <div class="chart-label">
@@ -4691,11 +4788,14 @@ function setupChartDrag() {
 
 function getTokenData() {
   if (!selectedToken) return null;
-  
   if (selectedToken === 'ksptToken') return d.market.ksptToken;
   else if (selectedToken === 'banxToken') return d.market.banxToken;
   else if (selectedToken === 'jvmToken') return d.market.jvmToken;
-  else if (selectedToken === 'personalToken') return d.market.personalToken;
+  else if (selectedToken === 'personalToken') return d.market.myTokens?.[0] || d.market.personalToken;
+  else if (selectedToken.startsWith('userToken_')) {
+    const idx = parseInt(selectedToken.split('_')[1]);
+    return d.market.myTokens?.[idx] || null;
+  }
   return null;
 }
 
@@ -4769,28 +4869,39 @@ function initMarketUI() {
         </div>
       </div>
       
-      ${d.market.personalToken ? `
-        <div class="market-list-item" onclick="openTrade('personalToken')">
-          ${d.market.personalToken.icon.startsWith('data:') ? 
-            `<img src="${d.market.personalToken.icon}" class="token-icon" style="object-fit:cover;" onerror="this.src='kspt.png'">` :
-            `<img src="${d.market.personalToken.icon}" class="token-icon" onerror="this.src='kspt.png'">`
-          }
+      ${(d.market.myTokens && d.market.myTokens.length > 0) ? d.market.myTokens.map((tok, idx) => `
+        <div class="market-list-item" onclick="openTrade('userToken_${idx}')">
+          <img src="${tok.icon}" class="token-icon" style="object-fit:cover;" onerror="this.src='kspt.png'">
           <div class="token-info">
-            <div class="token-name">${d.market.personalToken.ticker}</div>
-            <div class="token-price">${t('price')}: <span id="price-personalToken-value">${formatNumber(d.market.personalToken.price, 4)}</span> KSPT</div>
+            <div class="token-name">${tok.ticker}</div>
+            <div class="token-price">${t('price')}: <span id="price-userToken-${idx}-value">${formatNumber(tok.price, 4)}</span> KSPT</div>
           </div>
         </div>
-      ` : ''}
+      `).join('') : ''}
     </div>
     
     <div class="card">
       <div class="card-title">${t('personal_token')}</div>
       <div class="card-sub">${t('create_token_desc')}</div>
-      <button onclick="createPersonalToken()" style="background:#ff9800; color:#000; margin-bottom:10px;">${t('create_token')} (899 KSPT)</button>
-      ${d.market.personalToken ? `
-        <button onclick="deletePersonalToken()" style="background:#d32f2f;">${t('delete_token')}</button>
-        <div style="font-size:11px; color:#666; margin-top:5px;">${t('delete_warning')}</div>
-      ` : ''}
+      ${(!d.market.myTokens || d.market.myTokens.length < 3) ? `
+        <button onclick="createPersonalToken()" style="background:#ff9800; color:#000; margin-bottom:10px;">${t('create_token')} (899 KSPT)</button>
+      ` : `<div style="font-size:12px;color:#ff9800;margin-bottom:8px;">Лимит: 3 токена созданы</div>`}
+      ${(d.market.myTokens && d.market.myTokens.length > 0) ? d.market.myTokens.map(tok => `
+        <div style="border:1px solid #333;border-radius:10px;padding:8px;margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <img src="${tok.icon}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.src='kspt.png'">
+            <div>
+              <b>${tok.ticker}</b> — ${tok.name}
+              <div style="font-size:11px;color:#aaa;">by ${tok.creatorName || tok.creatorId}</div>
+            </div>
+          </div>
+          <div style="display:flex;gap:6px;">
+            <button onclick="changeTokenIcon('${tok.firebaseId}')" style="background:#1565c0;font-size:12px;flex:1;">Change Icon</button>
+            <button onclick="deletePersonalToken('${tok.firebaseId}')" style="background:#d32f2f;font-size:12px;flex:1;">${t('delete_token')}</button>
+          </div>
+        </div>
+      `).join('') : ''}
+      <div style="font-size:11px;color:#555;margin-top:6px;">${t('delete_warning')} · Max 3 tokens</div>
     </div>
   `;
   
@@ -5020,7 +5131,16 @@ function renderTokenCreationForm() {
         <div id="tokenImagePreview" style="width: 60px; height: 60px; background: #222; border-radius: 50%; margin-bottom: 10px; background-size: cover; background-position: center; background-image: url('${imagePreview}');"></div>
         <input type="file" id="tokenImageUpload" accept="image/*" style="display: none;">
         <button onclick="document.getElementById('tokenImageUpload').click()" style="width: auto; padding: 8px 15px; background: #444; margin-bottom: 10px;">${t('upload_image')}</button>
-        <div style="font-size: 11px; color: #666;">${t('default_icon')}</div>
+        <div style="font-size: 12px; color: #aaa; margin-top: 6px;">Or choose default icon:</div>
+        <div style="display:flex; gap:10px; margin-top:8px;" id="defaultIconRow">
+          ${['what.png','burger.png','basket.png','diam.png'].map(icon => `
+            <img src="${icon}"
+                 onclick="selectDefaultTokenIcon('${icon}', this)"
+                 style="width:48px;height:48px;border-radius:50%;cursor:pointer;border:2px solid transparent;object-fit:cover;"
+                 onerror="this.style.display='none'">
+          `).join('')}
+        </div>
+        <div style="font-size: 11px; color: #666; margin-top:4px;">${t('default_icon')}</div>
       </div>
       
       <div style="border-top: 1px solid #333; padding-top: 15px; margin-top: 15px;">
@@ -5084,21 +5204,23 @@ function confirmTokenCreation() {
     return;
   }
   
-  let icon = 'what.png';
   const preview = document.getElementById('tokenImagePreview');
-  if (preview && preview.dataset.imageData) {
-    icon = preview.dataset.imageData;
-  }
+  let icon = (preview && preview.dataset.imageData) ? preview.dataset.imageData : 'what.png';
   
   const initialPrice = 899 / supply;
   
   if (confirm(formatTemplate(t('confirm_token'), [ticker, name, supply, initialPrice.toFixed(4), 899]))) {
     d.tokens -= 899;
-    d.market.personalToken = {
+
+    const creatorId = _getMyId();
+    const firebaseId = 'tok_' + creatorId + '_' + Date.now();
+
+    const newToken = {
       ticker: ticker,
       name: name,
       description: description,
       creatorName: d.market.account.name,
+      creatorId: creatorId,
       supply: supply,
       owned: 0,
       lastBuyTime: 0,
@@ -5109,15 +5231,20 @@ function confirmTokenCreation() {
       lastUpdate: Date.now(),
       icon: icon,
       createdAt: Date.now(),
-      chartOffset: 0
+      chartOffset: 0,
+      firebaseId: firebaseId
     };
-    
-    // Save to localStorage for persistence
-    localStorage.setItem('kspt_user_tokens', JSON.stringify(d.market.personalToken));
-    
+
+    if (!d.market.myTokens) d.market.myTokens = [];
+    d.market.myTokens.push(newToken);
+    d.market.personalToken = newToken;
+
+    localStorage.setItem('kspt_user_tokens', JSON.stringify(d.market.myTokens));
+    publishTokenToFirebase(newToken);
+
     tokenImageCache = null;
     localStorage.removeItem('kspt_token_image_cache');
-    
+
     showToast(t('token_created'));
     save();
     currentMarketView = 'main';
@@ -5152,38 +5279,160 @@ function editAccount() {
 }
 
 function createPersonalToken() {
+  const myTokens = d.market.myTokens || [];
+  if (myTokens.length >= 3) {
+    showToast('Max 3 tokens allowed');
+    return;
+  }
   currentMarketView = 'createToken';
   updateMarketUI();
 }
 
-function deletePersonalToken() {
-  if (!d.market.personalToken) return;
-  
+// ─── Firebase: синхронизация цен основных токенов ───────────────────────────
+
+function syncPricesToFirebase() {
+  if (!window._firebaseReady) return;
+  window._firebaseRef(window._firebaseDB, 'market/prices').set({
+    kspt: d.market.ksptToken.price,
+    ksptHistory: d.market.ksptToken.history,
+    banx: d.market.banxToken.price,
+    banxHistory: d.market.banxToken.history,
+    jvm: d.market.jvmToken.price,
+    jvmHistory: d.market.jvmToken.history,
+    ts: Date.now()
+  });
+}
+
+function subscribeToPrices() {
+  if (!window._firebaseReady) return;
+  window._firebaseRef(window._firebaseDB, 'market/prices').on('value', function(snapshot) {
+    const data = snapshot.val();
+    if (!data) return;
+    if (!d.market._lastPriceSync || data.ts > d.market._lastPriceSync) {
+      d.market._lastPriceSync = data.ts;
+      if (data.kspt) { d.market.ksptToken.price = data.kspt; if (data.ksptHistory) d.market.ksptToken.history = data.ksptHistory; }
+      if (data.banx) { d.market.banxToken.price = data.banx; if (data.banxHistory) d.market.banxToken.history = data.banxHistory; }
+      if (data.jvm)  { d.market.jvmToken.price = data.jvm;   if (data.jvmHistory)  d.market.jvmToken.history  = data.jvmHistory; }
+      updateMarketPrices();
+      if (currentMarketView === 'trade') { try { drawChart(); } catch(e){} }
+    }
+  });
+}
+
+// Мастер-выбор: кто считает цены и пишет в Firebase
+// Используем простую блокировку через Firebase, обновляем каждые 25 сек
+function acquireMasterLock() {
+  if (!window._firebaseReady) return;
+  const myId = _getMyId();
+  const lockRef = window._firebaseRef(window._firebaseDB, 'market/master');
+  // Используем once() — читаем один раз, без подписки, без рекурсии
+  lockRef.once('value', function(snapshot) {
+    const lock = snapshot.val();
+    const now = Date.now();
+    if (!lock || now - lock.ts > 35000 || lock.id === myId) {
+      window._isMaster = true;
+      lockRef.set({ id: myId, ts: now });
+    } else {
+      window._isMaster = false;
+    }
+  });
+}
+
+// ─── Firebase: пользовательские токены ──────────────────────────────────────
+
+function publishTokenToFirebase(tokenObj) {
+  if (!window._firebaseReady) return;
+  window._firebaseRef(window._firebaseDB, 'market/userTokens/' + tokenObj.firebaseId).set(tokenObj);
+}
+
+function publishTokenPriceToFirebase(tok) {
+  if (!window._firebaseReady) return;
+  window._firebaseRef(window._firebaseDB, 'market/userTokens/' + tok.firebaseId).update({
+    price: tok.price,
+    history: tok.history,
+    lastUpdate: tok.lastUpdate
+  });
+}
+
+function removeTokenFromFirebase(firebaseId) {
+  if (!window._firebaseReady) return;
+  window._firebaseRef(window._firebaseDB, 'market/userTokens/' + firebaseId).remove();
+}
+
+function subscribeToUserTokens() {
+  if (!window._firebaseReady) return;
+  window._firebaseRef(window._firebaseDB, 'market/userTokens').on('value', function(snapshot) {
+    const data = snapshot.val();
+    const remote = data ? Object.values(data) : [];
+
+    // Сохраняем локальные owned/lastBuyTime для каждого токена —
+    // они хранятся только у игрока, не в Firebase
+    const localOwned = {};
+    (d.market.myTokens || []).forEach(tok => {
+      if (tok.firebaseId) {
+        localOwned[tok.firebaseId] = {
+          owned: tok.owned || 0,
+          lastBuyTime: tok.lastBuyTime || 0,
+          lastUserBuyPrice: tok.lastUserBuyPrice || null,
+          lastUserSellPrice: tok.lastUserSellPrice || null,
+          chartOffset: tok.chartOffset || 0
+        };
+      }
+    });
+
+    // Применяем данные из Firebase, восстанавливая локальные поля
+    d.market.myTokens = remote.map(tok => {
+      const local = localOwned[tok.firebaseId] || {};
+      return Object.assign({}, tok, {
+        owned: local.owned || 0,
+        lastBuyTime: local.lastBuyTime || 0,
+        lastUserBuyPrice: local.lastUserBuyPrice || null,
+        lastUserSellPrice: local.lastUserSellPrice || null,
+        chartOffset: local.chartOffset || 0
+      });
+    });
+
+    d.market.personalToken = d.market.myTokens[0] || null;
+    marketInitialized = false;
+    updateMarketUI();
+  });
+}
+
+function deletePersonalToken(firebaseId) {
+  if (!d.market.myTokens) d.market.myTokens = [];
+
+  let tokenToDelete = firebaseId
+    ? d.market.myTokens.find(tok => tok.firebaseId === firebaseId)
+    : (d.market.myTokens[0] || d.market.personalToken);
+
+  if (!tokenToDelete) return;
+
   const now = Date.now();
-  const created = d.market.personalToken.createdAt;
-  const hoursPassed = (now - created) / (1000 * 60 * 60);
-  
+  const hoursPassed = (now - tokenToDelete.createdAt) / (1000 * 60 * 60);
   if (hoursPassed < 24) {
     showToast(formatTemplate(t('delete_wait'), [Math.ceil(24 - hoursPassed)]));
     return;
   }
-  
-  let warningMsg = t('delete_warning_msg');
-  if (d.market.personalToken.owned > 0) {
-    warningMsg += formatTemplate(t('delete_sell_warning'), [d.market.personalToken.owned.toFixed(2), d.market.personalToken.price.toFixed(4)]);
+
+  let warningMsg = `${t('delete_warning_msg')}\nТокен: ${tokenToDelete.ticker}`;
+  if (tokenToDelete.owned > 0) {
+    warningMsg += '\n' + formatTemplate(t('delete_sell_warning'), [tokenToDelete.owned.toFixed(2), (tokenToDelete.owned * tokenToDelete.price).toFixed(4)]);
   }
   warningMsg += t('delete_final_warning');
-  
+
   if (confirm(warningMsg)) {
-    if (d.market.personalToken.owned > 0) {
-      let earned = d.market.personalToken.owned * d.market.personalToken.price;
+    if (tokenToDelete.owned > 0) {
+      let earned = tokenToDelete.owned * tokenToDelete.price;
       d.tokens += earned;
-      showToast(formatTemplate(t('sold_tokens'), [d.market.personalToken.owned.toFixed(2), earned.toFixed(2)]));
+      showToast(formatTemplate(t('sold_tokens'), [tokenToDelete.owned.toFixed(2), earned.toFixed(2)]));
     }
-    
-    d.market.personalToken = null;
-    localStorage.removeItem('kspt_user_tokens');
-    
+
+    d.market.myTokens = d.market.myTokens.filter(tok => tok.firebaseId !== tokenToDelete.firebaseId);
+    d.market.personalToken = d.market.myTokens[0] || null;
+
+    if (tokenToDelete.firebaseId) removeTokenFromFirebase(tokenToDelete.firebaseId);
+    localStorage.setItem('kspt_user_tokens', JSON.stringify(d.market.myTokens));
+
     showToast(t('token_deleted'));
     save();
     marketInitialized = false;
@@ -5237,8 +5486,9 @@ function buyToken() {
     tokenData = d.market.jvmToken;
     minBuy = 5;
     maxBuy = 250;
-  } else if (selectedToken === 'personalToken') {
-    tokenData = d.market.personalToken;
+  } else if (selectedToken === 'personalToken' || selectedToken.startsWith('userToken_')) {
+    tokenData = getTokenData();
+    if (!tokenData) return;
     minBuy = 0.1;
     maxBuy = 100;
   } else {
@@ -5262,10 +5512,10 @@ function buyToken() {
   tokenData.lastUserBuyPrice = tokenData.price;
   lastMarketBuyTime = now;
   
-  let tokenName = selectedToken === 'ksptToken' ? 'KSP Tokens' : 
-                  selectedToken === 'banxToken' ? 'BANX' : 
-                  selectedToken === 'jvmToken' ? 'JVM' : 
-                  d.market.personalToken.ticker;
+  let tokenName = selectedToken === 'ksptToken' ? 'KSP Tokens' :
+                  selectedToken === 'banxToken' ? 'BANX' :
+                  selectedToken === 'jvmToken' ? 'JVM' :
+                  tokenData.ticker || 'TOKEN';
   showToast(formatTemplate(t('bought_tokens'), [tokensBought.toFixed(2), tokenName]));
   
   save();
@@ -5313,101 +5563,84 @@ function sellToken() {
 }
 
 function marketTicker() {
-  console.debug('marketTicker: updating all tokens');
   if (!d.market) return;
   const now = Date.now();
-  
+
+  // ====================================================
+  // ОСНОВНЫЕ ТОКЕНЫ: цены берём ТОЛЬКО из Firebase.
+  // Локально считать не нужно — onValue обновит их сам.
+  // Но если Firebase ещё не подключился — fallback на
+  // локальный расчёт, чтобы UI не стоял.
+  // ====================================================
+  if (!window._firebaseReady) {
+    // Fallback: локальный расчёт пока Firebase не готов
+    _localTickerFallback(now);
+  }
+
+  // Пользовательские токены (myTokens) — тикер локальный,
+  // т.к. создатель сам публикует цену в Firebase
+  _tickMyTokens(now);
+}
+
+function _localTickerFallback(now) {
   // KSP Token
   if (now - d.market.ksptToken.lastUpdate >= 30000) {
     d.market.ksptToken.lastUpdate = now;
-    let change = 0;
-    let isSpike = Math.random() < 0.05;
     let sign = Math.random() < 0.5 ? -1 : 1;
-    
-    if (isSpike) {
-      change = (Math.random() * 0.15) + 0.15;
-    } else {
-      change = (Math.random() * 0.04) + 0.01;
-    }
-    
-    let newPrice = d.market.ksptToken.price + (change * sign);
-    if (newPrice < 0.40) newPrice = 0.40;
-    if (newPrice > 3.10) newPrice = 3.10;
-    
-    d.market.ksptToken.price = newPrice;
-    d.market.ksptToken.history.push(newPrice);
+    let change = Math.random() < 0.05 ? (Math.random() * 0.15) + 0.15 : (Math.random() * 0.04) + 0.01;
+    let p = Math.min(3.10, Math.max(0.40, d.market.ksptToken.price + change * sign));
+    d.market.ksptToken.price = p;
+    d.market.ksptToken.history.push(p);
     if (d.market.ksptToken.history.length > 20) d.market.ksptToken.history.shift();
   }
-  
-  // BANX Token
   if (d.market.banxToken && now - d.market.banxToken.lastUpdate >= 20000) {
     d.market.banxToken.lastUpdate = now;
-    let banxChange = 0;
-    let banxIsSpike = Math.random() < 0.05;
-    let banxSign = Math.random() < 0.5 ? -1 : 1;
-    
-    if (banxIsSpike) {
-      banxChange = (Math.random() * 0.0002) + 0.0006;
-    } else {
-      banxChange = (Math.random() * 0.0002) + 0.0002;
-    }
-    
-    let newBanxPrice = d.market.banxToken.price + (banxChange * banxSign);
-    if (newBanxPrice < 0.00010) newBanxPrice = 0.00010;
-    if (newBanxPrice > 0.01) newBanxPrice = 0.01;
-    
-    d.market.banxToken.price = newBanxPrice;
-    d.market.banxToken.history.push(newBanxPrice);
+    let sign = Math.random() < 0.5 ? -1 : 1;
+    let change = Math.random() < 0.05 ? (Math.random() * 0.0002) + 0.0006 : (Math.random() * 0.0002) + 0.0002;
+    let p = Math.min(0.01, Math.max(0.00010, d.market.banxToken.price + change * sign));
+    d.market.banxToken.price = p;
+    d.market.banxToken.history.push(p);
     if (d.market.banxToken.history.length > 20) d.market.banxToken.history.shift();
   }
-  
-  // JVM Token
   if (d.market.jvmToken && now - d.market.jvmToken.lastUpdate >= 23000) {
     d.market.jvmToken.lastUpdate = now;
-    let jvmChange = 0;
-    let jvmIsSpike = Math.random() < 0.05;
-    let jvmSign = Math.random() < 0.5 ? -1 : 1;
-    
-    if (jvmIsSpike) {
-      jvmChange = (Math.random() * 0.10) + 0.10;
-    } else {
-      jvmChange = (Math.random() * 0.04) + 0.03;
-    }
-    
-    let newJvmPrice = d.market.jvmToken.price + (jvmChange * jvmSign);
-    if (newJvmPrice < 2.80) newJvmPrice = 2.80;
-    if (newJvmPrice > 12.10) newJvmPrice = 12.10;
-    
-    d.market.jvmToken.price = newJvmPrice;
-    d.market.jvmToken.history.push(newJvmPrice);
+    let sign = Math.random() < 0.5 ? -1 : 1;
+    let change = Math.random() < 0.05 ? (Math.random() * 0.10) + 0.10 : (Math.random() * 0.04) + 0.03;
+    let p = Math.min(12.10, Math.max(2.80, d.market.jvmToken.price + change * sign));
+    d.market.jvmToken.price = p;
+    d.market.jvmToken.history.push(p);
     if (d.market.jvmToken.history.length > 20) d.market.jvmToken.history.shift();
-  }
-  
-  // Personal Token
-  if (d.market.personalToken && now - d.market.personalToken.lastUpdate >= (15000 + Math.random() * 10000)) {
-    d.market.personalToken.lastUpdate = now;
-    let personalChangePercent = 0;
-    let personalIsSpike = Math.random() < 0.05;
-    let personalSign = Math.random() < 0.5 ? -1 : 1;
-    
-    if (personalIsSpike) {
-      personalChangePercent = (Math.random() * 0.05) + 0.10;
-    } else {
-      personalChangePercent = (Math.random() * 0.05) + 0.03;
-    }
-    
-    let changeAmount = d.market.personalToken.price * personalChangePercent;
-    let newPersonalPrice = d.market.personalToken.price + (changeAmount * personalSign);
-    
-    if (newPersonalPrice < 0.001) newPersonalPrice = 0.001;
-    if (newPersonalPrice > 10) newPersonalPrice = 10;
-    
-    d.market.personalToken.price = newPersonalPrice;
-    d.market.personalToken.history.push(newPersonalPrice);
-    if (d.market.personalToken.history.length > 20) d.market.personalToken.history.shift();
   }
 }
 
+function _tickMyTokens(now) {
+  const myTokens = d.market.myTokens || [];
+  myTokens.forEach(tok => {
+    const interval = 15000 + Math.random() * 10000;
+    if (now - (tok.lastUpdate || 0) >= interval) {
+      tok.lastUpdate = now;
+      let sign = Math.random() < 0.5 ? -1 : 1;
+      let pct = Math.random() < 0.05 ? (Math.random() * 0.05) + 0.10 : (Math.random() * 0.05) + 0.03;
+      let p = Math.min(10, Math.max(0.001, tok.price + tok.price * pct * sign));
+      tok.price = p;
+      tok.history = tok.history || [];
+      tok.history.push(p);
+      if (tok.history.length > 20) tok.history.shift();
+      // Публикуем обновлённую цену в Firebase (только создатель)
+      if (window._firebaseReady && tok.creatorId === _getMyId()) {
+        publishTokenPriceToFirebase(tok);
+      }
+    }
+  });
+  // Обратная совместимость
+  if (d.market.myTokens && d.market.myTokens.length > 0) {
+    d.market.personalToken = d.market.myTokens[0];
+  }
+}
+
+function _getMyId() {
+  return (window.Telegram?.WebApp?.initDataUnsafe?.user?.id || localStorage.getItem('_kspt_uid') || 'local');
+}
 // ==========================================
 // ОСНОВНЫЕ ФУНКЦИОНАЛЬНЫЕ ФУНКЦИИ
 // ==========================================
@@ -5465,7 +5698,10 @@ function openScreen(id) {
   } else if (id === 'market') {
   document.getElementById('navMarket')?.classList.add("active");
   if (!marketUpdateInterval) {
-    marketUpdateInterval = setInterval(updateMarketPrices, 1000);
+    marketUpdateInterval = setInterval(function() {
+      updateMarketPrices();
+      updatePriceCountdown();
+    }, 1000);
     console.debug('market: interval started');
   }
   setTimeout(() => {
@@ -9195,3 +9431,29 @@ window.addEventListener('message', function(ev) {
 
 // Запуск игры
 initGame();
+
+// Генерируем локальный uid если нет Telegram
+(function() {
+  if (!localStorage.getItem('_kspt_uid')) {
+    localStorage.setItem('_kspt_uid', 'u_' + Math.random().toString(36).slice(2));
+  }
+})();
+
+// Firebase: запускаем подписки после готовности SDK
+function _startFirebaseSync() {
+  acquireMasterLock();
+  subscribeToPrices();
+  subscribeToUserTokens();
+  // Мастер обновляет цены каждые 28 секунд
+  setInterval(function() {
+    if (window._isMaster && window._firebaseReady) {
+      acquireMasterLock();
+      // Пересчитываем цены и записываем в Firebase
+      _localTickerFallback(Date.now());
+      syncPricesToFirebase();
+    }
+  }, 28000);
+}
+
+document.addEventListener('firebase-ready', _startFirebaseSync);
+if (window._firebaseReady) _startFirebaseSync();

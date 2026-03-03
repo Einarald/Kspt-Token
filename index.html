@@ -6,6 +6,28 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 
 <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+<!-- Firebase (compat — синхронная загрузка, совместима с обычным game.js) -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCvvNiYR_bD7S8xReVZz9wwaP2tJwYya9k",
+    authDomain: "crypto-exchange-35c73.firebaseapp.com",
+    databaseURL: "https://crypto-exchange-35c73-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "crypto-exchange-35c73",
+    storageBucket: "crypto-exchange-35c73.firebasestorage.app",
+    messagingSenderId: "797502229447",
+    appId: "1:797502229447:web:4c01e79846d26a67b027e2"
+  };
+
+  firebase.initializeApp(firebaseConfig);
+  const _db = firebase.database();
+
+  window._firebaseDB = _db;
+  window._firebaseRef = (db, path) => db.ref(path);
+  window._firebaseReady = true;
+</script>
 <link rel="stylesheet" href="css/style.css">
 </head>
 

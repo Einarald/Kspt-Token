@@ -4883,9 +4883,9 @@ function initMarketUI() {
     <div class="card">
       <div class="card-title">${t('personal_token')}</div>
       <div class="card-sub">${t('create_token_desc')}</div>
-      ${(!d.market.myTokens || d.market.myTokens.length < 3) ? `
+      ${(function(){ const mine = (d.market.myTokens||[]).filter(t=>t.creatorId===_getMyId()); return mine.length < 3; })() ? `
         <button onclick="createPersonalToken()" style="background:#ff9800; color:#000; margin-bottom:10px;">${t('create_token')} (899 KSPT)</button>
-      ` : `<div style="font-size:12px;color:#ff9800;margin-bottom:8px;">Лимит: 3 токена созданы</div>`}
+      ` : `<div style="font-size:12px;color:#ff9800;margin-bottom:8px;">Max 3 tokens per user</div>`}
       ${(d.market.myTokens && d.market.myTokens.length > 0) ? d.market.myTokens.map(tok => `
         <div style="border:1px solid #333;border-radius:10px;padding:8px;margin-top:8px;display:flex;flex-direction:column;gap:6px;">
           <div style="display:flex;align-items:center;gap:8px;">
@@ -5200,6 +5200,12 @@ function confirmTokenCreation() {
     showToast(t('supply_error'));
     return;
   }
+
+  const myTokenCount = (d.market.myTokens || []).filter(t => t.creatorId === _getMyId()).length;
+  if (myTokenCount >= 3) {
+    showToast('You can only create 3 tokens');
+    return;
+  }
   
   if (d.tokens < 899) {
     showToast(formatTemplate(t('need_kspt'), [899]));
@@ -5379,6 +5385,20 @@ function subscribeToUserTokens() {
           lastUserSellPrice: tok.lastUserSellPrice || null,
           chartOffset: tok.chartOffset || 0
         };
+      }
+    });
+
+    // Проверяем удалённые токены — автоматически продаём если был owned > 0
+    Object.keys(localOwned).forEach(fid => {
+      const stillExists = remote.find(t => t.firebaseId === fid);
+      if (!stillExists && localOwned[fid].owned > 0) {
+        // Находим последнюю известную цену из старого списка
+        const oldTok = (d.market.myTokens || []).find(t => t.firebaseId === fid);
+        const price = oldTok ? oldTok.price : 0;
+        const earned = localOwned[fid].owned * price;
+        d.tokens += earned;
+        showToast(`Token was deleted. Auto-sold for ${earned.toFixed(2)} KSPT`);
+        save();
       }
     });
 

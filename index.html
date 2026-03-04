@@ -179,19 +179,22 @@ window.addEventListener('message', (event) => {
   
   <div class="bottom-bar">
     <div class="button-row">
-      <div class="long-btn" onclick="openScreen('skins')">
+      <div class="long-btn" onclick="openScreen('skins')" style="position:relative;">
         <img src="m.png" alt="Skins">
+        <div id="badge-main" class="notif-badge" style="display:none;"></div>
       </div>
       <div class="long-btn" onclick="openScreen('offlineShop')">
         <img src="k.png" alt="Mining">
       </div>
     </div>
     <div class="button-row">
-      <div class="long-btn" onclick="openScreen('tech')">
+      <div class="long-btn" onclick="openScreen('tech')" style="position:relative;">
          <img src="t.png" alt="Tech">
+         <div id="badge-tech" class="notif-badge" style="display:none;"></div>
       </div>
-      <div class="long-btn" onclick="openScreen('capsuleScreen')">
+      <div class="long-btn" onclick="openScreen('capsuleScreen')" style="position:relative;">
          <img src="puz.png" alt="Capsule">
+         <div id="badge-capsule" class="notif-badge" style="display:none;"></div>
       </div>
     </div>
     <div class="settings-row">
@@ -391,11 +394,6 @@ window.addEventListener('message', (event) => {
   </div>
 
   <div id="iventTab" style="display:none;">
-    <div class="card">
-      <div class="card-title" data-lang-key="temp_events">Temporary Events</div>
-      <div class="card-sub" data-lang-key="hurry_rewards">Hurry up to get rewards!</div>
-    </div>
-    
     <div id="iventContainer"></div>
   </div>
 
@@ -419,6 +417,12 @@ window.addEventListener('message', (event) => {
       <!-- Элементы магазина будут вставлены здесь -->
     </div>
     <button id="expandShopBtn" onclick="expandShop()" style="position: absolute; bottom: 10px; right: 10px; width: 40px; height: 40px; background: #333; border: none; border-radius: 50%; color: white; font-size: 20px; cursor: pointer;">+</button>
+  </div>
+
+<!-- Key Box (hidden — triggered externally, e.g. promo code or event) -->
+  <div id="keyBox" style="display:none;">
+    <div id="keyBoxProgressBar" style="display:none;"></div>
+    <div id="keyBoxTapCount" style="display:none;"></div>
   </div>
 
   <!-- Нижний блок: Glitch Box -->
@@ -461,7 +465,8 @@ window.addEventListener('message', (event) => {
       <button onclick="showSettingsSub('sound')" style="margin-bottom:12px;" data-lang-key="vibration_sound">Vibration & Sound</button>
       <button onclick="showSettingsSub('animation')" style="margin-bottom:12px;" data-lang-key="animation">Animation</button>
       <button onclick="showSettingsSub('bg')" style="margin-bottom:12px;" data-lang-key="backgrounds">Backgrounds</button>
-      <button onclick="showSettingsSub('language')" data-lang-key="language">Language</button>
+      <button onclick="showSettingsSub('language')" style="margin-bottom:12px;" data-lang-key="language">Language</button>
+      <button onclick="showSettingsSub('notifications')">Notifications</button>
     </div>
     <button class="back" onclick="openScreen('main')" data-lang-key="back">Back</button>
   </div>
@@ -734,6 +739,25 @@ window.addEventListener('message', (event) => {
       
       <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
   </div>
+
+  <div id="settings-notifications" style="display:none;">
+    <div class="settings-section">
+      <div class="card-title">Notifications</div>
+      <div class="card-sub">Red dot badges on tabs when something needs your attention</div>
+      <div class="settings-checkbox">
+        <div style="flex:1;">
+          <label for="toggleNotifications">Enable badges</label>
+          <div class="subtext">Default: OFF</div>
+        </div>
+        <label class="toggle-switch">
+          <input type="checkbox" id="toggleNotifications" onchange="toggleNotificationSetting(this.checked)">
+          <span class="toggle-slider"></span>
+        </label>
+      </div>
+    </div>
+    <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
+  </div>
+
 </div>
 
 <div id="skins" class="screen">
@@ -796,11 +820,10 @@ window.addEventListener('message', (event) => {
   <div class="card">
     <img id="skin-img-euro" src="dontwhat.png" class="card-img">
     <div class="card-title">Euro Coin</div>
-    <div class="card-sub" data-lang-key="additional_skin">Skin + additional skin</div>
+    <div class="card-sub" data-lang-key="additional_skin">Skin + animation</div>
     <div id="skin-sub-euro" class="card-sub"></div>
     <div style="display: flex; gap: 5px; margin-top: 10px;">
       <button id="skin-euro" onclick="buySkin('euro',780)" data-lang-key="buy" style="flex: 1;">BUY 780 KSPT</button>
-      <button id="variant-euro" onclick="switchVariant('euro')" style="display:none; background: #444; width: auto; padding: 0 10px;">Variant</button>
     </div>
   </div>
 
@@ -937,6 +960,13 @@ window.addEventListener('message', (event) => {
     </div>
   </div>
 
+<div class="card" id="skinCardDoge" style="display:none">
+    <img id="skin-img-doge" src="doge.png" class="card-img">
+    <div class="card-title" style="color:#f59e0b;">KSPT: DogeToken</div>
+    <div class="card-sub">Fortune Wheel Exclusive (+50 KSPT/h)</div>
+    <button id="skin-doge" onclick="applySkin('doge')">Select</button>
+  </div>
+
   <!-- Glitch Box Exclusive Skins -->
   <div class="card" id="skinCardCorrupted" style="display:none">
     <img id="skin-img-corrupted" src="corr.png" class="card-img">
@@ -1059,6 +1089,38 @@ window.addEventListener('message', (event) => {
     <button class="cancel" onclick="cancelBet()" data-lang-key="cancel">Cancel</button>
   </div>
 
+<!-- Fortune Wheel Card -->
+  <div class="card" id="fortuneWheelCard" style="border: 2px solid #a855f7; text-align: center; background: linear-gradient(180deg, #1a0533 0%, #0f0f1a 100%); padding: 18px;">
+    <div style="font-size: 22px; font-weight: bold; color: #d946ef; letter-spacing: 1px; text-shadow: 0 0 14px #a855f7; margin-bottom: 4px;">🎡 Fortune Wheel</div>
+    <div style="font-size: 12px; color: #c4b5fd; margin-bottom: 12px;">Spin for rare prizes & boxes!</div>
+
+    <!-- Mini wheel preview (canvas) -->
+    <div style="position: relative; width: 130px; height: 130px; margin: 0 auto 12px;">
+      <canvas id="fortuneWheelPreview" width="130" height="130" style="border-radius:50%; box-shadow: 0 0 20px rgba(168,85,247,0.5); cursor: pointer;" onclick="openFortuneWheel()"></canvas>
+      <div style="position:absolute;top:-10px;left:50%;transform:translateX(-50%);font-size:18px;line-height:1;filter:drop-shadow(0 0 4px #fff);">▼</div>
+    </div>
+
+    <!-- Prize icons row -->
+    <div style="display:flex; justify-content:center; gap:6px; align-items:center; margin-bottom:10px; flex-wrap:wrap;">
+      <img src="noob.png"    style="width:26px;height:26px;object-fit:contain;" title="Noob Box">
+      <img src="keybox.png"  style="width:26px;height:26px;object-fit:contain;" title="Key Box">
+      <img src="glitchbox.png" style="width:26px;height:26px;object-fit:contain;" title="Glitch Box">
+      <img src="gold.png"    onerror="this.src='capsule.png'" style="width:26px;height:26px;object-fit:contain;" title="Gold Capsule">
+      <img src="blue.png"    style="width:26px;height:26px;object-fit:contain;" title="Blue Key">
+      <img src="doge.png"    style="width:26px;height:26px;object-fit:contain;" title="DogeToken Skin">
+      <img src="kspt.png"    style="width:26px;height:26px;object-fit:contain;" title="+50h Income">
+    </div>
+
+    <div class="card-sub" id="fortuneWheelPrice" style="color: #e9d5ff; font-size:13px;">Price: calculating...</div>
+    <div class="card-sub" id="fortuneWheelCooldownInfo" style="color: #f97316; display:none; font-size:12px;"></div>
+    <div class="card-sub" id="fortuneWheelSpinsLeft" style="color: #86efac; margin-top: 4px; font-size:13px;">Spins left: 3/3</div>
+
+    <div style="display:flex; gap:8px; margin-top:10px; align-items:stretch;">
+      <button id="fortuneWheelBtn" onclick="openFortuneWheel()" style="background: linear-gradient(135deg, #7c3aed, #d946ef); color: #fff; font-weight: bold; padding: 12px 16px; border-radius: 12px; border: none; cursor: pointer; flex:1; font-size: 14px;">🎡 SPIN THE WHEEL</button>
+      <button onclick="openWheelOdds()" style="background:#2a1a3e; color:#c4b5fd; border:1px solid #7c3aed; border-radius:10px; width:36px; font-size:18px; cursor:pointer; flex-shrink:0; display:flex; align-items:center; justify-content:center;">?</button>
+    </div>
+  </div>
+
   <div class="card promo-box">
     <div class="card-title" data-lang-key="enter_promo">Enter promo code</div>
     <div class="promo-input-group">
@@ -1071,17 +1133,19 @@ window.addEventListener('message', (event) => {
 </div>
 
 <div class="global-nav">
-  <div class="nav-item" id="navGames" onclick="openScreen('games')">
+  <div class="nav-item" id="navGames" onclick="openScreen('games')" style="position:relative;">
     <div class="nav-icon" style="background: url('game.png') center/cover;"></div>
     <span data-lang-key="games">Games</span>
+    <div id="badge-games" class="notif-badge" style="display:none; top:4px; right:12px;"></div>
   </div>
   <div class="nav-item active" id="navMain" onclick="openScreen('main')">
     <div class="nav-icon" style="background: url('kspt.png') center/cover;"></div>
     <span data-lang-key="main_menu">Main Menu</span>
   </div>
-  <div class="nav-item" id="navMarket" onclick="openScreen('market')">
+  <div class="nav-item" id="navMarket" onclick="openScreen('market')" style="position:relative;">
     <div class="nav-icon" style="background: url('bir.png') center/cover;"></div>
     <span data-lang-key="market">Market</span>
+    <div id="badge-market" class="notif-badge" style="display:none; top:4px; right:12px;"></div>
   </div>
 </div>
 
@@ -1130,6 +1194,21 @@ document.addEventListener('DOMContentLoaded', function () {
     }
   })();
 </script>
+
+<!-- Key Box Opening Modal -->
+<div id="keyBoxModal" class="capsule-modal">
+  <div id="keyBoxHint" style="margin-bottom:20px; font-size:24px; font-weight:bold;">Tap to open! (0/25)</div>
+  <img id="keyBoxBreakImg" src="keybox.png" class="capsule-center">
+</div>
+
+<!-- Key Box Reward Modal -->
+<div id="keyBoxRewardModal" class="reward-popup" style="display: none; border-color: #ffd700; box-shadow: 0 0 40px rgba(255,215,0,0.4);">
+  <h2 style="color: #ffd700; margin-top: 0; font-size: 22px; letter-spacing: 1px;">KEY OBTAINED!</h2>
+  <img id="keyBoxRewardImg" class="reward-img" src="" alt="Key Reward" style="width: 110px; height: 110px; filter: drop-shadow(0 0 12px rgba(255,215,0,0.6));">
+  <div id="keyBoxRewardText" style="margin-bottom: 8px; font-size: 22px; font-weight: bold; color: #fff;"></div>
+  <div id="keyBoxRewardDesc" style="font-size: 13px; color: #ffe082; margin-bottom: 22px; line-height: 1.5;"></div>
+  <button onclick="closeKeyBoxReward()" style="background: linear-gradient(135deg, #ffd700, #ff8c00); color: #000; font-weight: bold; padding: 12px 32px; border-radius: 12px; border: none; font-size: 16px; cursor: pointer; width: 100%;">✔ Collect</button>
+</div>
 
 <!-- Glitch Box Modal -->
 <div id="glitchModal" class="glitch-modal">
@@ -1182,6 +1261,31 @@ document.addEventListener('DOMContentLoaded', function () {
 <div id="tapBoostIndicator" class="tap-boost-indicator">
   <div>TAP BOOST ACTIVE</div>
   <div id="tapBoostTimer" style="font-size: 12px;">05:00</div>
+</div>
+
+<!-- Fortune Wheel Modal -->
+<div id="fortuneWheelModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.93); z-index:20000; flex-direction:column; align-items:center; justify-content:center; overflow-y:auto;">
+  <div style="color:#d946ef; font-size:22px; font-weight:bold; margin-bottom:10px; letter-spacing:2px; text-shadow:0 0 20px #a855f7;">🎡 FORTUNE WHEEL</div>
+  <div id="fortuneWheelModalPrice" style="font-size:13px; color:#c4b5fd; margin-bottom:12px;"></div>
+  <div style="position:relative; width:300px; height:300px; margin-bottom:16px;">
+    <canvas id="fortuneWheelCanvas" width="300" height="300" style="border-radius:50%; box-shadow:0 0 40px rgba(168,85,247,0.6);"></canvas>
+    <div style="position:absolute; top:-18px; left:50%; transform:translateX(-50%); font-size:36px; line-height:1; filter:drop-shadow(0 0 6px #fff);">▼</div>
+  </div>
+  <div id="fortuneWheelResult" style="min-height:28px; font-size:18px; font-weight:bold; color:#fff; text-align:center; margin-bottom:14px; text-shadow:0 0 10px #d946ef; padding: 0 20px;"></div>
+  <div style="display:flex; gap:10px; align-items:center;">
+    <button id="fortuneWheelSpinBtn" onclick="spinFortuneWheel()" style="background:linear-gradient(135deg,#7c3aed,#d946ef); color:#fff; font-weight:bold; padding:14px 28px; border-radius:12px; border:none; font-size:15px; cursor:pointer; box-shadow:0 0 20px rgba(168,85,247,0.5);">🎡 SPIN!</button>
+    <button onclick="openWheelOdds()" style="background:#2a1a3e; color:#c4b5fd; border:1px solid #7c3aed; border-radius:10px; width:40px; height:40px; font-size:20px; cursor:pointer;">?</button>
+    <button onclick="closeFortuneWheel()" style="background:#222; color:#aaa; padding:14px 20px; border-radius:12px; border:none; font-size:14px; cursor:pointer;">✕</button>
+  </div>
+</div>
+
+<!-- Wheel Odds Modal -->
+<div id="wheelOddsModal" style="display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.88); z-index:21000; flex-direction:column; align-items:center; justify-content:center;">
+  <div style="background:#1a0533; border:2px solid #7c3aed; border-radius:20px; padding:24px; width:88%; max-width:340px; max-height:85vh; overflow-y:auto;">
+    <div style="font-size:20px; font-weight:bold; color:#d946ef; text-align:center; margin-bottom:16px; letter-spacing:1px;">📊 Prize Odds</div>
+    <div id="wheelOddsContent"></div>
+    <button onclick="closeWheelOdds()" style="background:linear-gradient(135deg,#7c3aed,#d946ef); color:#fff; font-weight:bold; padding:12px; border-radius:10px; border:none; width:100%; margin-top:16px; cursor:pointer; font-size:15px;">Close</button>
+  </div>
 </div>
 
 </body>

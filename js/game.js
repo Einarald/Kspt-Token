@@ -384,7 +384,46 @@ const translations = {
     'invalid_key': 'Invalid key',
     'music_unlocked': 'Music unlocked!',
     'bonus_bg': 'Bonus background unlocked!',
-    'puzzle_complete': 'Puzzle complete! Hamster Piece skin unlocked!'
+    'puzzle_complete': 'Puzzle complete! Hamster Piece skin unlocked!',
+
+    // Fortune Wheel
+    'fortune_wheel': 'Fortune Wheel',
+    'spin_wheel': 'Spin the Wheel',
+    'wheel_spin_cost': 'Cost: {0} KSPT',
+    'wheel_cooldown': 'Cooldown: {0}h {1}m',
+    'wheel_spins_left': 'Spins left: {0}/1',
+    'wheel_cooldown_active': 'Wheel on cooldown',
+    'wheel_requires_rate': 'Requires 400+ KSPT/h',
+    'wheel_try_again': 'No luck! Try again.',
+    'wheel_income_reward': '💰 +{0} KSPT!',
+    'wheel_noob_box': '📦 Noob Box obtained!',
+    'wheel_key_box': '🗝️ Key Box obtained!',
+    'wheel_glitch_box': '⚡ Glitch Box ready!',
+    'wheel_gold_capsule': '🌟 Gold Capsule obtained!',
+    'wheel_blue_key': '🔑 Blue Key obtained!',
+    'wheel_doge_skin': '🐶 KSPT: DogeToken skin unlocked!',
+    'wheel_free_spin': '🎡 Free spin!',
+    'wheel_spent': '-{0} KSPT spent on spin',
+    'wheel_need_kspt': 'Need {0} KSPT to spin!',
+    'wheel_odds_title': 'Prize Odds',
+
+    // Key Box
+    'key_box': 'Key Box',
+    'key_box_tap': 'Tap to open!',
+    'key_box_reward': 'Key obtained!',
+    'black_key': 'Black Key (Joker)',
+    'black_key_desc': 'Works in all shops!',
+
+    // Notifications (settings)
+    'notifications': 'Notifications',
+    'notifications_desc': 'Red dot badges on tabs',
+    'enable_badges': 'Enable badges',
+    'badges_default_off': 'Default: OFF',
+
+    // Promo new
+    'promo_free_spin': '🎡 Free Fortune Wheel spin!',
+    'promo_key_box': '🗝️ Key Box unlocked!',
+    'promo_adminek': '✅ EK balance set to 10'
   },
   ru: {
     // Main UI
@@ -753,7 +792,50 @@ const translations = {
     'invalid_key': 'Неверный ключ',
     'music_unlocked': 'Музыка разблокирована!',
     'bonus_bg': 'Бонусный фон разблокирован!',
-    'puzzle_complete': 'Пазл завершен! Скин Hamster Piece разблокирован!'
+    'puzzle_complete': 'Пазл завершен! Скин Hamster Piece разблокирован!',
+
+    // Fortune Wheel
+    'fortune_wheel': 'Колесо Фортуны',
+    'spin_wheel': 'Крутить колесо',
+    'wheel_spin_cost': 'Стоимость: {0} KSPT',
+    'wheel_cooldown': 'Перезарядка: {0}ч {1}м',
+    'wheel_spins_left': 'Спинов осталось: {0}/1',
+    'wheel_cooldown_active': 'Колесо на перезарядке',
+    'wheel_requires_rate': 'Требуется 400+ KSPT/ч',
+    'wheel_try_again': 'Не повезло! Попробуй снова.',
+    'wheel_income_reward': '💰 +{0} KSPT!',
+    'wheel_noob_box': '📦 Нуб Бокс получен!',
+    'wheel_key_box': '🗝️ Ключ Бокс получен!',
+    'wheel_glitch_box': '⚡ Глитч Бокс готов!',
+    'wheel_gold_capsule': '🌟 Золотая Капсула получена!',
+    'wheel_blue_key': '🔑 Синий ключ получен!',
+    'wheel_doge_skin': '🐶 Скин KSPT: DogeToken разблокирован!',
+    'wheel_free_spin': '🎡 Бесплатный спин!',
+    'wheel_spent': '-{0} KSPT потрачено на спин',
+    'wheel_need_kspt': 'Нужно {0} KSPT для спина!',
+    'wheel_odds_title': 'Шансы призов',
+
+    // Key Box
+    'key_box': 'Ключ Бокс',
+    'key_box_tap': 'Тапай чтобы открыть!',
+    'key_box_reward': 'Ключ получен!',
+    'black_key': 'Чёрный ключ (Джокер)',
+    'black_key_desc': 'Работает во всех магазинах!',
+
+    // Notifications (settings)
+    'notifications': 'Уведомления',
+    'notifications_desc': 'Красные значки на вкладках',
+    'enable_badges': 'Включить значки',
+    'badges_default_off': 'По умолчанию: ВЫКЛ',
+
+    // Promo new
+    'promo_free_spin': '🎡 Бесплатный спин на Колесе Фортуны!',
+    'promo_key_box': '🗝️ Ключ Бокс разблокирован!',
+    'promo_adminek': '✅ Баланс EK установлен на 10',
+
+    // Owned/progress
+    'owned_progress': 'Получено: {0}/9',
+    'owned_simple': 'Получено'
   }
 };
 
@@ -817,6 +899,10 @@ function updateAllTexts() {
     if (toggle3DEffectCheckbox && d.settings && d.settings.animation) {
         toggle3DEffectCheckbox.checked = d.settings.animation.coin3d !== false;
     }
+const notifToggle = document.getElementById('toggleNotifications');
+  if (notifToggle && d.settings && d.settings.notifications) {
+    notifToggle.checked = d.settings.notifications.enabled !== false;
+  }
   
   // Update skin texts with correct prices and incomes
   updateSkinTexts();
@@ -896,11 +982,9 @@ function updateSkinTexts() {
   }
   
   // Update variant buttons visibility
-  const euroVariantBtn = document.getElementById('variant-euro');
   const artemVariantBtn = document.getElementById('variant-artem');
-  
-  if (euroVariantBtn) {
-    euroVariantBtn.style.display = d.skins && d.skins['euro'] ? 'block' : 'none';
+  if (false) {
+    // euro variant button removed — animation on tap instead
   }
   
   if (artemVariantBtn) {
@@ -1286,7 +1370,15 @@ keys: {
     blue: 0,
     red: 0,
     green: 0,
-    yellow: 0
+    yellow: 0,
+    black: 0
+  },
+  keyBox: {
+    taps: 0
+  },
+  fortuneWheel: {
+    spinsUsed: 0,
+    lastResetTime: 0
   },
   glitchBox: {
     firstOpen: true,
@@ -1320,6 +1412,9 @@ keys: {
     vibration: {
       tapsEnabled: true,
       buttonsEnabled: true
+    },
+    notifications: {
+      enabled: false
     }
   },
 
@@ -1497,6 +1592,10 @@ if (!d.keys) {
   d.keys = defaultData.keys;
 }
 
+if (!d.keyBox) d.keyBox = { taps: 0 };
+if (!d.fortuneWheel) d.fortuneWheel = { spinsUsed: 0, lastResetTime: 0 };
+if (typeof d.keys.black === 'undefined') d.keys.black = 0;
+
 if (!d.glitchBox) {
   d.glitchBox = defaultData.glitchBox;
 }
@@ -1558,7 +1657,8 @@ const SKIN_INCOME = {
   skin_zombie_train: 40,
   brb: 500,
   corrupted: 20,
-  failed: 35
+  failed: 35,
+  doge: 50
   };
 
 // Card data - UPDATED WITH EXACT VALUES
@@ -1895,6 +1995,7 @@ updateBoostTimers();
   }
   
   updateMaxedButtons();
+  updateNotificationBadges();
 }
 
 function updateMaxedButtons() {
@@ -1971,7 +2072,8 @@ function getSkinImage(skinId, euroVar = 1, artemVar = 0) {
     'crypto_heart': 'heart.png',
     'brb': 'knopka.png',
     'corrupted': 'corr.png',
-    'failed': 'fail.png'
+    'failed': 'fail.png',
+    'doge': 'doge.png'
   };
   return skinImages[skinId] || 'kspt.png';
 }
@@ -2054,8 +2156,8 @@ function applySkin(skinId, variant = null) {
   
   // Check if skin is owned
   if (skinId !== 'default' && !d.skins[skinId]) {
-    // Особые скины из золотой капсулы (не покупаются)
-    if (skinId === 'gkspt' || skinId === 'cyber_android' || skinId === 'dirty') {
+    // Особые скины из боксов (не покупаются)
+    if (skinId === 'gkspt' || skinId === 'cyber_android' || skinId === 'dirty' || skinId === 'doge') {
       showToast(t('locked'));
       return;
     }
@@ -2224,6 +2326,14 @@ function handleTapSkinAnimation() {
       coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
       coin.src = coin.dataset.toggle === "1" ? "gkspt1.png" : "gkspt.png";
       break;
+    case "doge":
+  let dogeStage = parseInt(coin.dataset.dogeStage || "0", 10);
+  dogeStage = (dogeStage + 1) % 3;
+  coin.dataset.dogeStage = dogeStage;
+  if (dogeStage === 0) coin.src = "doge.png";
+  else if (dogeStage === 1) coin.src = "doge1.png";
+  else coin.src = "doge2.png";
+  break;
     case "cyber_android":
       let cyberStage = parseInt(coin.dataset.cyberStage || "0", 10);
       cyberStage = (cyberStage + 1) % 4;
@@ -2441,6 +2551,7 @@ case "brb":
 
 function updateSkinButtons() {
   const secretSkins = {
+    "skinCardDoge": 'doge',
     "kostiaSkinCard": 'kostia',
     "metkaSkinCard": 'metka',
     "seriSkinCard": 'seri',
@@ -2463,7 +2574,7 @@ function updateSkinButtons() {
     }
   }
   
-  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android",  "brb",  "corrupted", "failed"];
+  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android",  "brb", "doge", "corrupted", "failed"];
   
   skins.forEach(s => {
     const button = document.getElementById("skin-" + s);
@@ -2490,18 +2601,14 @@ function updateSkinButtons() {
 
     // 2. Общая логика для Активных и Купленных скинов
     if (d.skin === s) {
-        if (s === "euro") {
-            button.textContent = formatTemplate(t('active_var'), [d.euroVar]);
-        } else if (s === "artem") {
+        if (s === "artem") {
             button.textContent = formatTemplate(t('active_var'), [d.artemVar + 1]);
         } else {
             button.textContent = t('active');
         }
         button.className = "active";
     } else if (s === "default" || d.skins[s]) {
-        if (s === "euro") {
-            button.textContent = formatTemplate(t('owned_var'), [d.euroVar]);
-        } else if (s === "artem") {
+        if (s === "artem") {
             button.textContent = formatTemplate(t('owned_var'), [d.artemVar + 1]);
         } else {
             button.textContent = t('select');
@@ -2548,6 +2655,21 @@ function updateSkinButtons() {
             button.textContent = d.skins[s] ? t('select') : t('locked');
             button.className = d.skins[s] ? "" : "owned";
             button.onclick = d.skins[s] ? () => applySkin('siulai') : null;
+
+        } else if (s === "doge") {
+            const isOwned = d.skins && d.skins['doge'];
+            if (d.skin === 'doge') {
+                button.textContent = t('active');
+                button.className = "active";
+            } else if (isOwned) {
+                button.textContent = t('select');
+                button.className = "";
+                button.onclick = () => applySkin('doge');
+            } else {
+                button.textContent = '🎡 Fortune Wheel';
+                button.className = "owned";
+                button.onclick = null;
+            }
 
         // === ВСТАВЛЕННЫЙ ФРАГМЕНТ ДЛЯ ГЛИТЧ СКИНОВ ===
         } else if (s === "corrupted" || s === "failed") {
@@ -5670,7 +5792,145 @@ function _getMyId() {
 // ОСНОВНЫЕ ФУНКЦИОНАЛЬНЫЕ ФУНКЦИИ
 // ==========================================
 
+// ===== NOTIFICATION BADGES =====
+function updateNotificationBadges() {
+  if (!d.settings || !d.settings.notifications || !d.settings.notifications.enabled) {
+    ['badge-main', 'badge-tech', 'badge-capsule', 'badge-games', 'badge-market'].forEach(id => {
+      const el = document.getElementById(id);
+      if (el) el.style.display = 'none';
+      if (el) {
+        const parent = el.closest('.long-btn, .nav-item');
+        if (parent) { parent.style.outline = ''; parent.style.outlineOffset = ''; }
+      }
+    });
+    return;
+  }
+
+  const now = Date.now();
+  let mainCount = 0, techCount = 0, capsuleCount = 0, gamesCount = 0, marketCount = 0;
+
+  // 1. Capsule ready
+  if (d.capsule) {
+    const capsuleReady = d.capsule.firstOpen || (now - (d.capsule.lastOpen || 0) >= 23 * 3600 * 1000);
+    if (capsuleReady) capsuleCount++;
+  }
+
+  // 2. Glitch Box available (cooldown passed or first open)
+  if (d.glitchBox) {
+    const cooldownMs = (d.glitchBox.cooldownDays || 20) * 24 * 3600 * 1000;
+    const glitchReady = d.glitchBox.firstOpen || (now - (d.glitchBox.lastOpen || 0) >= cooldownMs);
+    if (glitchReady) capsuleCount++;
+  }
+
+  // 3. Fortune Wheel available + affordable
+  if (d.fortuneWheel) {
+    const rate = getHourlyRate();
+    const price = getWheelPrice ? getWheelPrice() : 0;
+    const cooldownMs = 50 * 3600 * 1000;
+    const fw = d.fortuneWheel;
+    const spinsOk = fw.spinsUsed < WHEEL_MAX_SPINS || (now - (fw.lastResetTime || 0)) >= cooldownMs;
+    if (rate >= 400 && d.tokens >= price && spinsOk) techCount++;
+    // Free spin via promo
+    if (window._freeWheelSpin) techCount++;
+  }
+
+  // 4. Can afford a new skin
+  const skinPrices = { what: 1, burger: 10, joost: 30, dog: 80, diam: 100, tung: 240, euro: 780, space: 1210, pixe: 3215, onion: 10110, cookie: 40780, ruka: 172080, banditx: 542123, goldcoin: 1120000, brb: 5000000 };
+  const canBuySkin = Object.entries(skinPrices).some(([s, p]) => !d.skins[s] && d.tokens >= p);
+  if (canBuySkin) mainCount++;
+
+  // 5. Tickets refilled (in games.js gameTickets)
+  if (typeof gameTickets !== 'undefined' && gameTickets) {
+    const MAX_T = 10;
+    if ((gameTickets.current || 0) >= MAX_T) gamesCount++;
+  }
+
+  // 6. Active event
+  if (typeof currentIvent !== 'undefined' && currentIvent) {
+    const end = new Date(currentIvent.endDate).getTime();
+    if (end > now) capsuleCount++;
+  }
+
+  // 7. Market: any owned token with significant price change
+  if (d.market) {
+    const tokens = [d.market.ksptToken, d.market.banxToken, d.market.jvmToken];
+    tokens.forEach(t => {
+      if (t && t.owned > 0) {
+        const hist = t.history || [];
+        if (hist.length >= 2) {
+          const change = Math.abs((hist[hist.length - 1] - hist[0]) / (hist[0] || 1));
+          if (change >= 0.05) marketCount++;
+        }
+      }
+    });
+  }
+
+  // Build reason strings
+  const reasons = { main: [], tech: [], capsule: [], games: [], market: [] };
+
+  if (d.capsule) {
+    const capsuleReady2 = d.capsule.firstOpen || (now - (d.capsule.lastOpen || 0) >= 23 * 3600 * 1000);
+    if (capsuleReady2) reasons.capsule.push('🔮 Capsule ready');
+  }
+  if (d.glitchBox) {
+    const cooldownMs2 = (d.glitchBox.cooldownDays || 20) * 24 * 3600 * 1000;
+    const glitchReady2 = d.glitchBox.firstOpen || (now - (d.glitchBox.lastOpen || 0) >= cooldownMs2);
+    if (glitchReady2) reasons.capsule.push('⚡ Glitch Box ready');
+  }
+  if (typeof currentIvent !== 'undefined' && currentIvent) {
+    if (new Date(currentIvent.endDate).getTime() > now) reasons.capsule.push('🎉 Event active');
+  }
+  if (d.fortuneWheel) {
+    const rate2 = getHourlyRate();
+    const price2 = getWheelPrice ? getWheelPrice() : 0;
+    const fw2 = d.fortuneWheel;
+    const spinsOk2 = fw2.spinsUsed < WHEEL_MAX_SPINS || (now - (fw2.lastResetTime || 0)) >= WHEEL_COOLDOWN_HOURS * 3600 * 1000;
+    if (rate2 >= 400 && d.tokens >= price2 && spinsOk2) reasons.tech.push('🎡 Wheel available');
+    if (window._freeWheelSpin) reasons.tech.push('🎡 Free spin!');
+  }
+  const skinPrices2 = { what: 1, burger: 10, joost: 30, dog: 80, diam: 100, tung: 240, euro: 780, space: 1210, pixe: 3215, onion: 10110, cookie: 40780, ruka: 172080, banditx: 542123, goldcoin: 1120000, brb: 5000000 };
+  Object.entries(skinPrices2).forEach(([s, p]) => { if (!d.skins[s] && d.tokens >= p) reasons.main.push(`🎨 Can buy skin`); });
+  if (reasons.main.length > 1) reasons.main = ['🎨 Can buy skin'];
+  if (typeof gameTickets !== 'undefined' && gameTickets && (gameTickets.current || 0) >= 10) reasons.games.push('🎟️ Tickets full');
+  if (d.market) {
+    [d.market.ksptToken, d.market.banxToken, d.market.jvmToken].forEach(tk => {
+      if (tk && tk.owned > 0) {
+        const hist = tk.history || [];
+        if (hist.length >= 2 && Math.abs((hist[hist.length-1] - hist[0]) / (hist[0]||1)) >= 0.05)
+          reasons.market.push('📈 Token price changed');
+      }
+    });
+  }
+
+  function setBadge(id, count, reasonArr) {
+    let el = document.getElementById(id);
+    if (!el) return;
+    if (count > 0) {
+      el.textContent = count > 9 ? '9+' : String(count);
+      el.style.display = 'flex';
+      if (reasonArr && reasonArr.length) el.title = reasonArr.join('\n');
+      // Pulse the parent button
+      const parent = el.closest('.long-btn, .nav-item');
+      if (parent) {
+        parent.style.outline = '2px solid rgba(229,57,53,0.45)';
+        parent.style.outlineOffset = '-2px';
+      }
+    } else {
+      el.style.display = 'none';
+      const parent = el.closest('.long-btn, .nav-item');
+      if (parent) { parent.style.outline = ''; parent.style.outlineOffset = ''; }
+    }
+  }
+
+  setBadge('badge-main',    mainCount,    reasons.main);
+  setBadge('badge-tech',    techCount,    reasons.tech);
+  setBadge('badge-capsule', capsuleCount, reasons.capsule);
+  setBadge('badge-games',   gamesCount,   reasons.games);
+  setBadge('badge-market',  marketCount,  reasons.market);
+}
+
 function openScreen(id) {
+updateNotificationBadges();
   if (d.settings && d.settings.animation && !d.settings.animation.transitions) {
     document.querySelectorAll(".screen").forEach(s => {
       s.classList.remove("active");
@@ -5732,6 +5992,8 @@ function openScreen(id) {
   setTimeout(() => {
     updateMarketUI();
   }, 100);
+  } else if (id === 'tech') {
+    updateFortuneWheelCard && updateFortuneWheelCard();
   } else if (id === 'offlineShop') {
     // Initialize cards tab on first open
     if (!document.getElementById('cards-content').innerHTML) {
@@ -5753,7 +6015,7 @@ function openScreen(id) {
 }
 
 function showSettingsSub(sub) {
-  const subs = ["settings-main", "settings-animation", "settings-sound", "settings-bg", "settings-language"];
+  const subs = ["settings-main", "settings-animation", "settings-sound", "settings-bg", "settings-language", "settings-notifications"];
   subs.forEach(s => {
     const elem = document.getElementById(s);
     if (elem) elem.style.display = "none";
@@ -6503,6 +6765,31 @@ function checkPromo() {
   } else if (code === "tap2x") {
     d.bonuses.tap2x = { active: true, end: Date.now() + 30 * 60 * 1000 };
     message = "x2 tap boost for 30 minutes!";
+
+  } else if (code === "freefortunespin") {
+    if (!d.fortuneWheel) d.fortuneWheel = { spinsUsed: 0, lastResetTime: 0 };
+    d.usedCodes.push(code);
+    save();
+    input.value = "";
+    window._freeWheelSpin = true;
+    showToast('🎡 Free Fortune Wheel spin!');
+    openFortuneWheel();
+    return;
+
+  } else if (code === "keyboxopen") {
+    if (!d.keyBox) d.keyBox = { taps: 0 };
+    d.keyBox.taps = 0;
+    d.usedCodes.push(code);
+    save();
+    input.value = "";
+    showToast('🗝️ Key Box unlocked!');
+    startKeyBoxSequence();
+    return;
+
+  } else if (code === "adminek10") {
+    if (!d.ek) d.ek = 0;
+    d.ek = 10;
+    message = '✅ EK balance set to 10';
 
   } else {
     showToast("Invalid code");
@@ -7958,7 +8245,7 @@ function claimIventReward(day) {
 
 // ===== KEYS SYSTEM =====
 let currentKeyIndex = 0;
-const keyColors = ['blue', 'red', 'green', 'yellow'];
+const keyColors = ['blue', 'red', 'green', 'yellow', 'black'];
 let glitchAudioContext = null;
 let glitchAudioBuffer = null;
 
@@ -8087,11 +8374,19 @@ function getShopItems(keyColor) {
     ],
     green: [
       { name: 'Glitch Box', type: 'glitchBox', value: 1, desc: 'Open Glitch Box' },
-      { name: '+15 EK', type: 'ek', value: 15, desc: 'Get 15 EK coins' }
+      { name: '+30 EK', type: 'ek', value: 30, desc: 'Get 30 EK coins' }
     ],
     yellow: [
       { name: '+10h Income', type: 'income', value: 10, desc: 'Get 10h KSPT income' },
       { name: 'Tap Boost', type: 'tapBoost', value: 300, desc: '+0.10 KSPT per tap for 5min' }
+    ],
+    black: [
+      { name: '+50 Tickets', type: 'tickets', value: 50, desc: 'Add 50 game tickets' },
+      { name: 'Gold Capsule', type: 'goldCapsule', value: 1, desc: 'Open 1 gold capsule' },
+      { name: 'Glitch Box', type: 'glitchBox', value: 1, desc: 'Open Glitch Box' },
+      { name: '+20h Income', type: 'income', value: 20, desc: 'Get 20h KSPT income' },
+      { name: 'Puzzle Piece', type: 'puzzle', value: 1, desc: 'Get random puzzle piece' },
+      { name: '+25 EK', type: 'ek', value: 25, desc: 'Get 25 EK coins' }
     ]
   };
   
@@ -8100,6 +8395,10 @@ function getShopItems(keyColor) {
 
 // Покупка предмета в магазине ключа
 function buyKeyItem(keyColor, item) {
+  // Black key is a joker — use it if no key of the needed color
+  if (d.keys[keyColor] <= 0 && d.keys.black > 0) {
+    keyColor = 'black';
+  }
   if (d.keys[keyColor] <= 0) {
     showToast(`No ${keyColor} keys!`);
     return;
@@ -8540,6 +8839,647 @@ function updateGlitchBoxUI() {
   if (tapCount) {
     tapCount.textContent = `Taps: ${d.glitchBox.taps}/30`;
   }
+}
+
+// ===== KEY BOX =====
+let keyBoxOpening = false;
+let keyBoxTapCount = 0;
+
+function startKeyBoxSequence() {
+  if (keyBoxOpening) return;
+  keyBoxOpening = true;
+  keyBoxTapCount = (d.keyBox && d.keyBox.taps) ? d.keyBox.taps : 0;
+
+  const modal = document.getElementById('keyBoxModal');
+  const img = document.getElementById('keyBoxBreakImg');
+  const hint = document.getElementById('keyBoxHint');
+
+  if (!modal || !img) { keyBoxOpening = false; return; }
+
+  img.src = 'keybox.png';
+  hint.textContent = `Tap to open! (${keyBoxTapCount}/25)`;
+  modal.classList.add('active');
+
+  img.removeEventListener('click', keyBoxTapHandler);
+  img.addEventListener('click', keyBoxTapHandler);
+}
+
+function keyBoxTapHandler(e) {
+  const now = Date.now();
+  if (lastCapsuleTapTime && now - lastCapsuleTapTime < 120) return;
+  lastCapsuleTapTime = now;
+
+  keyBoxTapCount++;
+  if (!d.keyBox) d.keyBox = { taps: 0 };
+  d.keyBox.taps = keyBoxTapCount;
+
+  const img = document.getElementById('keyBoxBreakImg');
+  const hint = document.getElementById('keyBoxHint');
+
+  img.classList.add('tap-anim');
+  setTimeout(() => img.classList.remove('tap-anim'), 220);
+  hint.textContent = `Tap to open! (${keyBoxTapCount}/25)`;
+
+  const bar = document.getElementById('keyBoxProgressBar');
+  const tapLabel = document.getElementById('keyBoxTapCount');
+  if (bar) bar.style.width = Math.min(100, (keyBoxTapCount / 25) * 100) + '%';
+  if (tapLabel) tapLabel.textContent = `Taps: ${keyBoxTapCount}/25`;
+
+  if (keyBoxTapCount >= 25) {
+    img.src = 'keybox1.png';
+    hint.textContent = 'Opening...';
+    img.removeEventListener('click', keyBoxTapHandler);
+    setTimeout(() => openKeyBox(), 350);
+  }
+
+  save();
+}
+
+function openKeyBox() {
+  const modal = document.getElementById('keyBoxModal');
+  const whiteFade = document.getElementById('whiteFade');
+
+  if (whiteFade) {
+    whiteFade.classList.add('active');
+    setTimeout(() => whiteFade.classList.remove('active'), 250);
+  }
+
+  setTimeout(() => {
+    const roll = Math.random() * 100;
+    let wonKey;
+    if (roll < 40)       wonKey = 'yellow';
+    else if (roll < 70)  wonKey = 'red';
+    else if (roll < 90)  wonKey = 'green';
+    else if (roll < 99)  wonKey = 'blue';
+    else                 wonKey = 'black';
+
+    const keyImgMap = {
+      yellow: 'yellow.png',
+      red: 'red.png',
+      green: 'green.png',
+      blue: 'blue.png',
+      black: 'black.png'
+    };
+
+    const isBlack = wonKey === 'black';
+    const added = addKey(wonKey);
+    const rewardImg = keyImgMap[wonKey];
+    const keyName = wonKey.charAt(0).toUpperCase() + wonKey.slice(1);
+    const rewardText = added ? `${keyName} Key!` : `${keyName} Key (MAX — KSPT compensation)`;
+    const rewardDesc = isBlack
+      ? '🃏 Secret Black Key — a joker key that works like all other keys combined. Use it in any shop!'
+      : '';
+
+    d.keyBox.taps = 0;
+    save();
+
+    const bar = document.getElementById('keyBoxProgressBar');
+    const tapLabel = document.getElementById('keyBoxTapCount');
+    if (bar) bar.style.width = '0%';
+    if (tapLabel) tapLabel.textContent = 'Taps: 0/25';
+
+    if (modal) modal.classList.remove('active');
+    keyBoxOpening = false;
+    keyBoxTapCount = 0;
+
+    const rewardModal = document.getElementById('keyBoxRewardModal');
+    const rewardImgEl = document.getElementById('keyBoxRewardImg');
+    const rewardTextEl = document.getElementById('keyBoxRewardText');
+    const rewardDescEl = document.getElementById('keyBoxRewardDesc');
+
+    if (rewardModal && rewardImgEl && rewardTextEl) {
+      rewardImgEl.src = rewardImg;
+      rewardTextEl.textContent = rewardText;
+      if (rewardDescEl) rewardDescEl.textContent = rewardDesc;
+      rewardModal.style.display = 'flex';
+    }
+
+    ui();
+    updateKeysUI();
+  }, 300);
+}
+
+function closeKeyBoxReward() {
+  const modal = document.getElementById('keyBoxRewardModal');
+  if (modal) modal.style.display = 'none';
+}
+
+// ===== FORTUNE WHEEL =====
+const WHEEL_SEGMENTS = [
+  { label: 'Try Again',    color: '#374151', textColor: '#9ca3af', chance: 25, icon: null         },
+  { label: '+30h Income',  color: '#065f46', textColor: '#6ee7b7', chance: 20, icon: 'kspt.png'   },
+  { label: 'Noob Box',     color: '#1e3a5f', textColor: '#93c5fd', chance: 15, icon: 'noob.png'   },
+  { label: 'Key Box',      color: '#78350f', textColor: '#fcd34d', chance: 15, icon: 'keybox.png' },
+  { label: 'Glitch Box',   color: '#4c1d95', textColor: '#c4b5fd', chance: 10, icon: 'glitchbox.png' },
+  { label: 'Gold Capsule', color: '#7c2d12', textColor: '#fdba74', chance: 8,  icon: 'cagold.png'   },
+  { label: 'Blue Key',     color: '#1e3a8a', textColor: '#93c5fd', chance: 5,  icon: 'blue.png'   },
+  { label: 'DogeToken',    color: '#92400e', textColor: '#fde68a', chance: 2,  icon: 'doge.png'   },
+];
+
+const WHEEL_COOLDOWN_HOURS = 50;
+const WHEEL_MAX_SPINS = 1;
+const WHEEL_MIN_RATE = 400; // min KSPT/h to use wheel
+
+let wheelSpinning = false;
+let wheelCurrentAngle = 0;
+let wheelAudioCtx = null;
+
+function getWheelPrice() {
+  const rate = getHourlyRate();
+  return Math.round(rate * 50 / 1000) * 1000;
+}
+
+function updateFortuneWheelCard() {
+  const rate = getHourlyRate();
+  const priceEl = document.getElementById('fortuneWheelPrice');
+  const coolEl = document.getElementById('fortuneWheelCooldownInfo');
+  const spinsEl = document.getElementById('fortuneWheelSpinsLeft');
+  const btn = document.getElementById('fortuneWheelBtn');
+  if (!priceEl) return;
+
+  if (rate < WHEEL_MIN_RATE) {
+    priceEl.textContent = `Requires 400+ KSPT/h offline income`;
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
+    if (spinsEl) spinsEl.style.display = 'none';
+    if (coolEl) coolEl.style.display = 'none';
+    return;
+  }
+
+  const price = getWheelPrice();
+  priceEl.textContent = `Price: ${formatNumber(price)} KSPT`;
+
+  // check cooldown
+  const fw = d.fortuneWheel;
+  const now = Date.now();
+  const cooldownMs = WHEEL_COOLDOWN_HOURS * 3600 * 1000;
+  const sinceReset = now - (fw.lastResetTime || 0);
+
+  if (fw.spinsUsed >= WHEEL_MAX_SPINS && sinceReset < cooldownMs) {
+    const remaining = cooldownMs - sinceReset;
+    const h = Math.floor(remaining / 3600000);
+    const m = Math.floor((remaining % 3600000) / 60000);
+    if (coolEl) { coolEl.textContent = `Cooldown: ${h}h ${m}m remaining`; coolEl.style.display = 'block'; }
+    if (spinsEl) { spinsEl.textContent = `Spins: 0/1 (cooldown)`; spinsEl.style.display = 'block'; }
+    if (btn) { btn.disabled = true; btn.style.opacity = '0.4'; }
+  } else {
+    if (fw.spinsUsed >= WHEEL_MAX_SPINS) {
+      // reset
+      fw.spinsUsed = 0;
+      fw.lastResetTime = 0;
+      save();
+    }
+    const left = WHEEL_MAX_SPINS - fw.spinsUsed;
+    if (coolEl) coolEl.style.display = 'none';
+    if (spinsEl) { spinsEl.textContent = `Spins left: ${left}/1`; spinsEl.style.display = 'block'; }
+    if (btn) { btn.disabled = false; btn.style.opacity = '1'; }
+  }
+  // Draw mini preview in card
+  const preview = document.getElementById('fortuneWheelPreview');
+  if (preview) preloadWheelImages(() => drawWheel(wheelCurrentAngle, preview));
+}
+// Image cache for wheel icons
+const _wheelImgCache = {};
+function _loadWheelImg(src, cb) {
+  if (!src) { cb(null); return; }
+  if (_wheelImgCache[src] === true) { cb(null); return; }
+  if (_wheelImgCache[src] instanceof Image) { cb(_wheelImgCache[src]); return; }
+  // avoid duplicate loads
+  if (_wheelImgCache[src] === 'loading') {
+    const wait = setInterval(() => {
+      if (_wheelImgCache[src] !== 'loading') { clearInterval(wait); cb(_wheelImgCache[src] instanceof Image ? _wheelImgCache[src] : null); }
+    }, 50);
+    return;
+  }
+  _wheelImgCache[src] = 'loading';
+  const img = new Image();
+  img.crossOrigin = 'anonymous';
+  img.onload = () => { _wheelImgCache[src] = img; cb(img); };
+  img.onerror = () => { _wheelImgCache[src] = true; cb(null); };
+  img.src = src;
+}
+
+function preloadWheelImages(onDone) {
+  let pending = WHEEL_SEGMENTS.filter(s => s.icon).length;
+  if (pending === 0) { if (onDone) onDone(); return; }
+  WHEEL_SEGMENTS.forEach(seg => {
+    if (!seg.icon) return;
+    _loadWheelImg(seg.icon, () => {
+      pending--;
+      if (pending === 0 && onDone) onDone();
+    });
+  });
+}
+
+function drawWheel(angle, targetCanvas) {
+  const canvas = targetCanvas || document.getElementById('fortuneWheelCanvas');
+  if (!canvas) return;
+  const ctx = canvas.getContext('2d');
+  const w = canvas.width, h = canvas.height;
+  const cx = w / 2, cy = h / 2, r = cx - 4;
+  const total = WHEEL_SEGMENTS.length;
+  const arc = (Math.PI * 2) / total;
+  const isSmall = r < 80;
+
+  ctx.clearRect(0, 0, w, h);
+
+  WHEEL_SEGMENTS.forEach((seg, i) => {
+    const startAngle = angle + i * arc;
+    const endAngle = startAngle + arc;
+    const midAngle = startAngle + arc / 2;
+
+    // Slice
+    ctx.beginPath();
+    ctx.moveTo(cx, cy);
+    ctx.arc(cx, cy, r, startAngle, endAngle);
+    ctx.closePath();
+    ctx.fillStyle = seg.color;
+    ctx.fill();
+    ctx.strokeStyle = '#0d0d1a';
+    ctx.lineWidth = isSmall ? 1.5 : 2.5;
+    ctx.stroke();
+
+    // Position for icon + label
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(midAngle);
+
+    const iconDist = r * 0.65;
+    const iconSize = isSmall ? 14 : 26;
+
+    const img = seg.icon ? (_wheelImgCache[seg.icon] instanceof Image ? _wheelImgCache[seg.icon] : null) : null;
+
+    if (img) {
+      // Draw sprite icon
+      ctx.drawImage(img, iconDist - iconSize / 2, -iconSize / 2, iconSize, iconSize);
+    } else if (!seg.icon) {
+      // "Try Again" — draw X
+      ctx.strokeStyle = '#6b7280';
+      ctx.lineWidth = isSmall ? 1.5 : 2.5;
+      const s = iconSize / 2 - 2;
+      ctx.beginPath(); ctx.moveTo(iconDist - s, -s); ctx.lineTo(iconDist + s, s); ctx.stroke();
+      ctx.beginPath(); ctx.moveTo(iconDist + s, -s); ctx.lineTo(iconDist - s, s); ctx.stroke();
+    }
+
+    // Label under icon
+    if (!isSmall) {
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'top';
+      ctx.fillStyle = seg.textColor;
+      ctx.font = 'bold 8.5px sans-serif';
+      // Shorten label to fit
+      const words = seg.label.split(' ');
+      const short = words.length >= 2 ? words[0] + (words[1].length <= 4 ? ' ' + words[1] : '') : seg.label;
+      ctx.fillText(short, iconDist, iconSize / 2 + 3);
+    }
+
+    ctx.restore();
+  });
+
+  // Outer ring glow
+  ctx.beginPath();
+  ctx.arc(cx, cy, r, 0, Math.PI * 2);
+  ctx.strokeStyle = '#7c3aed';
+  ctx.lineWidth = isSmall ? 2 : 4;
+  ctx.stroke();
+
+  // Center circle
+  const cr = isSmall ? 10 : 20;
+  ctx.beginPath();
+  ctx.arc(cx, cy, cr, 0, Math.PI * 2);
+  ctx.fillStyle = '#1a0533';
+  ctx.fill();
+  ctx.strokeStyle = '#d946ef';
+  ctx.lineWidth = isSmall ? 2 : 3;
+  ctx.stroke();
+  ctx.fillStyle = '#d946ef';
+  ctx.font = `bold ${isSmall ? 10 : 15}px sans-serif`;
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.fillText('✦', cx, cy);
+}
+
+function openFortuneWheel() {
+  const rate = getHourlyRate();
+  if (rate < WHEEL_MIN_RATE) {
+    showToast('Need 400+ KSPT/h to use Fortune Wheel!');
+    return;
+  }
+  const fw = d.fortuneWheel;
+  const now = Date.now();
+  const cooldownMs = WHEEL_COOLDOWN_HOURS * 3600 * 1000;
+  if (fw.spinsUsed >= WHEEL_MAX_SPINS && (now - (fw.lastResetTime || 0)) < cooldownMs) {
+    showToast('Fortune Wheel on cooldown!');
+    return;
+  }
+
+  const modal = document.getElementById('fortuneWheelModal');
+  if (modal) {
+    modal.style.display = 'flex';
+    document.getElementById('fortuneWheelResult').textContent = '';
+    document.getElementById('fortuneWheelSpinBtn').disabled = false;
+    const priceLabel = document.getElementById('fortuneWheelModalPrice');
+    if (priceLabel) priceLabel.textContent = `Cost per spin: ${formatNumber(getWheelPrice())} KSPT`;
+    preloadWheelImages(() => drawWheel(wheelCurrentAngle));
+  }
+}
+
+function openWheelOdds() {
+  const modal = document.getElementById('wheelOddsModal');
+  const content = document.getElementById('wheelOddsContent');
+  if (!modal || !content) return;
+  content.innerHTML = WHEEL_SEGMENTS.map(seg => {
+    const imgEl = seg.icon
+      ? `<img src="${seg.icon}" style="width:22px;height:22px;object-fit:contain;vertical-align:middle;margin-right:8px;" onerror="this.style.display='none'">`
+      : `<span style="font-size:18px;margin-right:8px;">✕</span>`;
+    const barW = Math.round(seg.chance * 2.8);
+    return `<div style="display:flex;align-items:center;margin-bottom:10px;">
+      ${imgEl}
+      <div style="flex:1;">
+        <div style="display:flex;justify-content:space-between;margin-bottom:3px;">
+          <span style="color:#e9d5ff;font-size:13px;">${seg.label}</span>
+          <span style="color:#d946ef;font-weight:bold;font-size:13px;">${seg.chance}%</span>
+        </div>
+        <div style="background:#2a1a3e;border-radius:4px;height:7px;">
+          <div style="background:linear-gradient(90deg,#7c3aed,#d946ef);width:${barW}px;height:100%;border-radius:4px;"></div>
+        </div>
+      </div>
+    </div>`;
+  }).join('');
+  modal.style.display = 'flex';
+}
+
+function closeWheelOdds() {
+  const modal = document.getElementById('wheelOddsModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function closeFortuneWheel() {
+  const modal = document.getElementById('fortuneWheelModal');
+  if (modal) modal.style.display = 'none';
+  updateFortuneWheelCard();
+}
+
+function toggleNotificationSetting(enabled) {
+  if (!d.settings) d.settings = {};
+  if (!d.settings.notifications) d.settings.notifications = {};
+  d.settings.notifications.enabled = enabled;
+  save();
+  updateNotificationBadges();
+}
+
+function getWheelWinner(finalAngle) {
+  const total = WHEEL_SEGMENTS.length;
+  const arc = (Math.PI * 2) / total;
+  // pointer is at top (angle = -PI/2). Normalize.
+  let normalized = ((-Math.PI / 2) - finalAngle) % (Math.PI * 2);
+  if (normalized < 0) normalized += Math.PI * 2;
+  const idx = Math.floor(normalized / arc) % total;
+  return WHEEL_SEGMENTS[idx];
+}
+
+function pickWeightedSegmentAngle() {
+  const total = WHEEL_SEGMENTS.reduce((s, seg) => s + seg.chance, 0);
+  let roll = Math.random() * total;
+  let chosenIdx = 0;
+  for (let i = 0; i < WHEEL_SEGMENTS.length; i++) {
+    roll -= WHEEL_SEGMENTS[i].chance;
+    if (roll <= 0) { chosenIdx = i; break; }
+  }
+  // Target center of that segment
+  const arc = (Math.PI * 2) / WHEEL_SEGMENTS.length;
+  const targetCenter = chosenIdx * arc + arc / 2;
+  // We want pointer (-PI/2) to land on targetCenter
+  // finalAngle + targetCenter = -PI/2  =>  finalAngle = -PI/2 - targetCenter
+  const targetAngle = -Math.PI / 2 - targetCenter;
+  return { targetAngle, chosenIdx };
+}
+
+function playWheelTick(freq) {
+  try {
+    if (!wheelAudioCtx) wheelAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const osc = wheelAudioCtx.createOscillator();
+    const gain = wheelAudioCtx.createGain();
+    osc.connect(gain);
+    gain.connect(wheelAudioCtx.destination);
+    osc.frequency.setValueAtTime(freq || 440, wheelAudioCtx.currentTime);
+    gain.gain.setValueAtTime(0.15, wheelAudioCtx.currentTime);
+    gain.gain.exponentialRampToValueAtTime(0.001, wheelAudioCtx.currentTime + 0.08);
+    osc.start();
+    osc.stop(wheelAudioCtx.currentTime + 0.08);
+  } catch(e) {}
+}
+
+function playWheelWin() {
+  try {
+    if (!wheelAudioCtx) wheelAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const notes = [523, 659, 784, 1047];
+    notes.forEach((freq, i) => {
+      const osc = wheelAudioCtx.createOscillator();
+      const gain = wheelAudioCtx.createGain();
+      osc.connect(gain); gain.connect(wheelAudioCtx.destination);
+      osc.frequency.setValueAtTime(freq, wheelAudioCtx.currentTime + i * 0.12);
+      gain.gain.setValueAtTime(0.2, wheelAudioCtx.currentTime + i * 0.12);
+      gain.gain.exponentialRampToValueAtTime(0.001, wheelAudioCtx.currentTime + i * 0.12 + 0.25);
+      osc.start(wheelAudioCtx.currentTime + i * 0.12);
+      osc.stop(wheelAudioCtx.currentTime + i * 0.12 + 0.25);
+    });
+  } catch(e) {}
+}
+
+function spinFortuneWheel() {
+  if (wheelSpinning) return;
+
+  // Check price
+  const price = getWheelPrice();
+  const isFree = window._freeWheelSpin === true;
+  window._freeWheelSpin = false;
+  if (!isFree && d.tokens < price) {
+    showToast(`Need ${formatNumber(price)} KSPT to spin!`);
+    return;
+  }
+
+  // Check spins
+  const fw = d.fortuneWheel;
+  const now = Date.now();
+  const cooldownMs = WHEEL_COOLDOWN_HOURS * 3600 * 1000;
+  if (fw.spinsUsed >= WHEEL_MAX_SPINS) {
+    if ((now - (fw.lastResetTime || 0)) < cooldownMs) {
+      showToast('Fortune Wheel on cooldown!');
+      return;
+    }
+    fw.spinsUsed = 0;
+    fw.lastResetTime = 0;
+  }
+
+  // Deduct price
+  if (!isFree) {
+    d.tokens -= price;
+    showToast(`-${formatNumber(price)} KSPT spent on spin`);
+  } else {
+    showToast('🎡 Free spin!');
+  }
+  fw.spinsUsed++;
+  if (fw.spinsUsed >= WHEEL_MAX_SPINS) fw.lastResetTime = now;
+  save();
+  ui();
+
+  wheelSpinning = true;
+  document.getElementById('fortuneWheelSpinBtn').disabled = true;
+  document.getElementById('fortuneWheelResult').textContent = '';
+
+  const { targetAngle, chosenIdx } = pickWeightedSegmentAngle();
+
+  // Total rotation: 6-10 full spins + land on target
+  const fullSpins = (6 + Math.floor(Math.random() * 5)) * Math.PI * 2;
+  const startAngle = wheelCurrentAngle;
+  // Normalize targetAngle
+  let normalTarget = targetAngle % (Math.PI * 2);
+  // Ensure we overshoot cleanly
+  let delta = (fullSpins + normalTarget - (startAngle % (Math.PI * 2)));
+  if (delta < fullSpins) delta += Math.PI * 2;
+  const endAngle = startAngle + delta;
+
+  const totalDuration = 5000; // ms
+  const startTime = performance.now();
+  let lastTickAngle = startAngle;
+  const tickInterval = (Math.PI * 2) / WHEEL_SEGMENTS.length;
+
+  function easeOut(t) {
+    // Slow down dramatically at the end for dramatic effect
+    return 1 - Math.pow(1 - t, 4);
+  }
+
+  function animate(now2) {
+    const elapsed = now2 - startTime;
+    const t = Math.min(elapsed / totalDuration, 1);
+    const eased = easeOut(t);
+    const current = startAngle + delta * eased;
+    drawWheel(current);
+    wheelCurrentAngle = current;
+
+    // Tick sound
+    const angleDiff = current - lastTickAngle;
+    if (angleDiff >= tickInterval) {
+      const progress = t;
+      const freq = 300 + 400 * (1 - eased); // higher pitch at start
+      playWheelTick(freq);
+      lastTickAngle = current;
+    }
+
+    if (t < 1) {
+      requestAnimationFrame(animate);
+    } else {
+      wheelSpinning = false;
+      wheelCurrentAngle = endAngle % (Math.PI * 2);
+      drawWheel(wheelCurrentAngle);
+      applyWheelReward(WHEEL_SEGMENTS[chosenIdx]);
+    }
+  }
+
+  requestAnimationFrame(animate);
+}
+
+function applyWheelReward(seg) {
+  const resultEl = document.getElementById('fortuneWheelResult');
+  const rate = getHourlyRate();
+  let resultText = '';
+
+  switch (seg.label) {
+    case 'Try Again':
+      resultText = '😔 Try Again! No reward this time.';
+      if (resultEl) resultEl.style.color = '#9ca3af';
+      break;
+
+    case '+30h Income': {
+      const reward = Math.round(rate * 30 / 1000) * 1000;
+      d.tokens += reward;
+      resultText = `💰 +${formatNumber(reward)} KSPT!`;
+      if (resultEl) resultEl.style.color = '#6ee7b7';
+      playWheelWin();
+      break;
+    }
+
+    case 'Noob Box':
+      if (!d.noobBox) d.noobBox = { obtained: false, opened: false, taps: 0, lastOpen: 0 };
+      d.noobBox.obtained = true;
+      d.noobBox.opened = false;
+      d.noobBox.taps = 0;
+      resultText = '📦 Noob Box obtained!';
+      if (resultEl) resultEl.style.color = '#93c5fd';
+      playWheelWin();
+      setTimeout(() => { closeFortuneWheel(); startNoobBoxSequence(); }, 1500);
+      break;
+
+    case 'Key Box':
+      if (!d.keyBox) d.keyBox = { taps: 0 };
+      d.keyBox.taps = 0;
+      resultText = '🗝️ Key Box obtained!';
+      if (resultEl) resultEl.style.color = '#fcd34d';
+      playWheelWin();
+      setTimeout(() => { closeFortuneWheel(); startKeyBoxSequence(); }, 1500);
+      break;
+
+    case 'Glitch Box':
+      if (!d.glitchBox) d.glitchBox = { firstOpen: true, lastOpen: 0, cooldownDays: 20, taps: 0, doubled: 1, duplicates: 0 };
+      d.glitchBox.firstOpen = true;
+      d.glitchBox.lastOpen = 0;
+      resultText = '⚡ Glitch Box ready!';
+      if (resultEl) resultEl.style.color = '#c4b5fd';
+      playWheelWin();
+      setTimeout(() => { closeFortuneWheel(); startGlitchBoxSequence(); }, 1500);
+      break;
+
+    case 'Gold Capsule':
+      if (!d.goldCapsule) d.goldCapsule = { obtained: false, opened: false, taps: 0, lastOpen: 0 };
+      d.goldCapsule.obtained = true;
+      d.goldCapsule.opened = false;
+      d.goldCapsule.taps = 0;
+      resultText = '🌟 Gold Capsule obtained!';
+      if (resultEl) resultEl.style.color = '#fdba74';
+      playWheelWin();
+      setTimeout(() => { closeFortuneWheel(); startGoldCapsuleSequence(); }, 1500);
+      break;
+
+    case 'Blue Key':
+      addKey('blue');
+      resultText = '🔑 Blue Key obtained!';
+      if (resultEl) resultEl.style.color = '#93c5fd';
+      playWheelWin();
+      break;
+
+    case 'DogeToken 🐶':
+      if (!d.skins) d.skins = {};
+      if (!d.skins['doge']) {
+        d.skins['doge'] = 1;
+        resultText = '🐶 KSPT: DogeToken skin UNLOCKED!';
+        const card = document.getElementById('skinCardDoge');
+        if (card) card.style.display = 'block';
+      } else {
+        const bonus = Math.round(rate * 10 / 100) * 100;
+        d.tokens += bonus;
+        resultText = `🐶 DogeToken (already owned) → +${formatNumber(bonus)} KSPT`;
+      }
+      if (resultEl) resultEl.style.color = '#fde68a';
+      playWheelWin();
+      break;
+  }
+
+  if (resultEl) resultEl.textContent = resultText;
+  save();
+  ui();
+  updateFortuneWheelCard();
+
+  // Re-enable spin btn after delay if spins remain
+  setTimeout(() => {
+    const fw = d.fortuneWheel;
+    const now = Date.now();
+    const cooldownMs = WHEEL_COOLDOWN_HOURS * 3600 * 1000;
+    const canSpin = fw.spinsUsed < WHEEL_MAX_SPINS || (now - (fw.lastResetTime || 0)) >= cooldownMs;
+    const btn = document.getElementById('fortuneWheelSpinBtn');
+    if (btn && canSpin && seg.label !== 'Noob Box' && seg.label !== 'Key Box' && seg.label !== 'Glitch Box') {
+      btn.disabled = false;
+    }
+  }, 1500);
 }
 
 // Начать открытие Glitch Box

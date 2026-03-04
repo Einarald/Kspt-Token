@@ -42,12 +42,13 @@ const SHOP_ITEMS = [
 function loadD(){
   try {
     const raw = localStorage.getItem('d');
-    if (raw) return JSON.parse(raw);
-
-    const def = { tokens:0, ek:0 };
-    localStorage.setItem('d', JSON.stringify(def));
-    return def;
-
+    const parsed = raw ? JSON.parse(raw) : {};
+    // Always prefer ek from ekshop_ek_cache if main game sent it
+    const ekCache = localStorage.getItem('ekshop_ek_cache');
+    if (ekCache !== null) parsed.ek = Number(ekCache);
+    if (!parsed.tokens) parsed.tokens = 0;
+    if (typeof parsed.ek === 'undefined') parsed.ek = 0;
+    return parsed;
   } catch(e){
     return { tokens:0, ek:0 };
   }
@@ -119,6 +120,7 @@ function renderShop(){
 
   d.ek -= item.price;
   saveD(d);
+  localStorage.setItem('ekshop_ek_cache', String(Number(d.ek)));
 
   owned[item.id] = true;
   setOwned(owned);
@@ -203,20 +205,20 @@ window.addEventListener('message', (ev) => {
 
   if (msg.type === 'kspt_init' && msg.d) {
   try {
-    // Берём текущие локальные данные магазина (если есть)
-    const local = loadD(); // функция уже есть в ekshop.html
-    // Сливаем: берём msg.d как основу, но НЕ перезаписываем EK и выборы магазина,
-    // если у нас уже есть локальные изменения.
-    const merged = Object.assign({}, msg.d || {});
-    // prefer local.ek if present (so purchases made in shop are not lost)
-    if (typeof local.ek !== 'undefined') merged.ek = Number(local.ek);
+    // Cache the real EK from main game — this is the source of truth
+    const realEk = Number(msg.d.ek || 0);
+    localStorage.setItem('ekshop_ek_cache', String(realEk));
+
+    const local = loadD();
+    const merged = Object.assign({}, msg.d);
+    // Use real EK from main game (overrides any stale local value)
+    merged.ek = realEk;
     if (local.ekshop_owned) merged.ekshop_owned = local.ekshop_owned;
     if (local.ekshop_selected) merged.ekshop_selected = local.ekshop_selected;
     localStorage.setItem('d', JSON.stringify(merged));
   } catch(e){
     console.warn('merge kspt_init failed', e);
   }
-  // перерисовываем магазин
   renderShop();
 }
 });
@@ -266,15 +268,7 @@ function syncWithMainGame() {
       }, '*');
     }
 
-    // Обновим основное localStorage 'd' (если хотим, чтобы другие окна/скрипты тоже видели)
-    try {
-      const mainDRaw = localStorage.getItem('d');
-      let mainD = mainDRaw ? JSON.parse(mainDRaw) : {};
-      mainD = Object.assign({}, mainD, dObj);
-      localStorage.setItem('d', JSON.stringify(mainD));
-    } catch(e) {
-      console.warn('failed to sync local d', e);
-    }
+    // (intentionally removed — first block above already synced ek correctly)
   } catch(e) {
     console.warn('Sync error:', e);
   }

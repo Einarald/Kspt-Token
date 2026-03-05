@@ -515,6 +515,25 @@ input{
     pointer-events: none;
 }
 
+#leaderboardModal {
+  -webkit-overflow-scrolling: touch;
+}
+
+#leaderboardModal::-webkit-scrollbar {
+  width: 4px;
+}
+#leaderboardModal::-webkit-scrollbar-track {
+  background: #111;
+}
+#leaderboardModal::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+#lbList > div {
+  transition: background 0.2s;
+}
+
 .notif-badge {
   position: absolute;
   top: 2px;

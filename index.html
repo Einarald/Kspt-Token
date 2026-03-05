@@ -466,7 +466,10 @@ window.addEventListener('message', (event) => {
       <button onclick="showSettingsSub('animation')" style="margin-bottom:12px;" data-lang-key="animation">Animation</button>
       <button onclick="showSettingsSub('bg')" style="margin-bottom:12px;" data-lang-key="backgrounds">Backgrounds</button>
       <button onclick="showSettingsSub('language')" style="margin-bottom:12px;" data-lang-key="language">Language</button>
-      <button onclick="showSettingsSub('notifications')">Notifications</button>
+      <button onclick="showSettingsSub('notifications')" style="margin-bottom:12px;">Notifications</button>
+      <button onclick="openLeaderboard()" style="display:flex; align-items:center; gap:10px; justify-content:center;">
+        <img src="records.png" style="width:22px; height:22px; object-fit:contain;"> Records
+      </button>
     </div>
     <button class="back" onclick="openScreen('main')" data-lang-key="back">Back</button>
   </div>
@@ -738,6 +741,42 @@ window.addEventListener('message', (event) => {
 </div>
       
       <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
+  </div>
+
+<!-- LEADERBOARD MODAL -->
+  <div id="leaderboardModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.85); overflow-y:auto;">
+    <div style="max-width:480px; margin:0 auto; padding:16px;">
+      <!-- Header -->
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px; padding-top:12px;">
+        <img src="records.png" style="width:32px; height:32px;">
+        <div style="flex:1;">
+          <div style="font-size:20px; font-weight:bold; color:#ffd700;">🏆 Leaderboard</div>
+          <div style="font-size:12px; color:#888;">Top players by offline income</div>
+        </div>
+        <button onclick="closeLeaderboard()" style="background:#222; border:1px solid #444; color:#fff; border-radius:50%; width:34px; height:34px; font-size:18px; cursor:pointer; flex-shrink:0;">×</button>
+      </div>
+
+      <!-- My rank card -->
+      <div id="lbMyRank" style="background:linear-gradient(135deg,#1a1a2e,#16213e); border:1px solid #ffd70055; border-radius:14px; padding:12px 16px; margin-bottom:14px; display:none;">
+        <div style="font-size:11px; color:#ffd700; margin-bottom:6px; text-transform:uppercase; letter-spacing:1px;">Your Rank</div>
+        <div style="display:flex; align-items:center; gap:12px;">
+          <div id="lbMyRankNum" style="font-size:22px; font-weight:bold; color:#ffd700; min-width:32px;">#–</div>
+          <img id="lbMyAvatar" src="seri.png" style="width:40px; height:40px; border-radius:50%; object-fit:cover; border:2px solid #ffd700;">
+          <div style="flex:1;">
+            <div id="lbMyName" style="font-weight:bold; font-size:14px;">You</div>
+            <div id="lbMyRate" style="color:#6ee7b7; font-size:13px;">0 KSPT/h</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- List -->
+      <div id="lbList" style="display:flex; flex-direction:column; gap:8px;">
+        <div style="text-align:center; color:#555; padding:30px;">Loading...</div>
+      </div>
+
+      <!-- Last updated -->
+      <div id="lbUpdated" style="text-align:center; font-size:11px; color:#555; margin-top:12px; padding-bottom:20px;"></div>
+    </div>
   </div>
 
   <div id="settings-notifications" style="display:none;">

@@ -386,6 +386,22 @@ const translations = {
     'bonus_bg': 'Bonus background unlocked!',
     'puzzle_complete': 'Puzzle complete! Hamster Piece skin unlocked!',
 
+// Leaderboard
+    'leaderboard': 'Leaderboard',
+    'leaderboard_desc': 'Top players by offline income',
+    'leaderboard_your_rank': 'Your Rank',
+    'leaderboard_no_players': 'No players yet',
+    'leaderboard_updated': 'Updated: ',
+    'leaderboard_you': 'you',
+    'leaderboard_loading': 'Loading...',
+    'records': 'Records',
+
+    // Notifications settings
+    'notifications_title': 'Notifications',
+    'notifications_sub': 'Red dot badges on tabs when something needs your attention',
+    'notifications_enable': 'Enable badges',
+    'notifications_default': 'Default: OFF',
+
     // Fortune Wheel
     'fortune_wheel': 'Fortune Wheel',
     'spin_wheel': 'Spin the Wheel',
@@ -793,6 +809,22 @@ const translations = {
     'music_unlocked': 'Музыка разблокирована!',
     'bonus_bg': 'Бонусный фон разблокирован!',
     'puzzle_complete': 'Пазл завершен! Скин Hamster Piece разблокирован!',
+
+// Leaderboard
+    'leaderboard': 'Таблица лидеров',
+    'leaderboard_desc': 'Топ игроков по оффлайн доходу',
+    'leaderboard_your_rank': 'Ваше место',
+    'leaderboard_no_players': 'Пока нет игроков',
+    'leaderboard_updated': 'Обновлено: ',
+    'leaderboard_you': 'вы',
+    'leaderboard_loading': 'Загрузка...',
+    'records': 'Рекорды',
+
+    // Notifications settings
+    'notifications_title': 'Уведомления',
+    'notifications_sub': 'Красные значки на вкладках когда есть что-то новое',
+    'notifications_enable': 'Включить значки',
+    'notifications_default': 'По умолчанию: ВЫКЛ',
 
     // Fortune Wheel
     'fortune_wheel': 'Колесо Фортуны',
@@ -1493,12 +1525,12 @@ function loadEkshopData() {
     if (typeof d !== 'undefined') {
       if (d.ekshop_selected?.skin) {
         d.ekshopSkin = d.ekshop_selected.skin;
-        d.skin = 'default';
+        // Don't overwrite d.skin — updateSkinImage handles ekshop priority
       }
 
       if (d.ekshop_selected?.bg) {
         d.ekshopBg = d.ekshop_selected.bg;
-        d.bg = 'default';
+        // Don't overwrite d.bg
       }
     }
   } catch(e) {
@@ -1610,9 +1642,8 @@ if (!d.secretSkins) {
 const save = () => {
   console.debug('save: called at', Date.now());
   try {
+    d._savedAt = Date.now();
     localStorage.setItem("kspt", JSON.stringify(d));
-    
-    // Save user tokens separately for persistence
     if (d.market.personalToken) {
       localStorage.setItem('kspt_user_tokens', JSON.stringify(d.market.personalToken));
     }
@@ -1620,6 +1651,82 @@ const save = () => {
     console.error("Error saving data:", e);
   }
 };
+
+// ===== FIREBASE CLOUD SAVE =====
+function getCloudSaveUid() {
+  return String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id || '');
+}
+
+function saveToFirebase() {
+  if (!window._firebaseReady) return;
+  const uid = getCloudSaveUid();
+  if (!uid || uid === 'local' || uid === '') return;
+  try {
+    const snapshot = JSON.parse(JSON.stringify(d));
+    snapshot._savedAt = Date.now();
+    // Don't save market history to save space
+    if (snapshot.market) {
+      ['ksptToken','banxToken','jvmToken'].forEach(k => {
+        if (snapshot.market[k]) snapshot.market[k].history = snapshot.market[k].history?.slice(-10) || [];
+      });
+    }
+    window._firebaseRef(window._firebaseDB, 'cloudSave/' + uid).set(snapshot);
+    console.debug('cloud save: ok');
+  } catch(e) {
+    console.warn('cloud save error:', e);
+  }
+}
+
+function loadFromFirebase(onDone) {
+  if (!window._firebaseReady) { if (onDone) onDone(null); return; }
+  const uid = getCloudSaveUid();
+  if (!uid || uid === '') { if (onDone) onDone(null); return; }
+  window._firebaseRef(window._firebaseDB, 'cloudSave/' + uid).once('value', function(snapshot) {
+    const data = snapshot.val();
+    if (onDone) onDone(data);
+  }, function() {
+    if (onDone) onDone(null);
+  });
+}
+
+function tryRestoreFromCloud() {
+  const localRaw = localStorage.getItem('kspt');
+  loadFromFirebase(function(cloudData) {
+    if (!cloudData) return;
+    const cloudTime = cloudData._savedAt || 0;
+    let localTime = 0;
+    try {
+      const localParsed = localRaw ? JSON.parse(localRaw) : null;
+      localTime = localParsed?._savedAt || localParsed?.lastLogin || 0;
+    } catch(e) {}
+
+    if (cloudTime > localTime) {
+      console.log('cloud save is newer — restoring');
+      try {
+        delete cloudData._savedAt;
+        d = migrateData(cloudData, defaultData);
+        localStorage.setItem('kspt', JSON.stringify(d));
+        loadEkshopData();
+        ui();
+        showToast('☁️ Progress restored from cloud!');
+      } catch(e) {
+        console.warn('cloud restore error:', e);
+      }
+    } else {
+      console.debug('local save is up to date');
+    }
+  });
+}
+
+// Auto-save to Firebase every 30 seconds
+setInterval(() => {
+  if (window._firebaseReady) saveToFirebase();
+}, 30000);
+
+// On load — try to restore if local is empty or older
+window.addEventListener('load', () => {
+  setTimeout(tryRestoreFromCloud, 2000); // wait for firebase to init
+});
 
 // Данные о доходах от скинов
 const SKIN_INCOME = {
@@ -6141,6 +6248,8 @@ if (d.tapBoostEnd > now) {
     d.energy -= cost;
     let earned = 0.01 * m + tapBoostBonus;
     d.tokens += earned;
+    d.totalTaps = (d.totalTaps || 0) + 1;
+    if (d.totalTaps === 1 && window._firebaseReady) pushMyLeaderboardData();
     
     showTapFloat(e, earned);
     
@@ -9219,6 +9328,129 @@ function closeFortuneWheel() {
   updateFortuneWheelCard();
 }
 
+// ===== LEADERBOARD =====
+let _lbInterval = null;
+
+function getMyTelegramUser() {
+  const u = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  return u || null;
+}
+
+function getMyUid() {
+  return String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id || localStorage.getItem('_kspt_uid') || 'local');
+}
+
+function openLeaderboard() {
+  const modal = document.getElementById('leaderboardModal');
+  if (modal) modal.style.display = 'block';
+  document.body.style.overflow = 'hidden';
+  loadLeaderboard();
+  _lbInterval = setInterval(loadLeaderboard, 10000);
+  // Push own data first
+  pushMyLeaderboardData();
+}
+
+function closeLeaderboard() {
+  const modal = document.getElementById('leaderboardModal');
+  if (modal) modal.style.display = 'none';
+  document.body.style.overflow = '';
+  if (_lbInterval) { clearInterval(_lbInterval); _lbInterval = null; }
+}
+
+function pushMyLeaderboardData() {
+  if (!window._firebaseReady) return;
+  const uid = getMyUid();
+  const tgUser = getMyTelegramUser();
+  const rate = getHourlyRate();
+  const entry = {
+    uid: uid,
+    name: tgUser ? (tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '')) : 'Player',
+    username: tgUser?.username || '',
+    photoUrl: tgUser?.photo_url || '',
+    rate: Math.round(rate),
+    tokens: Math.round(d.tokens || 0),
+    updatedAt: Date.now()
+  };
+  // Only push if user made at least 1 tap
+  if ((d.totalTaps || 0) < 1 && (d.tokens || 0) < 1) return;
+  window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).set(entry);
+}
+
+function loadLeaderboard() {
+  if (!window._firebaseReady) {
+    document.getElementById('lbList').innerHTML = '<div style="text-align:center;color:#555;padding:30px;">Firebase not available</div>';
+    return;
+  }
+  window._firebaseRef(window._firebaseDB, 'leaderboard').orderByChild('rate').limitToLast(100).once('value', function(snapshot) {
+    const data = snapshot.val();
+    if (!data) {
+      document.getElementById('lbList').innerHTML = '<div style="text-align:center;color:#555;padding:30px;">No players yet</div>';
+      return;
+    }
+    const players = Object.values(data).sort((a, b) => b.rate - a.rate);
+    renderLeaderboard(players);
+    const upd = document.getElementById('lbUpdated');
+    if (upd) upd.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+  });
+}
+
+function renderLeaderboard(players) {
+  const myUid = getMyUid();
+  const list = document.getElementById('lbList');
+  if (!list) return;
+
+  const medals = ['🥇', '🥈', '🥉'];
+
+  // My rank card
+  const myIdx = players.findIndex(p => String(p.uid) === String(myUid));
+  const myCard = document.getElementById('lbMyRank');
+  if (myIdx !== -1 && myCard) {
+    const me = players[myIdx];
+    myCard.style.display = 'block';
+    document.getElementById('lbMyRankNum').textContent = '#' + (myIdx + 1);
+    document.getElementById('lbMyName').textContent = me.name || 'You';
+    document.getElementById('lbMyRate').textContent = formatNumber(me.rate) + ' KSPT/h';
+    const myAvatar = document.getElementById('lbMyAvatar');
+    if (me.photoUrl) {
+      myAvatar.src = me.photoUrl;
+      myAvatar.onerror = () => { myAvatar.src = 'seri.png'; };
+    } else {
+      myAvatar.src = 'seri.png';
+    }
+  }
+
+  // Render list
+  list.innerHTML = players.map((p, i) => {
+    const isMe = String(p.uid) === String(myUid);
+    const rank = i + 1;
+    const medal = medals[i] || '';
+    const avatarSrc = p.photoUrl || 'seri.png';
+    const username = p.username ? '@' + p.username : '';
+    const rateStr = formatNumber(p.rate) + ' KSPT/h';
+
+    const rankColor = rank === 1 ? '#ffd700' : rank === 2 ? '#c0c0c0' : rank === 3 ? '#cd7f32' : '#aaa';
+    const border = isMe ? '2px solid #ffd700' : '1px solid #2a2a2a';
+    const bg = isMe ? 'linear-gradient(135deg,#1a1a2e,#16213e)' : (rank <= 3 ? 'linear-gradient(135deg,#1c1c1c,#111)' : '#111');
+
+    return `<div style="display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:12px; background:${bg}; border:${border};">
+      <div style="font-size:${rank <= 3 ? '20px' : '14px'}; font-weight:bold; color:${rankColor}; min-width:28px; text-align:center;">${medal || '#' + rank}</div>
+      <img src="${avatarSrc}" onerror="this.src='seri.png'" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid ${rankColor}; flex-shrink:0;">
+      <div style="flex:1; min-width:0;">
+        <div style="font-weight:bold; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name || 'Player'}${isMe ? ' <span style="color:#ffd700;font-size:11px;">(you)</span>' : ''}</div>
+        <div style="font-size:11px; color:#666;">${username}</div>
+      </div>
+      <div style="font-weight:bold; font-size:13px; color:#6ee7b7; text-align:right; flex-shrink:0;">${rateStr}</div>
+    </div>`;
+  }).join('');
+}
+
+// Push leaderboard data every 10 seconds while app is open
+setInterval(() => {
+  if (window._firebaseReady && (d.totalTaps || 0) >= 1) {
+    pushMyLeaderboardData();
+  }
+}, 10000);
+
 function toggleNotificationSetting(enabled) {
   if (!d.settings) d.settings = {};
   if (!d.settings.notifications) d.settings.notifications = {};
@@ -10373,12 +10605,12 @@ window.addEventListener('message', function(ev) {
 
         if (data.selected.skin) {
           d.ekshopSkin = data.selected.skin;
-          d.skin = 'default';
+          // Don't overwrite d.skin
         }
 
         if (data.selected.bg) {
           d.ekshopBg = data.selected.bg;
-          d.bg = 'default';
+          // Don't overwrite d.bg
         }
       }
     }

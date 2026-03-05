@@ -468,7 +468,7 @@ window.addEventListener('message', (event) => {
       <button onclick="showSettingsSub('language')" style="margin-bottom:12px;" data-lang-key="language">Language</button>
       <button onclick="showSettingsSub('notifications')" style="margin-bottom:12px;">Notifications</button>
       <button onclick="openLeaderboard()" style="display:flex; align-items:center; gap:10px; justify-content:center;">
-        <img src="records.png" style="width:22px; height:22px; object-fit:contain;"> Records
+        <img src="records.png" style="width:22px; height:22px; object-fit:contain; pointer-events:none;"> <span data-lang-key="records" style="pointer-events:none;">Records</span>
       </button>
     </div>
     <button class="back" onclick="openScreen('main')" data-lang-key="back">Back</button>

@@ -9371,8 +9371,7 @@ function pushMyLeaderboardData() {
     tokens: Math.round(d.tokens || 0),
     updatedAt: Date.now()
   };
-  // Only push if user made at least 1 tap
-  if ((d.totalTaps || 0) < 1 && (d.tokens || 0) < 1) return;
+  // Always push when online — filter by tokens on display side
   window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).set(entry);
 }
 
@@ -9387,7 +9386,9 @@ function loadLeaderboard() {
       document.getElementById('lbList').innerHTML = '<div style="text-align:center;color:#555;padding:30px;">No players yet</div>';
       return;
     }
-    const players = Object.values(data).sort((a, b) => b.rate - a.rate);
+    const players = Object.values(data)
+      .filter(p => (p.tokens || 0) >= 0.01)
+      .sort((a, b) => b.rate - a.rate);
     renderLeaderboard(players);
     const upd = document.getElementById('lbUpdated');
     if (upd) upd.textContent = 'Updated: ' + new Date().toLocaleTimeString();
@@ -9437,7 +9438,6 @@ function renderLeaderboard(players) {
       <img src="${avatarSrc}" onerror="this.src='seri.png'" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid ${rankColor}; flex-shrink:0;">
       <div style="flex:1; min-width:0;">
         <div style="font-weight:bold; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name || 'Player'}${isMe ? ' <span style="color:#ffd700;font-size:11px;">(you)</span>' : ''}</div>
-        <div style="font-size:11px; color:#666;">${username}</div>
       </div>
       <div style="font-weight:bold; font-size:13px; color:#6ee7b7; text-align:right; flex-shrink:0;">${rateStr}</div>
     </div>`;
@@ -9446,10 +9446,13 @@ function renderLeaderboard(players) {
 
 // Push leaderboard data every 10 seconds while app is open
 setInterval(() => {
-  if (window._firebaseReady && (d.totalTaps || 0) >= 1) {
-    pushMyLeaderboardData();
-  }
+  if (window._firebaseReady) pushMyLeaderboardData();
 }, 10000);
+
+// Push immediately on load (after firebase ready)
+setTimeout(() => {
+  if (window._firebaseReady) pushMyLeaderboardData();
+}, 3000);
 
 function toggleNotificationSetting(enabled) {
   if (!d.settings) d.settings = {};

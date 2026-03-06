@@ -203,7 +203,19 @@ function updateTicketsUI() {
   const ticketCountElem = document.getElementById('ticketCount');
   const ticketsLeftElem = document.getElementById('ticketsLeft');
   if (ticketCountElem) ticketCountElem.textContent = gameTickets.current;
-  if (ticketsLeftElem) ticketsLeftElem.textContent = gameTickets.current;
+  if (ticketsLeftElem) {
+    ticketsLeftElem.textContent = gameTickets.current;
+    // Обновляем весь текст строки с переводом
+    const line = document.getElementById('ticketsLeftLine');
+    if (line) {
+      const lang = (typeof currentLang !== 'undefined') ? currentLang : 'en';
+      if (lang === 'ru') {
+        line.innerHTML = `У вас осталось <span id="ticketsLeft">${gameTickets.current}</span> билетов сегодня`;
+      } else {
+        line.innerHTML = `You have <span id="ticketsLeft">${gameTickets.current}</span> tickets left today`;
+      }
+    }
+  }
 
   const timer = document.getElementById('ticketTimer');
   const timerText = document.getElementById('ticketTimerText');
@@ -294,6 +306,65 @@ function disableMobileGameMode() {
   }
 }
 
+// ===== RACE MODE SELECTION =====
+let _raceModeTimer = null;
+let _raceModeCountdown = 15;
+
+function openRaceModeModal() {
+  if (gameTickets.current <= 0) {
+    showToast("Not enough tickets!");
+    return;
+  }
+  _raceModeCountdown = 15;
+  document.getElementById('raceModeTimer').textContent = 'Auto-starting with Bots in ' + _raceModeCountdown + 's...';
+  document.getElementById('raceModeModal').classList.add('active');
+  _raceModeTimer = setInterval(() => {
+    _raceModeCountdown--;
+    const el = document.getElementById('raceModeTimer');
+    if (el) el.textContent = 'Auto-starting with Bots in ' + _raceModeCountdown + 's...';
+    if (_raceModeCountdown <= 0) {
+      confirmRaceMode('bots');
+    }
+  }, 1000);
+}
+
+function closeRaceModeModal() {
+  document.getElementById('raceModeModal').classList.remove('active');
+  if (_raceModeTimer) { clearInterval(_raceModeTimer); _raceModeTimer = null; }
+}
+
+function confirmRaceMode(mode) {
+  closeRaceModeModal();
+  window._pendingRaceMode = mode;
+  if (mode === 'online') {
+    // Онлайн: открываем iframe БЕЗ списания билета
+    // Билет спишется только когда хост нажмёт START внутри race.html
+    currentGame = 'race';
+    document.getElementById('games').classList.remove('active');
+    const gameContainer = document.getElementById('gameContainer');
+    gameContainer.style.display = 'block';
+    gameContainer.classList.add('active');
+    const balEl = document.getElementById('balanceGames');
+    if (balEl && typeof d !== 'undefined') balEl.textContent = `${d.tokens.toFixed(2)} KSPT  •  ${Number(d.ek||0)} EK`;
+    const container = document.getElementById('gameFrameContainer');
+    container.innerHTML = `<iframe class="game-frame" src="games/race.html" allow="autoplay"></iframe>`;
+    const iframe = container.querySelector('iframe');
+    iframe.addEventListener('load', () => {
+      try {
+        const hourly = (typeof getHourlyRate === 'function') ? getHourlyRate() : 0;
+        const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user || null;
+        iframe.contentWindow.postMessage({ type: 'kspt_init', hourly, tgUser, raceMode: 'online' }, '*');
+      } catch(e) {}
+      try { enableMobileGameMode(iframe); } catch(e) {}
+    });
+    gameActive = true;
+    startGameLoop();
+  } else {
+    startGame('race');
+  }
+}
+// ===== END RACE MODE SELECTION =====
+
 function startGame(gameType) {
   if (gameTickets.current <= 0) {
     showToast("Not enough tickets!");
@@ -327,7 +398,9 @@ const iframe = container.querySelector('iframe');
 iframe.addEventListener('load', () => {
   try {
     const hourly = (typeof getHourlyRate === 'function') ? getHourlyRate() : 0;
-    iframe.contentWindow.postMessage({ type: 'kspt_init', hourly }, '*');
+    const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user || null;
+    iframe.contentWindow.postMessage({ type: 'kspt_init', hourly, tgUser, raceMode: window._pendingRaceMode || 'bots' }, '*');
+    window._pendingRaceMode = null;
   } catch(e) {
     console.warn('iframe init postMessage failed', e);
   }

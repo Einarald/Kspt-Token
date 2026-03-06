@@ -28,12 +28,52 @@
   window._firebaseRef = (db, path) => db.ref(path);
   window._firebaseReady = true;
 </script>
+<style>
+#raceModeModal {
+  display:none; position:fixed; inset:0; z-index:100000;
+  background:rgba(0,0,0,0.92); align-items:center; justify-content:center;
+}
+#raceModeModal.active { display:flex; }
+.race-mode-box {
+  background:linear-gradient(135deg,#0f0f0f,#1a1a1a);
+  border:1px solid #00bcd4; border-radius:20px;
+  padding:28px 24px; width:min(320px,88vw); text-align:center;
+}
+.race-mode-box h2 { color:#00e676; margin:0 0 6px; font-size:20px; }
+.race-mode-box p  { color:#aaa; font-size:13px; margin:0 0 22px; }
+.race-mode-btn {
+  display:block; width:100%; padding:15px; margin-bottom:12px;
+  border:none; border-radius:13px; font-size:16px; font-weight:bold;
+  cursor:pointer; transition:transform .1s;
+}
+.race-mode-btn:active { transform:scale(.96); }
+.race-mode-btn.bots   { background:linear-gradient(135deg,#00bcd4,#0097a7); color:#000; }
+.race-mode-btn.online { background:linear-gradient(135deg,#7c4dff,#651fff); color:#fff; }
+.race-mode-btn.cancel { background:rgba(255,255,255,0.07); color:#aaa; border:1px solid #333; }
+#raceModeTimer { color:#ff9800; font-size:13px; margin-top:-4px; margin-bottom:16px; }
+
+#lbAvatarPicker { display:none; gap:12px; justify-content:center; flex-wrap:wrap; margin:10px 0 14px; }
+.lb-avatar-option { width:48px; height:48px; border-radius:50%; object-fit:cover; cursor:pointer; border:2px solid #333; transition:border-color .15s, transform .1s; }
+.lb-avatar-option:hover { border-color:#00bcd4; transform:scale(1.08); }
+.lb-avatar-option.selected { border-color:#00e676; box-shadow:0 0 8px #00e676; }
+#lbAvatarPickerLabel { color:#aaa; font-size:12px; text-align:center; margin-bottom:4px; display:none; }
+</style>
 <link rel="stylesheet" href="css/style.css">
 </head>
 
 <body>
 
 <div id="toast" class="toast">Purchase successful</div>
+<div id="raceModeModal">
+  <div class="race-mode-box">
+    <h2>🏁 KSPT Races</h2>
+    <p>Choose game mode</p>
+    <div id="raceModeTimer">Auto-starting with Bots in 15s...</div>
+    <button class="race-mode-btn bots"   onclick="confirmRaceMode('bots')">🤖 Play vs Bots</button>
+    <button class="race-mode-btn online" onclick="confirmRaceMode('online')">🌐 Play Online</button>
+    <button class="race-mode-btn cancel" onclick="closeRaceModeModal()">✕ Cancel</button>
+  </div>
+</div>
 <div id="whiteFade" class="white-fade"></div>
 
 <div id="rewardPopup" class="reward-popup">
@@ -232,7 +272,7 @@ window.addEventListener('message', (event) => {
       <span data-lang-key="tickets_label">🎫 Tickets:</span>
       <span id="ticketCount">10</span>/10
     </div>
-    <div class="card-sub" style="color: #b388ff;" data-lang-key="tickets_left_today">You have <span id="ticketsLeft">10</span> tickets left today</div>
+    <div class="card-sub" style="color: #b388ff;" id="ticketsLeftLine">You have <span id="ticketsLeft">10</span> tickets left today</div>
     <div id="ticketTimer" class="card-sub" style="color: #ff4081; display: none;">
       <span data-lang-key="next_ticket_in">Next ticket in:</span> <span id="ticketTimerText">23:59:59</span>
     </div>
@@ -289,6 +329,15 @@ window.addEventListener('message', (event) => {
   <div class="game-info">
     <div class="game-title">Ghost Train</div>
     <div class="game-desc">Short 3D runner — collect boxes and avoid obstacles.</div>
+  </div>
+  <div class="game-ticket">1 ticket</div>
+</div>
+
+<div class="game-item" onclick="openRaceModeModal()">
+  <img src="race.png" class="game-icon" alt="KSPT Races">
+  <div class="game-info">
+    <div class="game-title">KSPT Races</div>
+    <div class="game-desc">3D racing — beat bots or race online, collect KSPT coins!</div>
   </div>
   <div class="game-ticket">1 ticket</div>
 </div>
@@ -466,7 +515,7 @@ window.addEventListener('message', (event) => {
       <button onclick="showSettingsSub('animation')" style="margin-bottom:12px;" data-lang-key="animation">Animation</button>
       <button onclick="showSettingsSub('bg')" style="margin-bottom:12px;" data-lang-key="backgrounds">Backgrounds</button>
       <button onclick="showSettingsSub('language')" style="margin-bottom:12px;" data-lang-key="language">Language</button>
-      <button onclick="showSettingsSub('notifications')" style="margin-bottom:12px;">Notifications</button>
+      <button onclick="showSettingsSub('notifications')" style="margin-bottom:12px;" data-lang-key="notifications_title">Notifications</button>
       <button onclick="openLeaderboard()" style="display:flex; align-items:center; gap:10px; justify-content:center;">
         <img src="records.png" style="width:22px; height:22px; object-fit:contain; pointer-events:none;"> <span data-lang-key="records" style="pointer-events:none;">Records</span>
       </button>
@@ -767,6 +816,14 @@ window.addEventListener('message', (event) => {
             <div id="lbMyRate" style="color:#6ee7b7; font-size:13px;">0 KSPT/h</div>
           </div>
         </div>
+        <!-- Пикер аватарки — только для не-Telegram -->
+        <div id="lbAvatarPickerLabel">Choose your avatar:</div>
+        <div id="lbAvatarPicker">
+          <img src="seri.png"      class="lb-avatar-option" data-avatar="seri.png"      onerror="this.style.display='none'">
+          <img src="kostia.png"    class="lb-avatar-option" data-avatar="kostia.png"    onerror="this.style.display='none'">
+          <img src="knowdont.png"  class="lb-avatar-option" data-avatar="knowdont.png"  onerror="this.style.display='none'">
+          <img src="doge.png"      class="lb-avatar-option" data-avatar="doge.png"      onerror="this.style.display='none'">
+        </div>
       </div>
 
       <!-- List -->
@@ -781,11 +838,11 @@ window.addEventListener('message', (event) => {
 
   <div id="settings-notifications" style="display:none;">
     <div class="settings-section">
-      <div class="card-title">Notifications</div>
-      <div class="card-sub">Red dot badges on tabs when something needs your attention</div>
+      <div class="card-title" data-lang-key="notifications_title">Notifications</div>
+      <div class="card-sub" data-lang-key="notifications_sub">Red dot badges on tabs when something needs your attention</div>
       <div class="settings-checkbox">
         <div style="flex:1;">
-          <label for="toggleNotifications">Enable badges</label>
+          <label for="toggleNotifications" data-lang-key="notifications_enable">Enable badges</label>
           <div class="subtext">Default: OFF</div>
         </div>
         <label class="toggle-switch">

@@ -439,7 +439,18 @@ const translations = {
     // Promo new
     'promo_free_spin': '🎡 Free Fortune Wheel spin!',
     'promo_key_box': '🗝️ Key Box unlocked!',
-    'promo_adminek': '✅ EK balance set to 10'
+    'promo_adminek': '✅ EK balance set to 10',
+
+    // Leaderboard online status
+    'lb_online': '🟢 Online',
+    'lb_less_hour': 'less than an hour ago',
+    'lb_hours_ago': '{0}h ago',
+    'lb_day_ago': 'a day ago',
+    'lb_days_ago': '{0} days ago',
+    'lb_week_ago': 'a week ago',
+    'lb_weeks_ago': '{0} weeks ago',
+    'lb_month_ago': 'a month ago',
+    'lb_long_ago': 'more than a month ago'
   },
   ru: {
     // Main UI
@@ -864,6 +875,17 @@ const translations = {
     'promo_free_spin': '🎡 Бесплатный спин на Колесе Фортуны!',
     'promo_key_box': '🗝️ Ключ Бокс разблокирован!',
     'promo_adminek': '✅ Баланс EK установлен на 10',
+
+    // Leaderboard online status
+    'lb_online': '🟢 Онлайн',
+    'lb_less_hour': 'менее часа назад',
+    'lb_hours_ago': '{0} ч назад',
+    'lb_day_ago': 'день назад',
+    'lb_days_ago': '{0} дн назад',
+    'lb_week_ago': 'неделю назад',
+    'lb_weeks_ago': '{0} нед назад',
+    'lb_month_ago': 'месяц назад',
+    'lb_long_ago': 'более месяца назад',
 
     // Owned/progress
     'owned_progress': 'Получено: {0}/9',
@@ -9357,21 +9379,58 @@ function closeLeaderboard() {
   if (_lbInterval) { clearInterval(_lbInterval); _lbInterval = null; }
 }
 
+function formatLastSeen(updatedAt) {
+  if (!updatedAt) return '';
+  const diff = Date.now() - updatedAt;
+  const ONLINE_THRESHOLD = 3 * 60 * 1000; // 3 минуты = "онлайн"
+  if (diff < ONLINE_THRESHOLD) return t('lb_online');
+  const h  = Math.floor(diff / 3600000);
+  const d  = Math.floor(diff / 86400000);
+  const w  = Math.floor(diff / (7 * 86400000));
+  const mo = Math.floor(diff / (30 * 86400000));
+  if (mo >= 1 && w >= 5) return t('lb_long_ago');
+  if (mo === 1 || (w >= 3 && w < 5)) return t('lb_month_ago');
+  if (w >= 2) return t('lb_weeks_ago').replace('{0}', w);
+  if (w === 1) return t('lb_week_ago');
+  if (d >= 2) return t('lb_days_ago').replace('{0}', d);
+  if (d === 1) return t('lb_day_ago');
+  if (h >= 1) return t('lb_hours_ago').replace('{0}', h);
+  return t('lb_less_hour');
+}
+
 function pushMyLeaderboardData() {
   if (!window._firebaseReady) return;
   const uid = getMyUid();
   const tgUser = getMyTelegramUser();
+  const isTg = !!tgUser;
   const rate = getHourlyRate();
+
+  // Имя: для не-TG игроков добавляем числовой суффикс из uid
+  let playerName;
+  if (isTg) {
+    playerName = tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '');
+  } else {
+    // uid вида "u_abc123xyz" → берём последние 2 цифровых символа или просто 2 char
+    const suffix = uid.replace(/\D/g, '').slice(-2).padStart(2, '0') || '01';
+    const saved = localStorage.getItem('_kspt_nonTg_name');
+    playerName = saved || ('Player' + suffix);
+    localStorage.setItem('_kspt_nonTg_name', playerName);
+  }
+
+  // Аватарка: для не-TG берём выбранную или дефолтную
+  const savedAvatar = !isTg ? (localStorage.getItem('_kspt_nonTg_avatar') || 'seri.png') : '';
+
   const entry = {
     uid: uid,
-    name: tgUser ? (tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '')) : 'Player',
+    name: playerName,
     username: tgUser?.username || '',
-    photoUrl: tgUser?.photo_url || '',
+    photoUrl: isTg ? (tgUser.photo_url || '') : savedAvatar,
+    isTg: isTg,
     rate: Math.round(rate),
     tokens: Math.round(d.tokens || 0),
-    updatedAt: Date.now()
+    updatedAt: Date.now(),
+    lastSeen: Date.now()
   };
-  // Always push when online — filter by tokens on display side
   window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).set(entry);
 }
 
@@ -9412,11 +9471,33 @@ function renderLeaderboard(players) {
     document.getElementById('lbMyName').textContent = me.name || 'You';
     document.getElementById('lbMyRate').textContent = formatNumber(me.rate) + ' KSPT/h';
     const myAvatar = document.getElementById('lbMyAvatar');
+    const isTgUser = !!getMyTelegramUser();
     if (me.photoUrl) {
       myAvatar.src = me.photoUrl;
       myAvatar.onerror = () => { myAvatar.src = 'seri.png'; };
     } else {
       myAvatar.src = 'seri.png';
+    }
+    // Показываем пикер только не-TG игрокам
+    const pickerLabel = document.getElementById('lbAvatarPickerLabel');
+    const picker = document.getElementById('lbAvatarPicker');
+    if (!isTgUser && picker) {
+      picker.style.display = 'flex';
+      if (pickerLabel) pickerLabel.style.display = 'block';
+      const currentAvatar = localStorage.getItem('_kspt_nonTg_avatar') || 'seri.png';
+      picker.querySelectorAll('.lb-avatar-option').forEach(img => {
+        img.classList.toggle('selected', img.dataset.avatar === currentAvatar);
+        img.onclick = () => {
+          localStorage.setItem('_kspt_nonTg_avatar', img.dataset.avatar);
+          myAvatar.src = img.dataset.avatar;
+          picker.querySelectorAll('.lb-avatar-option').forEach(x => x.classList.remove('selected'));
+          img.classList.add('selected');
+          pushMyLeaderboardData(); // обновить в Firebase
+        };
+      });
+    } else {
+      if (picker) picker.style.display = 'none';
+      if (pickerLabel) pickerLabel.style.display = 'none';
     }
   }
 
@@ -9426,8 +9507,10 @@ function renderLeaderboard(players) {
     const rank = i + 1;
     const medal = medals[i] || '';
     const avatarSrc = p.photoUrl || 'seri.png';
-    const username = p.username ? '@' + p.username : '';
     const rateStr = formatNumber(p.rate) + ' KSPT/h';
+    const seenStr = formatLastSeen(p.lastSeen || p.updatedAt);
+    const isOnline = (Date.now() - (p.lastSeen || p.updatedAt || 0)) < 3 * 60 * 1000;
+    const seenColor = isOnline ? '#00e676' : '#666';
 
     const rankColor = rank === 1 ? '#ffd700' : rank === 2 ? '#c0c0c0' : rank === 3 ? '#cd7f32' : '#aaa';
     const border = isMe ? '2px solid #ffd700' : '1px solid #2a2a2a';
@@ -9438,6 +9521,7 @@ function renderLeaderboard(players) {
       <img src="${avatarSrc}" onerror="this.src='seri.png'" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid ${rankColor}; flex-shrink:0;">
       <div style="flex:1; min-width:0;">
         <div style="font-weight:bold; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name || 'Player'}${isMe ? ' <span style="color:#ffd700;font-size:11px;">(you)</span>' : ''}</div>
+        <div style="font-size:11px; color:${seenColor}; margin-top:2px;">${seenStr}</div>
       </div>
       <div style="font-weight:bold; font-size:13px; color:#6ee7b7; text-align:right; flex-shrink:0;">${rateStr}</div>
     </div>`;

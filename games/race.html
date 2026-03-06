@@ -811,7 +811,8 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
             window.keys = { w: false, a: false, s: false, d: false };
 
             let startX = 0, startY = 0;
-            const maxDist = 40;
+            let activeTouchId = null;
+            const maxDist = 45;
 
             function handleMove(x, y) {
                 const dx = x - startX;
@@ -820,20 +821,68 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
                 const angle = Math.atan2(dy, dx);
                 const limitedDx = Math.cos(angle) * dist;
                 const limitedDy = Math.sin(angle) * dist;
-                knob.style.transform = `translate(-50%, -50%) translate(${limitedDx}px, ${limitedDy}px)`;
-                steering = -limitedDx / maxDist;
+                knob.style.transform = `translate(calc(-50% + ${limitedDx}px), calc(-50% + ${limitedDy}px))`;
+                // Только горизонталь рулит, плавнее через кривую
+                const raw = limitedDx / maxDist; // -1..1
+                steering = Math.sign(raw) * Math.pow(Math.abs(raw), 0.8);
             }
 
             function resetKnob() {
                 knob.style.transform = 'translate(-50%, -50%)';
-                if (!window.keys.a && !window.keys.d) steering = 0;
+                steering = 0;
             }
 
-            // Сенсорное управление / Мышь
-            joystickArea.addEventListener('touchstart', (e) => { e.preventDefault(); const t = e.touches[0]; startX = t.clientX; startY = t.clientY; window.joystickActive = true; unlockAudio(); });
-            joystickArea.addEventListener('touchmove', (e) => { if (!window.joystickActive) return; e.preventDefault(); handleMove(e.touches[0].clientX, e.touches[0].clientY); });
-            joystickArea.addEventListener('touchend', (e) => { e.preventDefault(); window.joystickActive = false; resetKnob(); });
-            joystickArea.addEventListener('mousedown', (e) => { e.preventDefault(); startX = e.clientX; startY = e.clientY; window.joystickActive = true; unlockAudio(); });
+            // Сенсорное управление — отслеживаем конкретный палец
+            joystickArea.addEventListener('touchstart', (e) => {
+                e.preventDefault();
+                if (activeTouchId !== null) return; // уже есть активный палец
+                const t = e.changedTouches[0];
+                activeTouchId = t.identifier;
+                const rect = joystickArea.getBoundingClientRect();
+                startX = rect.left + rect.width / 2;
+                startY = rect.top + rect.height / 2;
+                window.joystickActive = true;
+                handleMove(t.clientX, t.clientY);
+                unlockAudio();
+            }, { passive: false });
+
+            joystickArea.addEventListener('touchmove', (e) => {
+                e.preventDefault();
+                if (!window.joystickActive) return;
+                for (const t of e.changedTouches) {
+                    if (t.identifier === activeTouchId) {
+                        handleMove(t.clientX, t.clientY);
+                        break;
+                    }
+                }
+            }, { passive: false });
+
+            joystickArea.addEventListener('touchend', (e) => {
+                e.preventDefault();
+                for (const t of e.changedTouches) {
+                    if (t.identifier === activeTouchId) {
+                        activeTouchId = null;
+                        window.joystickActive = false;
+                        resetKnob();
+                        break;
+                    }
+                }
+            }, { passive: false });
+
+            joystickArea.addEventListener('touchcancel', (e) => {
+                activeTouchId = null;
+                window.joystickActive = false;
+                resetKnob();
+            });
+
+            joystickArea.addEventListener('mousedown', (e) => {
+                e.preventDefault();
+                const rect = joystickArea.getBoundingClientRect();
+                startX = rect.left + rect.width / 2;
+                startY = rect.top + rect.height / 2;
+                window.joystickActive = true;
+                unlockAudio();
+            });
             window.addEventListener('mousemove', (e) => { if (!window.joystickActive) return; handleMove(e.clientX, e.clientY); });
             window.addEventListener('mouseup', () => { if (window.joystickActive) { window.joystickActive = false; resetKnob(); } });
 
@@ -891,14 +940,16 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
                 window.addEventListener('deviceorientation', (e) => {
                     if (e.gamma === null) return;
                     window.gyroEnabled = true;
-                    // gamma: наклон телефона влево/вправо (-90..90)
-                    // Нормализуем: мёртвая зона ±5°, полный поворот при ±30°
-                    const raw = Math.max(-30, Math.min(30, e.gamma));
-                    const dead = 5;
+                    // gamma: наклон влево = отрицательный, вправо = положительный
+                    // Инвертируем знак чтобы наклон влево = поворот влево
+                    const raw = Math.max(-35, Math.min(35, -(e.gamma)));
+                    const dead = 6;
                     if (Math.abs(raw) < dead) {
                         window.gyroGamma = 0;
                     } else {
-                        window.gyroGamma = (raw - Math.sign(raw) * dead) / (30 - dead);
+                        // Плавное нарастание через квадратичную кривую
+                        const norm = (raw - Math.sign(raw) * dead) / (35 - dead);
+                        window.gyroGamma = Math.sign(norm) * Math.pow(Math.abs(norm), 1.4);
                     }
                 }, true);
             }

@@ -6922,6 +6922,15 @@ function checkPromo() {
     d.ek = 10;
     message = '✅ EK balance set to 10';
 
+  } else if (code === "ticket11") {
+    // Пополняем тикеты через games.js
+    if (typeof gameTickets !== 'undefined') {
+      gameTickets.current = Math.min(gameTickets.max, gameTickets.current + 10);
+      if (typeof saveTickets === 'function') saveTickets();
+      if (typeof updateTicketsUI === 'function') updateTicketsUI();
+    }
+    message = '🎫 +10 tickets!';
+
   } else {
     showToast("Invalid code");
     input.value = "";

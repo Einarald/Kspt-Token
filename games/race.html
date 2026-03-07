@@ -404,7 +404,7 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
 
             scene = new THREE.Scene();
             scene.background = new THREE.Color(0x87CEEB);
-            scene.fog = new THREE.Fog(0xaaccee, 45, 165); // fog масштабирован ×1.5
+            scene.fog = new THREE.Fog(0xaaccee, 60, 250);
 
             // ===== ОБЛАКА =====
             function createCloud(x, y, z) {
@@ -490,25 +490,37 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
         // ========== ГЕНЕРАЦИЯ ТРАССЫ ==========
         function generateTrack() {
             const points = [];
-            const radius = 102;   // 68 × 1.5
-            const turns = 6;
-            for (let i = 0; i <= turns; i++) {
-                const angle = (i / turns) * Math.PI * 2;
-                const r = radius + Math.sin(angle * 3) * 18;
-                const x = Math.cos(angle) * r;
-                const z = Math.sin(angle) * r;
+            // Проверенная основа — эллипс по часовой стрелке
+            // с chicanes (шиканами) для левых и правых поворотов
+            const R = 110;
+            const segments = 16;
+            for (let i = 0; i < segments; i++) {
+                const angle = (i / segments) * Math.PI * 2;
+                // Базовая эллиптическая форма
+                let x = Math.cos(angle) * R * 1.2;
+                let z = Math.sin(angle) * R;
+                // Добавляем шиканы: каждые ~3 сегмента смещаем точку внутрь/наружу
+                // Это создаёт чередующиеся левые и правые повороты
+                const chicanePhase = Math.floor(i / 2) % 2 === 0 ? 1 : -1;
+                if (i % 2 === 1) {
+                    // Смещаем точку перпендикулярно направлению
+                    const nx = -Math.sin(angle); // нормаль (внутрь/наружу)
+                    const nz =  Math.cos(angle);
+                    const offset = chicanePhase * 22;
+                    x += nx * offset;
+                    z += nz * offset;
+                }
                 points.push(new THREE.Vector3(x, 0, z));
             }
-            points.push(points[0].clone());
-            roadCurve = new THREE.CatmullRomCurve3(points);
+            roadCurve = new THREE.CatmullRomCurve3(points, true); // closed=true без дубля точки
             roadCurve.closed = true;
 
             const divisions = 400; // Больше сегментов для гладкости огромной трассы
-            const roadWidth = 6.0;
+            const roadWidth = 7.0;
             
             const asphaltTex = createNoiseTexture('#3a3a3a', '#2a2a2a', 128, 128);
             const roadMaterial = new THREE.MeshStandardMaterial({ map: asphaltTex, roughness: 0.9, metalness: 0.1 });
-            const lineMaterial = new THREE.MeshStandardMaterial({ color: 0xffcc00, roughness: 0.5 });
+            const lineMaterial = new THREE.MeshStandardMaterial({ color: 0xffffff, roughness: 0.5 });
 
             // Road Segments
             for (let i = 0; i < divisions; i++) {
@@ -536,49 +548,91 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
                 }
             }
 
-            // Trees — вдоль трассы (безопасное расстояние от края дороги)
+            // Строим lookup из точек трассы для быстрой проверки
+            const trackSamples = [];
+            for (let i = 0; i < 200; i++) {
+                trackSamples.push(roadCurve.getPointAt(i / 200));
+            }
+            function distToTrack(pos) {
+                let minD = Infinity;
+                for (const s of trackSamples) {
+                    const d = Math.sqrt((pos.x-s.x)**2 + (pos.z-s.z)**2);
+                    if (d < minD) minD = d;
+                }
+                return minD;
+            }
+            function tryPlaceTree(x, z) {
+                const pos = new THREE.Vector3(x, 0, z);
+                if (distToTrack(pos) > 9.0) createTree(pos); // только если далеко от дороги
+            }
+
+            // Деревья вдоль трассы — строго снаружи
             for (let i = 0; i < divisions; i += 6) {
                 const t = i / divisions;
                 const p = roadCurve.getPointAt(t);
                 const dir = roadCurve.getTangentAt(t);
                 const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0,1,0)).normalize();
+                // Ставим деревья на достаточном расстоянии по обе стороны
+                [10, 14, 18].forEach(d => {
+                    tryPlaceTree(p.x + right.x * d + (Math.random()-0.5)*2,
+                                 p.z + right.z * d + (Math.random()-0.5)*2);
+                    tryPlaceTree(p.x - right.x * d + (Math.random()-0.5)*2,
+                                 p.z - right.z * d + (Math.random()-0.5)*2);
+                });
+            }
+            // Фоновые деревья
+            for (let a = 0; a < Math.PI * 2; a += 0.12) {
+                const r = 175 + Math.random() * 40;
+                tryPlaceTree(Math.cos(a) * r, Math.sin(a) * r);
+            }
 
-                // Первый ряд — строго за краем дороги (roadWidth/2 = 3, +5 запас)
-                const tp1 = p.clone().add(right.clone().multiplyScalar(8 + Math.random() * 2));
-                tp1.y = 0; createTree(tp1);
-                const tp2 = p.clone().add(right.clone().multiplyScalar(-8 - Math.random() * 2));
-                tp2.y = 0; createTree(tp2);
-
-                // Второй ряд ещё дальше
-                if (i % 12 === 0) {
-                    const tp3 = p.clone().add(right.clone().multiplyScalar(12 + Math.random() * 4));
-                    tp3.y = 0; createTree(tp3);
-                    const tp4 = p.clone().add(right.clone().multiplyScalar(-12 - Math.random() * 4));
-                    tp4.y = 0; createTree(tp4);
+            // Finish Line — шашечная полоса + два флага по бокам
+            const finishPos = roadCurve.getPointAt(0);
+            const finishDir = roadCurve.getTangentAt(0).normalize();
+            const finishRight = new THREE.Vector3().crossVectors(finishDir, new THREE.Vector3(0,1,0)).normalize();
+            const finishAngle = Math.atan2(finishDir.x, finishDir.z);
+            const finishMatW = new THREE.MeshStandardMaterial({ color: 0xffffff });
+            const finishMatB = new THREE.MeshStandardMaterial({ color: 0x111111 });
+            const roadW = 7.0;
+            const tileSize = roadW / 8;
+            const cols = 8;
+            const rows = 2;
+            for (let row = 0; row < rows; row++) {
+                for (let col = 0; col < cols; col++) {
+                    const isWhite = (row + col) % 2 === 0;
+                    const mat = isWhite ? finishMatW : finishMatB;
+                    const tile = new THREE.Mesh(new THREE.PlaneGeometry(tileSize, tileSize * 1.2), mat);
+                    const lateralOffset = (col - cols / 2 + 0.5) * tileSize;
+                    const forwardOffset = (row - rows / 2 + 0.5) * tileSize * 1.2;
+                    const pos = finishPos.clone()
+                        .addScaledVector(finishRight, lateralOffset)
+                        .addScaledVector(finishDir, forwardOffset);
+                    pos.y = 0.02;
+                    tile.position.copy(pos);
+                    tile.rotation.x = -Math.PI / 2;
+                    tile.rotateOnWorldAxis(new THREE.Vector3(0,1,0), finishAngle);
+                    scene.add(tile);
                 }
             }
-
-            // Фоновые деревья — за пределами трассы (радиус трассы ~120, берём от 132)
-            for (let a = 0; a < Math.PI * 2; a += 0.12) {
-                const r = 132 + Math.random() * 25;
-                const bx = Math.cos(a) * r;
-                const bz = Math.sin(a) * r;
-                createTree(new THREE.Vector3(bx, 0, bz));
-            }
-
-            // Finish Line
-            const finishPos = roadCurve.getPointAt(0);
-            const finishDir = roadCurve.getTangentAt(0);
-            const finishRight = new THREE.Vector3().crossVectors(finishDir, new THREE.Vector3(0,1,0)).normalize();
-            const finishMat = new THREE.MeshStandardMaterial({ color: 0xffffff });
-            const finishMatBlack = new THREE.MeshStandardMaterial({ color: 0x111111 });
-            for (let i = -3; i <= 3; i++) {
-                const color = Math.abs(i) % 2 === 0 ? finishMat : finishMatBlack;
-                const tile = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.15, 1), color);
-                tile.position.copy(finishPos.clone().add(finishRight.clone().multiplyScalar(i * 0.7)));
-                tile.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), finishDir);
-                scene.add(tile);
-            }
+            // Два флагштока — по обеим сторонам дороги
+            const poleMat = new THREE.MeshStandardMaterial({ color: 0xcccccc });
+            const flagMat = new THREE.MeshStandardMaterial({ color: 0xff2222, side: THREE.DoubleSide });
+            [-1, 1].forEach(side => {
+                const polePos = finishPos.clone().addScaledVector(finishRight, side * (roadW / 2 + 0.5));
+                polePos.y = 2.5;
+                const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.08, 0.08, 5, 8), poleMat);
+                pole.position.copy(polePos);
+                scene.add(pole);
+                // Флаг прикреплён к верхушке
+                const flag = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 0.9), flagMat);
+                flag.position.copy(polePos.clone().add(new THREE.Vector3(
+                    finishRight.x * side * 0.7,
+                    2.2,
+                    finishRight.z * side * 0.7
+                )));
+                flag.rotation.y = finishAngle;
+                scene.add(flag);
+            });
         }
 
         function createTree(pos) {
@@ -698,7 +752,7 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
             group.userData = { 
                 speed: 0, 
                 maxSpeed: maxSpeed * (0.83 + Math.random() * 0.15), // -2% от предыдущего
-                offset: (Math.random() - 0.5) * 2.0,
+                offset: undefined,
                 lap: 1, 
                 lastParam: 0, 
                 isPlayer, 
@@ -712,28 +766,57 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
         }
 
         const carColors = [0xff4136, 0x2ecc40, 0x0074d9, 0xff851b, 0xb10dc9, 0xffdc00];
+                // смещения полос чуть уже — безопаснее по центру трассы
+        const botLaneOffsets = [-2.2, 0.0, 2.2, -2.2, 0.0, 2.2];
 
         function initCars() {
-            const startPos = roadCurve.getPointAt(0.01);
-            const dir = roadCurve.getTangentAt(0.01);
-            const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0,1,0)).normalize();
+            // Стартовое направление трассы — по нему ориентируем всех
+            const startDir = roadCurve.getTangentAt(0).normalize();
+            const startRight = new THREE.Vector3().crossVectors(startDir, new THREE.Vector3(0,1,0)).normalize();
+            const startBack = startDir.clone().negate();
+            // Стартовая позиция чуть впереди от t=0 чтобы не триггерить финиш сразу
+            const startBase = roadCurve.getPointAt(0.02);
 
-            playerCar = createCar(carColors[0], startPos.clone().add(right.clone().multiplyScalar(-1.2)), true);
-            playerCar.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), dir);
-            scene.add(playerCar);
+            const playerSlot = Math.floor(Math.random() * 6);
 
-            for (let i = 1; i < 6; i++) {
-                const offset = i * 0.04; 
-                const param = (0.01 + offset) % 1;
-                const botPos = roadCurve.getPointAt(param);
-                const botDir = roadCurve.getTangentAt(param);
-                const botRight = new THREE.Vector3().crossVectors(botDir, new THREE.Vector3(0,1,0)).normalize();
-                
-                const car = createCar(carColors[i], botPos.clone().add(botRight.clone().multiplyScalar(i%2==0 ? 1.2 : -1.2)), false);
-                car.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), botDir);
-                car.userData.lastParam = param;
-                scene.add(car);
-                botCars.push(car);
+            for (let slot = 0; slot < 6; slot++) {
+    const row = Math.floor(slot / 3);
+
+    // полоса для этого слота
+    const laneIndex = slot % botLaneOffsets.length;
+
+    // небольшой разброс внутри полосы
+    const lateralOffset = botLaneOffsets[laneIndex];
+
+    const pos = startBase.clone()
+        .addScaledVector(startRight, lateralOffset)
+        // небольшой разброс вперёд/назад (±0.6)
+        .addScaledVector(startBack, row * 5.5);
+
+                const isPlayer = (slot === playerSlot);
+                const car = createCar(carColors[slot], pos, isPlayer);
+                // полоса для этого стартового слота
+const laneOffsetForSlot = botLaneOffsets[slot % botLaneOffsets.length];
+
+// назначаем базовую полосу машине
+if (!isPlayer) {
+    car.userData.offset = laneOffsetForSlot;
+    car.userData.baseOffset = laneOffsetForSlot;
+} else {
+    car.userData.baseOffset = laneOffsetForSlot;
+}
+
+car.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), startDir);
+car.userData.lastParam = 0.02 - row * 0.003;
+car.userData.lap = 1;
+
+if (isPlayer) {
+    playerCar = car;
+    lastCheckpointParam = car.userData.lastParam;
+} else {
+    botCars.push(car);
+}
+scene.add(car);
             }
         }
 
@@ -822,8 +905,10 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
                 const limitedDx = Math.cos(angle) * dist;
                 const limitedDy = Math.sin(angle) * dist;
                 knob.style.transform = `translate(calc(-50% + ${limitedDx}px), calc(-50% + ${limitedDy}px))`;
-                // Только горизонталь рулит, плавнее через кривую
-                const raw = limitedDx / maxDist; // -1..1
+                // iOS и Android — одинаковый знак для джойстика (dx вправо = поворот вправо)
+                const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+                const joySign = isIOS ? 1 : -1;
+                const raw = (limitedDx / maxDist) * joySign;
                 steering = Math.sign(raw) * Math.pow(Math.abs(raw), 0.8);
             }
 
@@ -937,23 +1022,22 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
             }
 
             function listenGyro() {
+                // iOS и Android дают противоположный знак gamma
+                const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
+                const gyroSign = isIOS ? -1 : 1; // iOS инвертирован
                 window.addEventListener('deviceorientation', (e) => {
                     if (e.gamma === null) return;
                     window.gyroEnabled = true;
-                    // gamma: наклон влево = отрицательный, вправо = положительный
-                    // Инвертируем знак чтобы наклон влево = поворот влево
-                    const raw = Math.max(-35, Math.min(35, -(e.gamma)));
+                    const raw = Math.max(-35, Math.min(35, e.gamma * gyroSign));
                     const dead = 6;
                     if (Math.abs(raw) < dead) {
                         window.gyroGamma = 0;
                     } else {
-                        // Плавное нарастание через квадратичную кривую
                         const norm = (raw - Math.sign(raw) * dead) / (35 - dead);
                         window.gyroGamma = Math.sign(norm) * Math.pow(Math.abs(norm), 1.4);
                     }
                 }, true);
             }
-
             // Кнопка gyro теперь в header (HTML), просто вешаем listener
             const gyroBtn = document.getElementById('gyroBtn');
             gyroBtn.addEventListener('click', () => {
@@ -972,9 +1056,11 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
         function getClosestParam(pos, lastParam) {
             let bestT = lastParam || 0;
             let bestDist = Infinity;
-            // Full search to be robust against bumps
-            for (let i = 0; i < 100; i++) {
-                const t = i / 100;
+            // Ищем только в окне ±0.15 вокруг lastParam чтобы не прыгать назад
+            const window_ = 0.15;
+            for (let i = 0; i < 60; i++) {
+                const offset = (i / 60) * window_ * 2 - window_;
+                const t = ((lastParam || 0) + offset + 1) % 1;
                 const p = roadCurve.getPointAt(t);
                 const dist = p.distanceTo(pos);
                 if (dist < bestDist) {
@@ -1014,34 +1100,42 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
             const param = getClosestParam(playerCar.position, lastCheckpointParam);
             const trackPoint = roadCurve.getPointAt(param);
             const distToCenter = playerCar.position.distanceTo(trackPoint);
-            const maxTrackDist = 4.0; // Жесткое ограничение карты
+            const maxTrackDist = 5.5; // половина ширины 7.0 + запас на столкновения
 
             if (distToCenter > maxTrackDist) {
-                // Возвращаем машину обратно в границы, если выехала
                 const toCar = new THREE.Vector3().subVectors(playerCar.position, trackPoint);
                 toCar.y = 0;
                 toCar.normalize().multiplyScalar(maxTrackDist);
                 playerCar.position.copy(trackPoint.clone().add(toCar));
-                speed = Math.max(0, speed - 0.1); // Теряем скорость
-            } else if (distToCenter > 2.5) {
-                // Штраф за траву
-                speed = Math.max(0.5, speed - 0.05); // Плавное замедление на траве
-                camera.position.y += (Math.random() - 0.5) * 0.08; // Эффект тряски
+                speed *= 0.88;
+            } else if (distToCenter > 2.8) {
+                // Трава: ограничиваем скорость до 30% максимума
+                const grassMax = maxSpeed * 0.30;
+                if (speed > grassMax) speed = Math.max(grassMax, speed - 0.04);
+                camera.position.y += (Math.random() - 0.5) * 0.06;
             }
 
-            // Круги
-            if (param < 0.1 && lastCheckpointParam > 0.9) { 
-                if (!finishLinePassed) {
-                    finishLinePassed = true;
-                    if (lap < maxLaps) {
-                        lap++;
-                        document.getElementById('lapDisplay').innerText = `${lap}/${maxLaps}`;
-                    } else {
-                        endRace("You"); // Вызываем глобальное завершение гонки
+            // Защита от езды назад: трекаем прогресс вперёд
+            const paramDelta = param - lastCheckpointParam;
+            // Нормализуем переход через 0/1
+            const normalDelta = paramDelta > 0.5 ? paramDelta - 1 : (paramDelta < -0.5 ? paramDelta + 1 : paramDelta);
+            if (normalDelta < 0) {
+                // Едем назад — не считаем круги
+            } else {
+                // Круги — только если ехали вперёд
+                if (param < 0.05 && lastCheckpointParam > 0.92) {
+                    if (!finishLinePassed) {
+                        finishLinePassed = true;
+                        if (lap < maxLaps) {
+                            lap++;
+                            document.getElementById('lapDisplay').innerText = `${lap}/${maxLaps}`;
+                        } else {
+                            endRace("You");
+                        }
                     }
+                } else if (param > 0.15 && param < 0.85) {
+                    finishLinePassed = false;
                 }
-            } else if (param > 0.2 && param < 0.8) {
-                finishLinePassed = false;
             }
             lastCheckpointParam = param;
             playerCar.userData.lastParam = param;
@@ -1052,89 +1146,180 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
             if (raceFinished || gamePaused || countdownActive) return;
             if (!raceActive && finishOrder.length === 0) return;
 
+                        // ROAD_HALF должен точно соответствовать половине ширины дороги (roadWidth / 2 = 7.0 / 2)
+            const ROAD_HALF = 3.5; // исправлено: соответствует roadWidth = 7.0 в generateTrack()
+
             botCars.forEach((bot, idx) => {
                 let currentParam = getClosestParam(bot.position, bot.userData.lastParam);
                 if (currentParam < 0.1 && bot.userData.lastParam > 0.9) {
                     bot.userData.lap++;
-                    if (bot.userData.lap > maxLaps) {
-                        endRace(`Bot ${idx + 1}`); // Бот выиграл гонку
-                    }
+                    if (bot.userData.lap > maxLaps) endRace(`Bot ${idx + 1}`);
                 }
                 bot.userData.lastParam = currentParam;
 
-                // Look ahead point for AI
-                let lookAhead = (currentParam + 0.02) % 1.0; // Снижено, так как трасса больше
-                let targetPoint = roadCurve.getPointAt(lookAhead);
-                let dir = roadCurve.getTangentAt(lookAhead);
-                let right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0,1,0)).normalize();
-                
-                targetPoint.addScaledVector(right, bot.userData.offset); // preferred lane
+                // === ТОЧНОЕ ЗНАНИЕ О ТРАССЕ ===
+                const trackCenter = roadCurve.getPointAt(currentParam);
+                const dirNow = roadCurve.getTangentAt(currentParam).normalize();
+                const rightNow = new THREE.Vector3().crossVectors(dirNow, new THREE.Vector3(0,1,0)).normalize();
+                const toBot = new THREE.Vector3().subVectors(bot.position, trackCenter);
+                toBot.y = 0;
+                const currentSideOffset = rightNow.dot(toBot); // реальное боковое смещение от центра
+                const onGrass = Math.abs(currentSideOffset) > ROAD_HALF;
 
-                // Steer
-                let toTarget = new THREE.Vector3().subVectors(targetPoint, bot.position);
+                /*
+if (idx === 0) {
+    console.log(
+        'offset:', currentSideOffset.toFixed(2),
+        'baseOffset:', (bot.userData.baseOffset || 0).toFixed(2),
+        'onGrass:', onGrass,
+        'rightNow:', rightNow.x.toFixed(2), rightNow.z.toFixed(2)
+    );
+}
+*/
+
+                // === ИНИЦИАЛИЗАЦИЯ ПОЛОСЫ ===
+                if (bot.userData.offsetTarget === undefined) {
+                    bot.userData.offsetTarget = bot.userData.baseOffset || 0;
+                    bot.userData.offsetChangeTimer = 0;
+                }
+
+                // На траве — ВСЕГДА немедленно возвращаться на свою базовую полосу
+                if (onGrass) {
+                    bot.userData.offsetTarget = bot.userData.baseOffset || 0;
+                    bot.userData.offsetChangeTimer = 0;
+                } else {
+                    // Небольшое случайное виляние внутри своей полосы раз в ~5 сек
+                    bot.userData.offsetChangeTimer = (bot.userData.offsetChangeTimer || 0) + 1;
+                    if (bot.userData.offsetChangeTimer > 300 + Math.random() * 100) {
+                        bot.userData.offsetChangeTimer = 0;
+                        const base = bot.userData.baseOffset || 0;
+                        bot.userData.offsetTarget = base + (Math.random() * 0.8 - 0.4);
+                        // ЖЁСТКИЙ clamp — никогда не выходить за пределы трассы
+                        bot.userData.offsetTarget = Math.max(-(ROAD_HALF - 0.8), Math.min(ROAD_HALF - 0.8, bot.userData.offsetTarget));
+                    }
+                }
+
+                // Желаемая полоса — всегда внутри трассы
+                if (bot.userData.currentOffset === undefined) {
+                    bot.userData.currentOffset = bot.userData.baseOffset || 0;
+                }
+                const clampedTarget = Math.max(-(ROAD_HALF - 0.8), Math.min(ROAD_HALF - 0.8, bot.userData.offsetTarget));
+                const avoidAge = (performance.now() - (bot.userData._lastAvoidTime || 0));
+const reactFactor = (avoidAge < 1200) ? 0.12 : 0.04; // быстрее реагировать первые ~1.2с после avoid
+bot.userData.currentOffset += (clampedTarget - bot.userData.currentOffset) * reactFactor;
+                bot.userData.currentOffset = Math.max(-(ROAD_HALF - 0.8), Math.min(ROAD_HALF - 0.8, bot.userData.currentOffset));
+                const desiredOffset = bot.userData.currentOffset;
+
+                // === STEERING ===
+                const speedFactor = bot.userData.speed || 0;
+                const lookAhead = (currentParam + 0.03 + speedFactor * 0.005) % 1.0;
+                const targetPoint = roadCurve.getPointAt(lookAhead).clone();
+                const dirAhead = roadCurve.getTangentAt(lookAhead).normalize();
+                const rightAhead = new THREE.Vector3().crossVectors(dirAhead, new THREE.Vector3(0,1,0)).normalize();
+
+                // offsetError считаем в той же системе координат что и targetPoint
+                const toBot2 = new THREE.Vector3().subVectors(bot.position, targetPoint);
+                toBot2.y = 0;
+                const currentSideOffsetAhead = rightAhead.dot(toBot2);
+                const offsetError = desiredOffset - currentSideOffsetAhead;
+
+                const totalOffset = Math.max(-(ROAD_HALF - 0.5), Math.min(ROAD_HALF - 0.5,
+                    desiredOffset + Math.sign(offsetError) * Math.min(1.5, Math.abs(offsetError) * 0.8)
+                ));
+                targetPoint.addScaledVector(rightAhead, totalOffset);
+
+                const botForward = new THREE.Vector3(0,0,1).applyQuaternion(bot.quaternion);
+                const toTarget = new THREE.Vector3().subVectors(targetPoint, bot.position);
                 toTarget.y = 0;
-                let botForward = new THREE.Vector3(0,0,1).applyQuaternion(bot.quaternion);
 
                 let angle = Math.atan2(toTarget.x, toTarget.z) - Math.atan2(botForward.x, botForward.z);
                 while (angle > Math.PI) angle -= Math.PI * 2;
                 while (angle < -Math.PI) angle += Math.PI * 2;
 
-                let turn = Math.max(-0.06, Math.min(0.06, angle));
-                bot.rotation.y += turn;
+                // если бот на траве — резко возвращаем его к дороге
+if (onGrass) {
+    const recovery = -currentSideOffset * 0.25;
+    bot.position.addScaledVector(rightNow, recovery);
+}
 
-                // Gas & Brake
+const urgency = onGrass ? 0.25 : 0.08;
+                const turnLimit = Math.min(0.18, urgency + Math.abs(offsetError) * 0.02);
+                bot.rotation.y += Math.max(-turnLimit, Math.min(turnLimit, angle * 0.95));
+
+                // === СКОРОСТЬ и ИЗБЕГАНИЕ СОСЕДЕЙ ===
                 let botThrottle = 1.0;
 
-                // Collision avoidance
                 const allCars = [playerCar, ...botCars];
-                for (let other of allCars) {
+                for (const other of allCars) {
                     if (other === bot) continue;
-                    let distToOther = bot.position.distanceTo(other.position);
+                    const distToOther = bot.position.distanceTo(other.position);
                     if (distToOther < 4.0) {
-                        let toOther = new THREE.Vector3().subVectors(other.position, bot.position).normalize();
-                        if (botForward.dot(toOther) > 0.7) { // car is in front
-                            botThrottle = 0.1; // brake
-                            // steer away
-                            let rightDot = new THREE.Vector3(-botForward.z, 0, botForward.x).dot(toOther);
-                            bot.rotation.y += (rightDot > 0 ? -0.02 : 0.02);
+                        const toOther = new THREE.Vector3().subVectors(other.position, bot.position).normalize();
+                        const ahead = botForward.dot(toOther);
+                        if (ahead > 0.65) {
+                            // Плавное торможение — чем ближе тем сильнее
+                            botThrottle = Math.min(botThrottle, 0.3 + (distToOther / 4.0) * 0.7);
+                            // Уход на ПРОТИВОПОЛОЖНУЮ сторону от соседа, строго в пределах трассы
+                            const toOtherVec = new THREE.Vector3().subVectors(other.position, bot.position);
+                            const sideDot = rightNow.dot(toOtherVec);
+                            // Решаем в какую сторону уходить на основе позиции соседа относительно правого вектора
+// sideDot > 0 => сосед справа, значит уходим влево (-1). И наоборот.
+let avoidDir = (sideDot >= 0) ? -1 : 1;
+
+// Небольшая редкая инверсия (15%) чтобы добавить вариативности
+if (Math.random() < 0.15) avoidDir *= -1;
+
+// Джиттер на основе индекса бота, чтобы не синхронить всех одновременно
+const jitter = (idx % 3) * 0.06 * (Math.random() - 0.5);
+
+// Желаемый сдвиг — умеренный (0.6..1.2)
+const shift = 0.6 + Math.random() * 0.6 + jitter;
+
+// Предпочтительный новый таргет (относительно текущего смещения)
+let newTarget = currentSideOffset + avoidDir * shift;
+
+// Если newTarget слишком далеко от базовой полосы — лучше немного откатиться к baseOffset
+const base = bot.userData.baseOffset || 0;
+const distFromBase = Math.abs(newTarget - base);
+if (distFromBase > 1.8) {
+    // мягко вернуть к базовой полосе вместо экстремального ухода
+    newTarget = base + Math.sign(newTarget - base) * 1.1;
+}
+
+// Жёсткий clamp, как и раньше
+bot.userData.offsetTarget = Math.max(-(ROAD_HALF - 0.8), Math.min(ROAD_HALF - 0.8, newTarget));
+
+// При агрессивном уходе увеличим скорость «реакции» (чтобы сглаживание не было слишком медленным)
+bot.userData._lastAvoidTime = performance.now();
                         }
                     }
                 }
 
-                // Боты ускоряются немного слабее игрока
-                bot.userData.speed = Math.min(bot.userData.maxSpeed, bot.userData.speed + (acceleration * 0.9) * botThrottle);
-
-                // Off-road penalty
-                let distToTrackCenter = bot.position.distanceTo(roadCurve.getPointAt(currentParam));
-                if (distToTrackCenter > 2.5) {
-                    bot.userData.speed = Math.max(0.5, bot.userData.speed - 0.05);
+                // На траве — почти полная остановка
+                if (onGrass) {
+                    bot.userData.speed = Math.max(bot.userData.maxSpeed * 0.05, bot.userData.speed - 0.12);
+                } else {
+                    // На трассе — разгон
+                    bot.userData.speed = Math.min(
+                        bot.userData.maxSpeed,
+                        bot.userData.speed + acceleration * 0.9 * botThrottle
+                    );
+                    // Минимальная скорость на трассе
+                    const botMinSpeed = bot.userData.maxSpeed * 0.55;
+                    if (bot.userData.speed < botMinSpeed) bot.userData.speed = botMinSpeed;
                 }
 
-                // Агрессия: если бот агрессивный и игрок рядом и обгоняет — толкаем
-                if (bot.userData.aggressive) {
-                    const distToPlayer = bot.position.distanceTo(playerCar.position);
-                    if (distToPlayer < 3.5) {
-                        const playerAhead = playerCar.userData.lastParam > currentParam ||
-                            (playerCar.userData.lap || 1) > (bot.userData.lap || 1);
-                        if (playerAhead) {
-                            // Вектор к игроку
-                            const toPlayer = new THREE.Vector3().subVectors(playerCar.position, bot.position);
-                            toPlayer.y = 0; toPlayer.normalize();
-                            // Накапливаем импульс толчка (не телепортация — скорость)
-                            bot.userData.pushVelX += toPlayer.x * 0.012;
-                            bot.userData.pushVelZ += toPlayer.z * 0.012;
-                        }
-                    }
-                }
-
-                // Применяем импульс толчка с затуханием
-                bot.userData.pushVelX *= 0.88;
-                bot.userData.pushVelZ *= 0.88;
+                // Импульс от столкновений — быстро затухает
+                bot.userData.pushVelX = (bot.userData.pushVelX || 0) * 0.72;
+                bot.userData.pushVelZ = (bot.userData.pushVelZ || 0) * 0.72;
+                const maxPush = 0.12;
+                bot.userData.pushVelX = Math.max(-maxPush, Math.min(maxPush, bot.userData.pushVelX));
+                bot.userData.pushVelZ = Math.max(-maxPush, Math.min(maxPush, bot.userData.pushVelZ));
                 bot.position.x += bot.userData.pushVelX;
                 bot.position.z += bot.userData.pushVelZ;
 
-                let forwardMove = new THREE.Vector3(0,0,1).applyQuaternion(bot.quaternion);
-                bot.position.addScaledVector(forwardMove, bot.userData.speed * 0.1);
+                const forwardMove = new THREE.Vector3(0,0,1).applyQuaternion(bot.quaternion);
+                if (raceActive) bot.position.addScaledVector(forwardMove, bot.userData.speed * 0.1);
             });
         }
 
@@ -1142,6 +1327,7 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
         let playerVelX = 0, playerVelZ = 0;
 
         function checkCollisions() {
+            if (countdownActive) return;
             const allCars = [playerCar, ...botCars];
 
             // Применяем и затухаем импульс игрока
@@ -1149,9 +1335,13 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
             playerVelZ *= 0.82;
             playerCar.position.x += playerVelX;
             playerCar.position.z += playerVelZ;
+
+            // Добавляем remote-машины в список для коллизий
+            const remoteMeshes = Object.values(remotePlayers).map(rp => rp.mesh);
+            const allCarsWithRemote = [...allCars, ...remoteMeshes];
             
             // Car vs Car physics
-            for(let i=0; i<allCars.length; i++) {
+            for(let i=0; i<allCarsWithRemote.length; i++) {
                 for(let j=i+1; j<allCars.length; j++) {
                     let car1 = allCars[i];
                     let car2 = allCars[j];
@@ -1160,8 +1350,8 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
                         let dir = new THREE.Vector3().subVectors(car1.position, car2.position).normalize();
                         let overlap = 1.6 - dist;
 
-                        let spd1 = (car1 === playerCar) ? speed : car1.userData.speed;
-                        let spd2 = (car2 === playerCar) ? speed : car2.userData.speed;
+                        let spd1 = (car1 === playerCar) ? speed : (car1.userData.speed || car1.userData.remoteSpeed || 1.0);
+                    let spd2 = (car2 === playerCar) ? speed : (car2.userData.speed || car2.userData.remoteSpeed || 1.0);
                         let relativeSpeed = Math.abs(spd1 - spd2) + (spd1 + spd2) * 0.3;
                         // Импульс — меньше чем раньше, применяется как скорость а не мгновенное смещение
                         let impulse = Math.min(0.18, overlap * 0.06 + relativeSpeed * 0.05);
@@ -1230,17 +1420,28 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
         // ========== ЛИДЕРБОРД И ПОЗИЦИИ ==========
         function updatePositions() {
             let racePositions = [];
-            const allCars = [playerCar, ...botCars];
-            allCars.forEach((c, idx) => {
-                let score = c.userData.lap * 10 + c.userData.lastParam;
-                racePositions.push({ id: c.userData.isPlayer ? 'player' : `bot${idx}`, score });
-            });
+            if (onlineMode) {
+                // Онлайн: игрок + remote
+                racePositions.push({ id: 'player', score: lap * 10 + (playerCar.userData.lastParam || 0) });
+                Object.entries(remotePlayers).forEach(([uid, rp]) => {
+                    const remLap = rp.remoteLap || 1;
+                    const remParam = getClosestParam(rp.mesh.position, 0);
+                    racePositions.push({ id: uid, score: remLap * 10 + remParam });
+                });
+            } else {
+                const allCars = [playerCar, ...botCars];
+                allCars.forEach((c, idx) => {
+                    let score = c.userData.lap * 10 + c.userData.lastParam;
+                    racePositions.push({ id: c.userData.isPlayer ? 'player' : `bot${idx}`, score });
+                });
+            }
+            const total = racePositions.length;
             racePositions.sort((a,b) => b.score - a.score);
             let playerRank = racePositions.findIndex(p => p.id === 'player') + 1;
             const posDisplay = document.getElementById('posDisplay');
-            if (posDisplay) posDisplay.innerText = `${playerRank}/6`;
+            if (posDisplay) posDisplay.innerText = `${playerRank}/${total}`;
             const posIndicator = document.getElementById('posIndicator');
-            if (posIndicator) posIndicator.innerText = `${playerRank}/6`;
+            if (posIndicator) posIndicator.innerText = `${playerRank}/${total}`;
         }
 
         // ========== МИНИ-КАРТА ==========
@@ -1286,16 +1487,44 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
         function endRace(winnerName) {
             if (raceFinished) return;
 
+            const finishTime = (performance.now() - raceStartTime) / 1000;
+
+            // ОНЛАЙН: отправляем свой финиш в Firebase и ждём остальных
+            if (onlineMode) {
+                if (!onlineFinishOrder.find(r => r.uid === myPlayerId)) {
+                    onlineFinishOrder.push({ uid: myPlayerId, name: myPlayerName, time: finishTime, inactive: false });
+                    // Публикуем финиш в Firebase
+                    window._raceDB.ref('race_states/' + myRoomId + '/' + myPlayerId).update({
+                        finished: true, finishTime: finishTime, name: myPlayerName
+                    });
+                    // Показываем сообщение ожидания
+                    const cd = document.getElementById('countdownDisplay');
+                    cd.style.display = 'block';
+                    cd.style.fontSize = '22px';
+                    cd.innerText = '🏁 Finished!\nWaiting for others...';
+                    // Таймаут бездействия: 20 сек — принудительный финиш
+                    onlineInactivityTimer = setTimeout(() => {
+                        // Все кто не финишировал — inactive
+                        Object.entries(remotePlayers).forEach(([uid, rp]) => {
+                            if (!onlineFinishOrder.find(r => r.uid === uid)) {
+                                onlineFinishOrder.push({ uid, name: rp.name || uid, time: null, inactive: true });
+                            }
+                        });
+                        showOnlineResults();
+                    }, 20000);
+                    checkOnlineFinish();
+                }
+                return;
+            }
+
+            // БОТЫ: старая логика
             const allCars = [playerCar, ...botCars];
             const totalCars = allCars.length;
 
-            // Записываем финишировавшего
             if (!finishOrder.find(r => r.name === winnerName)) {
-                const finishTime = (performance.now() - raceStartTime) / 1000;
                 finishOrder.push({ name: winnerName, time: finishTime });
             }
 
-            // Если все финишировали — показываем результаты
             if (finishOrder.length >= totalCars) {
                 raceFinished = true;
                 raceActive = false;
@@ -1335,7 +1564,8 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
             raceResults.forEach((r, index) => {
                 let place = index + 1;
                 let medal = place === 1 ? '🥇' : place === 2 ? '🥈' : place === 3 ? '🥉' : `${place}.`;
-                html += `<div class="leaderboard-entry">${medal} ${r.name} — ${r.time.toFixed(2)}s — ${r.coins} coins</div>`;
+                const timeStr = (r.time == null) ? '-' : r.time.toFixed(2) + 's';
+                html += `<div class="leaderboard-entry">${medal} ${r.name} — ${timeStr} — ${r.coins} coins</div>`;
             });
             leaderboardDiv.innerHTML = html;
             document.getElementById('finalCoins').innerText = playerCoins;
@@ -1631,7 +1861,12 @@ function openWaitingRoom(rid) {
     document.getElementById('waitingStatusMsg').style.display = isHost ? 'none' : 'block';
     // Если kicked — меня нет в players
     const stillIn = players.some(p => p.uid === myPlayerId);
-    if (!stillIn) { leaveRoom(); closeOnlineLobby(); }
+    if (!stillIn) {
+      leaveRoom();
+      closeOnlineLobby();
+      alert('You have been kicked from the room.');
+      safeExitGame();
+    }
     // Стартовать гонку если хост нажал
     if (room.started && !onlineMode) startOnlineRace(room);
   };
@@ -1687,6 +1922,9 @@ function startOnlineRace(room) {
   }, 3000);
   // Получить список игроков кроме себя
   const players = room.players ? Object.values(room.players) : [];
+  onlineTotalPlayers = players.length;
+  onlineFinishOrder = [];
+  onlineFinishShown = false;
   // Убрать ботов — они больше не нужны
   botCars.forEach(c => scene.remove(c));
   botCars = [];
@@ -1715,26 +1953,24 @@ function startOnlineRace(room) {
     };
   });
   // Слушать состояния других игроков
-  window._raceDB.ref('race_states/' + myRoomId).on('child_changed', snap => {
-    const uid = snap.key;
-    const data = snap.val();
+  function applyRemoteState(uid, data) {
     if (!data || uid === myPlayerId) return;
     if (remotePlayers[uid]) {
       remotePlayers[uid].targetX = data.x;
       remotePlayers[uid].targetZ = data.z;
       remotePlayers[uid].targetRot = data.rotation;
+      remotePlayers[uid].remoteSpeed = data.speed || 0;
+      remotePlayers[uid].remoteLap = data.lap || 1;
+      remotePlayers[uid].lastUpdateTime = Date.now();
+      // Финиш онлайн-игрока
+      if (data.finished && !remotePlayers[uid].finished) {
+        remotePlayers[uid].finished = true;
+        onlinePlayerFinished(uid, data.finishTime, data.name);
+      }
     }
-  });
-  window._raceDB.ref('race_states/' + myRoomId).on('child_added', snap => {
-    const uid = snap.key;
-    const data = snap.val();
-    if (!data || uid === myPlayerId) return;
-    if (remotePlayers[uid]) {
-      remotePlayers[uid].targetX = data.x;
-      remotePlayers[uid].targetZ = data.z;
-      remotePlayers[uid].targetRot = data.rotation;
-    }
-  });
+  }
+  window._raceDB.ref('race_states/' + myRoomId).on('child_changed', snap => applyRemoteState(snap.key, snap.val()));
+  window._raceDB.ref('race_states/' + myRoomId).on('child_added',   snap => applyRemoteState(snap.key, snap.val()));
   // Отправлять своё состояние ~5 раз в секунду
   onlineSendInterval = setInterval(sendMyState, 200);
 }
@@ -1749,29 +1985,87 @@ function sendMyState() {
     speed: Math.round(speed * 100) / 100,
     lap: lap,
     coins: playerCoins,
+    name: myPlayerName,
     t: Date.now()
   };
   window._raceDB.ref('race_states/' + myRoomId + '/' + myPlayerId).set(state);
 }
 
+// ----- ОНЛАЙН ФИНИШ -----
+let onlineFinishOrder = []; // { uid, name, time, inactive }
+let onlineTotalPlayers = 0;
+let onlineInactivityTimer = null;
+let onlineFinishShown = false;
+let myLastMoveTime = Date.now();
+let myLastPos = { x: 0, z: 0 };
+
+function onlinePlayerFinished(uid, finishTime, name) {
+  if (onlineFinishOrder.find(r => r.uid === uid)) return;
+  onlineFinishOrder.push({ uid, name: name || uid, time: finishTime, inactive: false });
+  checkOnlineFinish();
+}
+
+function checkOnlineFinish() {
+  if (onlineFinishShown) return;
+  const total = onlineTotalPlayers || Object.keys(remotePlayers).length + 1;
+  if (onlineFinishOrder.length >= total) {
+    showOnlineResults();
+  }
+}
+
+function showOnlineResults() {
+  if (onlineFinishShown) return;
+  onlineFinishShown = true;
+  raceFinished = true;
+  raceActive = false;
+  if (onlineInactivityTimer) { clearTimeout(onlineInactivityTimer); onlineInactivityTimer = null; }
+
+  // Сортируем: inactive в конец, остальные по времени
+  onlineFinishOrder.sort((a, b) => {
+    if (a.inactive && !b.inactive) return 1;
+    if (!a.inactive && b.inactive) return -1;
+    return a.time - b.time;
+  });
+
+  // Формируем raceResults для displayGameOver
+  raceResults = onlineFinishOrder.map((r, i) => ({
+    name: r.name,
+    time: r.inactive ? null : r.time,
+    coins: r.uid === myPlayerId ? playerCoins : 0
+  }));
+  displayGameOver();
+}
+
 // ----- ИНТЕРПОЛЯЦИЯ REMOTE МАШИН (вызывается в animate) -----
 function updateRemotePlayers() {
   if (!onlineMode) return;
-  const alpha = 0.15; // скорость интерполяции
   const canvas = document.getElementById('gameCanvas');
   const rect = canvas.getBoundingClientRect();
+  const now = Date.now();
 
   Object.values(remotePlayers).forEach(rp => {
-    // Интерполируем позицию
+    // Экстраполяция: предсказываем позицию на основе скорости
+    const dt = Math.min(0.3, (now - (rp.lastUpdateTime || now)) / 1000);
+    if (rp.remoteSpeed && rp.remoteSpeed > 0.01) {
+      const fwd = new THREE.Vector3(
+        Math.sin(rp.targetRot),
+        0,
+        Math.cos(rp.targetRot)
+      );
+      rp.targetX += fwd.x * rp.remoteSpeed * 0.1 * dt * 60 * 0.5;
+      rp.targetZ += fwd.z * rp.remoteSpeed * 0.1 * dt * 60 * 0.5;
+    }
+
+    // Быстрая интерполяция к предсказанной позиции
+    const alpha = 0.35;
     rp.currentX += (rp.targetX - rp.currentX) * alpha;
     rp.currentZ += (rp.targetZ - rp.currentZ) * alpha;
-    // Интерполяция угла (с учётом wrap-around)
+
     let dRot = rp.targetRot - rp.currentRot;
     while (dRot > Math.PI) dRot -= Math.PI * 2;
     while (dRot < -Math.PI) dRot += Math.PI * 2;
-    rp.currentRot += dRot * alpha;
+    rp.currentRot += dRot * 0.3;
 
-    // Применяем к mesh
     rp.mesh.position.x = rp.currentX;
     rp.mesh.position.z = rp.currentZ;
     rp.mesh.rotation.y = rp.currentRot;

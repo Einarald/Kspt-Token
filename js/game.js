@@ -342,7 +342,7 @@ const translations = {
 'play_mini_games_desc': 'Play mini-games to earn KSPT!',
 'tickets_label': '🎫 Tickets:',
 'tickets_left_today': 'You have {0} tickets left today',
-'next_ticket_in': 'Next ticket in: {0}',
+'next_ticket_in': 'Next tickets in:',
 'available_games': 'Available games',
 'ticket_session_note': '1 ticket = 1 play session',
 'resume': 'Resume',
@@ -725,7 +725,7 @@ const translations = {
 'play_mini_games_desc': 'Играйте в мини-игры и зарабатывайте KSPT!',
 'tickets_label': '🎫 Билеты:',
 'tickets_left_today': 'У вас осталось {0} билетов сегодня',
-'next_ticket_in': 'Следующий билет через: {0}',
+'next_ticket_in': 'Следующие билеты через:',
 'available_games': 'Доступные игры',
 'ticket_session_note': '1 билет = 1 игровой сеанс',
 
@@ -5955,7 +5955,7 @@ function updateNotificationBadges() {
   if (d.fortuneWheel) {
     const rate = getHourlyRate();
     const price = getWheelPrice ? getWheelPrice() : 0;
-    const cooldownMs = 50 * 3600 * 1000;
+    const cooldownMs = 40 * 3600 * 1000;
     const fw = d.fortuneWheel;
     const spinsOk = fw.spinsUsed < WHEEL_MAX_SPINS || (now - (fw.lastResetTime || 0)) >= cooldownMs;
     if (rate >= 400 && d.tokens >= price && spinsOk) techCount++;
@@ -6922,7 +6922,7 @@ function checkPromo() {
     d.ek = 10;
     message = '✅ EK balance set to 10';
 
-  } else if (code === "ticket11") {
+  } else if (code === "ticket11" || code === "ticket12") {
     // Пополняем тикеты через games.js
     if (typeof gameTickets !== 'undefined') {
       gameTickets.current = Math.min(gameTickets.max, gameTickets.current + 10);

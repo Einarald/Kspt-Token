@@ -356,6 +356,7 @@ function getOnlinePlayerMeta() {
         let steering = 0;
         let throttle = 0;
         let speed = 0;
+        let _frameDt = 1; // нормализованный delta (=1 при 60fps)
         const maxSpeed = 2.76;        // 1.84 × 1.5
         const acceleration = 0.0276;  // 0.023 × 1.5 × 0.8 (на 20% медленнее набор)
         const turnSpeed = 0.032;
@@ -1024,7 +1025,7 @@ scene.add(car);
             function listenGyro() {
                 // iOS и Android дают противоположный знак gamma
                 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-                const gyroSign = isIOS ? -1 : 1; // iOS инвертирован
+                const gyroSign = isIOS ? 1 : -1; // Android инвертирован
                 window.addEventListener('deviceorientation', (e) => {
                     if (e.gamma === null) return;
                     window.gyroEnabled = true;
@@ -1094,7 +1095,7 @@ scene.add(car);
 
             // Движение вперед
             const forward = new THREE.Vector3(0, 0, 1).applyQuaternion(playerCar.quaternion);
-            playerCar.position.addScaledVector(forward, speed * 0.1);
+            playerCar.position.addScaledVector(forward, speed * 0.1 * _frameDt);
 
             // Ограничение (Трасса / Бездорожье)
             const param = getClosestParam(playerCar.position, lastCheckpointParam);
@@ -1319,7 +1320,7 @@ bot.userData._lastAvoidTime = performance.now();
                 bot.position.z += bot.userData.pushVelZ;
 
                 const forwardMove = new THREE.Vector3(0,0,1).applyQuaternion(bot.quaternion);
-                if (raceActive) bot.position.addScaledVector(forwardMove, bot.userData.speed * 0.1);
+                if (raceActive) bot.position.addScaledVector(forwardMove, bot.userData.speed * 0.1 * _frameDt);
             });
         }
 
@@ -1342,9 +1343,9 @@ bot.userData._lastAvoidTime = performance.now();
             
             // Car vs Car physics
             for(let i=0; i<allCarsWithRemote.length; i++) {
-                for(let j=i+1; j<allCars.length; j++) {
-                    let car1 = allCars[i];
-                    let car2 = allCars[j];
+                for(let j=i+1; j<allCarsWithRemote.length; j++) {
+                    let car1 = allCarsWithRemote[i];
+                    let car2 = allCarsWithRemote[j];
                     let dist = car1.position.distanceTo(car2.position);
                     if (dist < 1.6) {
                         let dir = new THREE.Vector3().subVectors(car1.position, car2.position).normalize();
@@ -1611,7 +1612,13 @@ bot.userData._lastAvoidTime = performance.now();
             document.getElementById('timerDisplay').innerText = raceTime.toFixed(1) + 's';
         }
 
+        let _lastFrameTime = performance.now();
         function animate() {
+            const _now = performance.now();
+            const _rawDt = (_now - _lastFrameTime) / 1000;
+            _lastFrameTime = _now;
+            const dt = Math.min(_rawDt, 0.05) * 60; // нормализовано к 60fps
+            _frameDt = dt;
             requestAnimationFrame(animate);
 
             // Обработка звука двигателя
@@ -1963,6 +1970,7 @@ function startOnlineRace(room) {
       remotePlayers[uid].targetRot = data.rotation;
       remotePlayers[uid].remoteSpeed = data.speed || 0;
       remotePlayers[uid].remoteLap = data.lap || 1;
+      remotePlayers[uid].remoteCoins = data.coins || 0;
       remotePlayers[uid].lastUpdateTime = Date.now();
       // Финиш онлайн-игрока
       if (data.finished && !remotePlayers[uid].finished) {
@@ -2033,7 +2041,7 @@ function showOnlineResults() {
   raceResults = onlineFinishOrder.map((r, i) => ({
     name: r.name,
     time: r.inactive ? null : r.time,
-    coins: r.uid === myPlayerId ? playerCoins : 0
+    coins: r.uid === myPlayerId ? playerCoins : (remotePlayers[r.uid]?.remoteCoins || 0)
   }));
   displayGameOver();
 }

@@ -907,7 +907,7 @@ scene.add(car);
                 knob.style.transform = `translate(calc(-50% + ${limitedDx}px), calc(-50% + ${limitedDy}px))`;
                 // iOS и Android — одинаковый знак для джойстика (dx вправо = поворот вправо)
                 const isIOS = /iphone|ipad|ipod/i.test(navigator.userAgent);
-                const joySign = isIOS ? 1 : -1;
+                const joySign = -1;
                 const raw = (limitedDx / maxDist) * joySign;
                 steering = Math.sign(raw) * Math.pow(Math.abs(raw), 0.8);
             }
@@ -1539,7 +1539,9 @@ bot.userData._lastAvoidTime = performance.now();
 
             // Если финишировал игрок — останавливаем его управление но продолжаем гонку
             if (winnerName === 'You') {
-                raceActive = false; // игрок не двигается
+                // останавливаем только игрока, но гонка продолжается
+                speed = 0;
+                throttle = 0;
                 // Показываем промежуточное сообщение
                 const cdElem = document.getElementById('countdownDisplay');
                 cdElem.style.display = 'block';

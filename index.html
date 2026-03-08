@@ -788,6 +788,13 @@ window.addEventListener('message', (event) => {
   <div class="card-sub">Glitch Box Exclusive</div>
   <button id="bg-btn-code" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
 </div>
+
+<div class="settings-section">
+  <div class="bg-preview" style="background-image: url('waterbomb.png');"></div>
+  <div class="card-title">Bomb In The Water</div>
+  <div class="card-sub">💣 Bomb Box Exclusive</div>
+  <button id="bg-btn-waterbomb" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
+</div>
       
       <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
   </div>
@@ -1291,6 +1298,12 @@ document.addEventListener('DOMContentLoaded', function () {
   })();
 </script>
 
+<!-- Bomb Box Modal -->
+<div id="bombBoxModal" class="capsule-modal" style="background:rgba(0,0,0,0.92);">
+  <div id="bombBoxHint" style="margin-bottom:24px; font-size:22px; font-weight:bold; color:#ff6b35; text-shadow:0 0 12px rgba(255,100,0,0.6);">Hold to detonate...</div>
+  <img id="bombBoxImg" src="bomb.png" class="capsule-center" style="width:160px; cursor:pointer; touch-action:none; user-select:none; -webkit-user-select:none;">
+</div>
+
 <!-- Key Box Opening Modal -->
 <div id="keyBoxModal" class="capsule-modal">
   <div id="keyBoxHint" style="margin-bottom:20px; font-size:24px; font-weight:bold;">Tap to open! (0/25)</div>
@@ -1431,9 +1444,15 @@ document.addEventListener('DOMContentLoaded', function () {
     <button class="ap-close" onclick="closeAdminPanel()">✕ Close</button>
   </div>
 
-  <div class="ap-tabs">
-    <div id="adminTabGlobal" class="ap-tab ap-tab-active" onclick="adminTab('global')">🌐 Global</div>
-    <div id="adminTabMod"    class="ap-tab" onclick="adminTab('mod')">🔨 Moderation</div>
+<!-- Active status bar -->
+  <div id="apActiveStatus" style="display:none;background:#0d1a0d;border:1px solid #2e7d32;
+    border-radius:10px;padding:9px 12px;margin-bottom:12px;font-size:11px;
+    color:#a5d6a7;line-height:1.7;"></div>
+
+  <div class="ap-tabs" style="flex-wrap:wrap;gap:6px;">
+    <div id="adminTabGlobal"  class="ap-tab ap-tab-active" onclick="adminTab('global')">🌐 Global</div>
+    <div id="adminTabEffects" class="ap-tab" onclick="adminTab('effects')">✨ Effects</div>
+    <div id="adminTabMod"     class="ap-tab" onclick="adminTab('mod')">🔨 Mod</div>
   </div>
 
   <!-- ===== GLOBAL ===== -->
@@ -1451,12 +1470,15 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="3">3 sec</option>
           <option value="5" selected>5 sec</option>
           <option value="10">10 sec</option>
+          <option value="20">20 sec</option>
         </select>
         <span class="ap-label">Color</span>
         <select id="apBroadcastColor" class="ap-select" style="max-width:110px;">
           <option value="#ffffff" selected>White</option>
           <option value="#ffd700">Yellow</option>
           <option value="#ff4444">Red</option>
+          <option value="#00e676">Green</option>
+          <option value="#111111">Black</option>
         </select>
       </div>
       <div class="ap-row" style="margin-top:6px;">
@@ -1468,6 +1490,74 @@ document.addEventListener('DOMContentLoaded', function () {
       <button class="ap-btn ap-btn-blue" style="width:100%;margin-top:6px;"
         onclick="adminBroadcast()">📢 Send to All</button>
     </div>
+
+<!-- Poll / Vote -->
+    <div class="ap-card">
+      <h3>🗳 Send Poll</h3>
+      <input id="apPollQuestion" class="ap-input" style="width:100%;box-sizing:border-box;margin-bottom:8px;" placeholder="Question for all players…">
+      <div id="apPollOptions">
+        <div class="ap-poll-row ap-row" style="margin-bottom:5px;">
+          <input class="ap-input ap-poll-opt" placeholder="Option 1" style="flex:1;">
+          <select class="ap-select ap-poll-color" style="max-width:95px;">
+            <option value="#00c853" selected>🟢 Green</option>
+            <option value="#d50000">🔴 Red</option>
+            <option value="#2979ff">🔵 Blue</option>
+            <option value="#f50057">🩷 Pink</option>
+            <option value="#ffd600">🟡 Yellow</option>
+            <option value="#ff6d00">🟠 Orange</option>
+            <option value="#aa00ff">🟣 Purple</option>
+            <option value="#00bfa5">🩵 Teal</option>
+            <option value="#ffffff">⬜ White</option>
+            <option value="#212121">⬛ Black</option>
+            <option value="#795548">🟤 Brown</option>
+            <option value="#546e7a">🩶 Steel</option>
+            <option value="#e91e63">💗 Magenta</option>
+            <option value="#00e5ff">🩵 Cyan</option>
+            <option value="#8bc34a">🌿 Lime</option>
+          </select>
+        </div>
+        <div class="ap-poll-row ap-row" style="margin-bottom:5px;">
+          <input class="ap-input ap-poll-opt" placeholder="Option 2" style="flex:1;">
+          <select class="ap-select ap-poll-color" style="max-width:95px;">
+            <option value="#00c853">🟢 Green</option>
+            <option value="#d50000" selected>🔴 Red</option>
+            <option value="#2979ff">🔵 Blue</option>
+            <option value="#f50057">🩷 Pink</option>
+            <option value="#ffd600">🟡 Yellow</option>
+            <option value="#ff6d00">🟠 Orange</option>
+            <option value="#aa00ff">🟣 Purple</option>
+            <option value="#00bfa5">🩵 Teal</option>
+            <option value="#ffffff">⬜ White</option>
+            <option value="#212121">⬛ Black</option>
+            <option value="#795548">🟤 Brown</option>
+            <option value="#546e7a">🩶 Steel</option>
+            <option value="#e91e63">💗 Magenta</option>
+            <option value="#00e5ff">🩵 Cyan</option>
+            <option value="#8bc34a">🌿 Lime</option>
+          </select>
+        </div>
+      </div>
+      <div class="ap-row" style="gap:6px;margin-top:4px;">
+        <button class="ap-btn ap-btn-blue ap-btn-sm" onclick="adminAddPollOption()">+ Add Option</button>
+        <button class="ap-btn ap-btn-sm" style="background:#1e2a5a;color:#9fa8da;" onclick="adminRemovePollOption()">− Remove</button>
+        <select id="apPollDur" class="ap-select" style="max-width:95px;">
+          <option value="5">5 sec</option>
+          <option value="10" selected>10 sec</option>
+          <option value="30">30 sec</option>
+          <option value="60">1 min</option>
+        </select>
+      </div>
+      <div class="ap-row" style="margin-top:6px;">
+        <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="apPollOnline" style="width:16px;height:16px;"> Online only
+        </label>
+      </div>
+      <button class="ap-btn ap-btn-purple" style="width:100%;margin-top:6px;" onclick="adminSendPoll()">🗳 Send Poll</button>
+    </div>
+
+    <!-- Tap Event -->
+    <div class="ap-card">
+      <h3>⚡ Tap Event</h3>
 
     <!-- Tap Event -->
     <div class="ap-card">
@@ -1497,6 +1587,13 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="ligting">Lighting</option>
           <option value="fire">Fire (tap boost)</option>
           <option value="ogon">Ogon (overdrive)</option>
+          <optgroup label="─── Admin Only ───">
+            <option value="king">👑 King Street</option>
+            <option value="castle">🏰 Big Castle</option>
+            <option value="admin">🛡 Admin Abuse</option>
+            <option value="meme">😂 Meme World</option>
+            <option value="hole">🕳 Black Hole</option>
+          </optgroup>
         </select>
       </div>
       <div class="ap-row" style="gap:8px;">
@@ -1516,6 +1613,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="glitchBox">Glitch Box</option>
           <option value="keyBox">Key Box</option>
           <option value="fortuneWheel">Fortune Wheel Spin</option>
+          <option value="bombBox">💣 Bomb Box</option>
         </select>
         <button class="ap-btn ap-btn-green" onclick="adminGiveOpeningAll()">🎁 Give All</button>
       </div>
@@ -1629,7 +1727,173 @@ document.addEventListener('DOMContentLoaded', function () {
       <button class="ap-btn ap-btn-purple" style="width:100%;" onclick="adminGiveTempSkin()">🎨 Apply to All</button>
     </div>
 
+  <!-- Force Music -->
+    <div class="ap-card">
+      <h3>🎵 Force Music for All</h3>
+      <select id="apMusicTrack" class="ap-select" style="width:100%;margin-bottom:8px;">
+        <optgroup label="In-game tracks">
+          <option value="mistic">Mystic</option>
+          <option value="gabber">Gabber</option>
+          <option value="onion">Onion</option>
+          <option value="calm">Calm</option>
+          <option value="siulai">Cat's Yarn</option>
+          <option value="funny">Funny</option>
+          <option value="code">Code</option>
+        </optgroup>
+        <optgroup label="🔒 Admin only">
+          <option value="catito">Ai My Catito</option>
+          <option value="event">Event Song</option>
+        </optgroup>
+      </select>
+      <div class="ap-row">
+        <span class="ap-label">Duration</span>
+        <select id="apMusicDur" class="ap-select">
+          <option value="15">15 sec</option>
+          <option value="30">30 sec</option>
+          <option value="60" selected>1 min</option>
+          <option value="120">2 min</option>
+          <option value="180">3 min</option>
+          <option value="300">5 min</option>
+          <option value="600">10 min</option>
+          <option value="1800">30 min</option>
+          <option value="3600">1 hour</option>
+        </select>
+      </div>
+      <div class="ap-row">
+        <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="apMusicOnline" style="width:16px;height:16px;"> Online only
+        </label>
+      </div>
+      <div class="ap-row" style="gap:8px;">
+        <button class="ap-btn ap-btn-purple" style="flex:1;" onclick="adminForceMusic()">🎵 Play for All</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminStopMusic()">■ Stop</button>
+      </div>
+    </div>
+
   </div><!-- /globalSection -->
+</div><!-- /adminGlobalSection -->
+
+<!-- ===== EFFECTS ===== -->
+  <div id="adminEffectsSection" style="display:none;">
+
+    <div class="ap-card">
+      <h3>✨ Visual Effects</h3>
+      <p style="color:#7986cb;font-size:11px;margin:0 0 10px;">Check effects to enable. Multiple can run simultaneously.</p>
+
+      <div class="ap-effect-row ap-row" style="background:#0d0d20;border-radius:8px;padding:7px 10px;margin-bottom:6px;">
+        <input type="checkbox" class="ap-effect-check" style="width:16px;height:16px;margin-right:6px;">
+        <span style="color:#e8eaf6;font-size:13px;flex:1;">🌈 Colorful Light Rays</span>
+        <select class="ap-select ap-effect-strength" data-effect="rays" style="max-width:85px;">
+          <option value="weak">Weak</option><option value="medium" selected>Med</option><option value="strong">Strong</option>
+        </select>
+      </div>
+      <div class="ap-effect-row ap-row" style="background:#0d0d20;border-radius:8px;padding:7px 10px;margin-bottom:6px;">
+        <input type="checkbox" class="ap-effect-check" style="width:16px;height:16px;margin-right:6px;">
+        <span style="color:#e8eaf6;font-size:13px;flex:1;">🌧 Rain</span>
+        <select class="ap-select ap-effect-strength" data-effect="rain" style="max-width:85px;">
+          <option value="weak">Weak</option><option value="medium" selected>Med</option><option value="strong">Strong</option>
+        </select>
+      </div>
+      <div class="ap-effect-row ap-row" style="background:#0d0d20;border-radius:8px;padding:7px 10px;margin-bottom:6px;">
+        <input type="checkbox" class="ap-effect-check" style="width:16px;height:16px;margin-right:6px;">
+        <span style="color:#e8eaf6;font-size:13px;flex:1;">❄️ Snow</span>
+        <select class="ap-select ap-effect-strength" data-effect="snow" style="max-width:85px;">
+          <option value="weak">Weak</option><option value="medium" selected>Med</option><option value="strong">Strong</option>
+        </select>
+      </div>
+      <div class="ap-effect-row ap-row" style="background:#0d0d20;border-radius:8px;padding:7px 10px;margin-bottom:6px;">
+        <input type="checkbox" class="ap-effect-check" style="width:16px;height:16px;margin-right:6px;">
+        <span style="color:#e8eaf6;font-size:13px;flex:1;">⚡ Lightning</span>
+        <select class="ap-select ap-effect-strength" data-effect="lightning" style="max-width:85px;">
+          <option value="weak">Weak</option><option value="medium" selected>Med</option><option value="strong">Strong</option>
+        </select>
+      </div>
+      <div class="ap-effect-row ap-row" style="background:#0d0d20;border-radius:8px;padding:7px 10px;margin-bottom:6px;">
+        <input type="checkbox" class="ap-effect-check" style="width:16px;height:16px;margin-right:6px;">
+        <span style="color:#e8eaf6;font-size:13px;flex:1;">🎤 Concert Lights</span>
+        <select class="ap-select ap-effect-strength" data-effect="concert" style="max-width:85px;">
+          <option value="weak">Weak</option><option value="medium" selected>Med</option><option value="strong">Strong</option>
+        </select>
+      </div>
+      <div class="ap-effect-row ap-row" style="background:#0d0d20;border-radius:8px;padding:7px 10px;margin-bottom:6px;">
+        <input type="checkbox" class="ap-effect-check" style="width:16px;height:16px;margin-right:6px;">
+        <span style="color:#e8eaf6;font-size:13px;flex:1;">🪙 Floating KSPT Coins</span>
+        <select class="ap-select ap-effect-strength" data-effect="coins" style="max-width:85px;">
+          <option value="weak">Weak</option><option value="medium" selected>Med</option><option value="strong">Strong</option>
+        </select>
+      </div>
+
+      <div class="ap-row" style="margin-top:6px;">
+        <span class="ap-label">Duration</span>
+        <select id="apEffectsDur" class="ap-select">
+          <option value="5">5 sec</option>
+          <option value="15">15 sec</option>
+          <option value="30">30 sec</option>
+          <option value="60" selected>1 min</option>
+          <option value="300">5 min</option>
+          <option value="600">10 min</option>
+          <option value="1800">30 min</option>
+          <option value="3600">1 hour</option>
+        </select>
+      </div>
+      <div class="ap-row">
+        <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="apEffectsOnline" style="width:16px;height:16px;"> Online only
+        </label>
+      </div>
+      <div class="ap-row" style="gap:8px;margin-top:6px;">
+        <button class="ap-btn ap-btn-purple" style="flex:1;" onclick="adminSendEffects()">✨ Apply</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminStopEffects()">■ Stop All</button>
+      </div>
+    </div>
+
+    <!-- UI Chaos -->
+    <div class="ap-card">
+      <h3>🌀 UI Chaos</h3>
+      <p style="color:#7986cb;font-size:11px;margin:0 0 8px;">Temporarily transforms the interface for all players.</p>
+      <div class="ap-row">
+        <span class="ap-label">Rotate</span>
+        <select id="apChaosRotate" class="ap-select">
+          <option value="0" selected>None</option>
+          <option value="180">🙃 Upside Down (180°)</option>
+          <option value="90">↻ 90° Right</option>
+          <option value="270">↺ 90° Left</option>
+          <option value="45">↗ 45° Tilt</option>
+        </select>
+      </div>
+      <div class="ap-row">
+        <span class="ap-label">Scale</span>
+        <select id="apChaosScale" class="ap-select">
+          <option value="1" selected>Normal (100%)</option>
+          <option value="0.5">Tiny (50%)</option>
+          <option value="0.7">Small (70%)</option>
+          <option value="1.3">Big (130%)</option>
+          <option value="1.6">Huge (160%)</option>
+        </select>
+      </div>
+      <div class="ap-row">
+        <span class="ap-label">Duration</span>
+        <select id="apChaosDur" class="ap-select">
+          <option value="5">5 sec</option>
+          <option value="15">15 sec</option>
+          <option value="30" selected>30 sec</option>
+          <option value="60">1 min</option>
+          <option value="300">5 min</option>
+          <option value="3600">1 hour</option>
+        </select>
+      </div>
+      <div class="ap-row">
+        <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="apChaosOnline" style="width:16px;height:16px;"> Online only
+        </label>
+      </div>
+      <div class="ap-row" style="gap:8px;margin-top:4px;">
+        <button class="ap-btn ap-btn-amber" style="flex:1;" onclick="adminSendUIChaos()">🌀 Apply</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminResetUIForAll()">↺ Reset</button>
+      </div>
+    </div>
+
+  </div><!-- /effectsSection -->
 
   <!-- ===== MODERATION ===== -->
   <div id="adminModSection" style="display:none;">
@@ -1681,6 +1945,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="glitchBox">Glitch Box</option>
           <option value="keyBox">Key Box</option>
           <option value="fortuneWheel">Fortune Wheel Spin</option>
+          <option value="bombBox">💣 Bomb Box</option>
         </select>
         <button class="ap-btn ap-btn-amber" onclick="adminGiveOpeningPlayer()">🎁 Give</button>
       </div>
@@ -1716,6 +1981,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="3">3 sec</option>
           <option value="5" selected>5 sec</option>
           <option value="10">10 sec</option>
+          <option value="20">20 sec</option>
         </select>
         <span class="ap-label">Color</span>
         <select id="apPersonalMsgColor" class="ap-select" style="max-width:110px;">
@@ -1723,10 +1989,18 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="#ffd700">Yellow</option>
           <option value="#ff4444">Red</option>
           <option value="#00e676">Green</option>
+          <option value="#111111">Black</option>
         </select>
       </div>
       <button class="ap-btn ap-btn-blue" style="width:100%;margin-top:4px;"
         onclick="adminSendPersonalMsg()">💬 Send Message</button>
+    </div>
+
+  <!-- Delete from Leaderboard -->
+    <div class="ap-card" style="border-color:#4a1515;">
+      <h3 style="color:#ef5350;">🗑 Remove from Leaderboard</h3>
+      <p style="color:#9fa8da;font-size:11px;margin:0 0 8px;">Permanently removes selected player from leaderboard for everyone.</p>
+      <button class="ap-btn ap-btn-red" style="width:100%;" onclick="adminRemoveFromLeaderboard()">🗑 Remove Selected Player</button>
     </div>
 
   </div><!-- /modSection -->

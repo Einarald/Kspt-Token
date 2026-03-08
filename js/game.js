@@ -241,10 +241,13 @@ const translations = {
     'ivent_no_events': 'No events are active right now. Check back later.',
     'ivent_error': 'Error loading events',
 
-    // Noob Box
-     'noob_box': 'Noob Box',
-     'noob_box_desc': 'A special box for beginners (+skin)',
-     'noob_box_obtained': 'Noob Box obtained!',
+    // Noob and Bomb Box
+    'noob_box': 'Noob Box',
+    'noob_box_desc': 'A special box for beginners (+skin)',
+    'noob_box_obtained': 'Noob Box obtained!',
+    'bomb_box_hold': 'Hold to detonate...',
+    'bomb_box_obtained': '💣 Bomb obtained!',
+    'bomb_box_bg': '💧 Bomb In The Water background unlocked!',
      
     // Market
     'balance': 'Balance: ',
@@ -669,10 +672,13 @@ const translations = {
     'ivent_no_events': 'В данный момент нет активных событий',
     'ivent_error': 'Ошибка загрузки событий',
 
-    // Noob Box
+    // Noob and Bomb Box
     'noob_box': 'Нуб Кейс',
     'noob_box_desc': 'Особый ящик для новичков (+скин)',
     'noob_box_obtained': 'Нуб Кейс получен!',
+    'bomb_box_hold': 'Удерживай для детонации...',
+    'bomb_box_obtained': '💣 Бомба получена!',
+    'bomb_box_bg': '💧 Фон Bomb In The Water разблокирован!',
     
     // Market
     'balance': 'Баланс: ',
@@ -1484,6 +1490,9 @@ keys: {
   keyBox: {
     taps: 0
   },
+  bombBox: {
+    obtained: false
+  },
   fortuneWheel: {
     spinsUsed: 0,
     lastResetTime: 0
@@ -1701,7 +1710,17 @@ if (!d.keys) {
 }
 
 if (!d.keyBox) d.keyBox = { taps: 0 };
+if (!d.bombBox) d.bombBox = { obtained: false };
 if (!d.fortuneWheel) d.fortuneWheel = { spinsUsed: 0, lastResetTime: 0 };
+// Admin ban check — runs every load
+if (d.adminBanned) {
+  document.body.innerHTML = `
+    <div id="adminBanScreen" style="display:flex;flex-direction:column;align-items:center;
+      justify-content:center;height:100vh;background:#0b0b0b;color:red;
+      font-size:22px;font-weight:bold;text-align:center;padding:20px;">
+      🚫 You have been banned by an admin.
+    </div>`;
+}
 if (typeof d.keys.black === 'undefined') d.keys.black = 0;
 
 if (!d.glitchBox) {
@@ -3060,8 +3079,11 @@ function updateBackground() {
         break;
       case "code":
         body.style.backgroundImage = "url('code.png')";
-        // Можно поставить черный цвет подложки, чтобы красиво смотрелось
-        body.style.backgroundColor = "#000000"; 
+        body.style.backgroundColor = "#000000";
+        break;
+      case "waterbomb":
+        body.style.backgroundImage = "url('waterbomb.png')";
+        body.style.backgroundColor = "transparent";
         break;
       default:
         body.style.backgroundImage = "none";
@@ -4065,6 +4087,7 @@ function updateSettingsUI() {
     {id: 'bg-btn-hell', key: 'hell', price: 0},
     {id: 'bg-btn-math', key: 'math', price: 0},
     {id: 'bg-btn-code', key: 'code', price: 0},
+    {id: 'bg-btn-waterbomb', key: 'waterbomb', price: 0},
   ];
   
   bgButtons.forEach(bg => {
@@ -4112,6 +4135,16 @@ function updateSettingsUI() {
              btn.onclick = () => equipBackground('code');
          } else {
              btn.textContent = t('locked_glitch'); 
+             btn.className = "owned";
+             btn.onclick = null;
+         }
+      } else if (bg.key === 'waterbomb') {
+         if (d.ownedBgs.includes('waterbomb')) {
+             btn.textContent = t('select');
+             btn.className = "";
+             btn.onclick = () => equipBackground('waterbomb');
+         } else {
+             btn.textContent = '🔒 Bomb Box Only';
              btn.className = "owned";
              btn.onclick = null;
          }
@@ -7073,26 +7106,94 @@ function _adminInjectButton() {
 function openAdminPanel() {
   if (!_isAdminUser()) return;
   const m = document.getElementById('adminPanelModal');
-  if (m) { m.style.display = 'flex'; _adminLoadPlayers(); }
+  if (m) {
+    m.style.display = 'flex';
+    _adminLoadPlayers();
+    _adminUpdateActiveBar();
+    clearInterval(window._adminBarInterval);
+    window._adminBarInterval = setInterval(_adminUpdateActiveBar, 1000);
+  }
 }
+
 function closeAdminPanel() {
   const m = document.getElementById('adminPanelModal');
   if (m) m.style.display = 'none';
+  clearInterval(window._adminBarInterval);
+  window._adminBarInterval = null;
 }
+
 function adminTab(tab) {
-  ['adminTabGlobal','adminTabMod'].forEach(id => {
-    document.getElementById(id).classList.remove('ap-tab-active');
+  ['adminTabGlobal','adminTabEffects','adminTabMod'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.classList.remove('ap-tab-active');
   });
-  ['adminGlobalSection','adminModSection'].forEach(id => {
-    document.getElementById(id).style.display = 'none';
+  ['adminGlobalSection','adminEffectsSection','adminModSection'].forEach(id => {
+    const el = document.getElementById(id); if (el) el.style.display = 'none';
   });
   if (tab === 'global') {
     document.getElementById('adminTabGlobal').classList.add('ap-tab-active');
     document.getElementById('adminGlobalSection').style.display = 'block';
+  } else if (tab === 'effects') {
+    document.getElementById('adminTabEffects').classList.add('ap-tab-active');
+    document.getElementById('adminEffectsSection').style.display = 'block';
   } else {
     document.getElementById('adminTabMod').classList.add('ap-tab-active');
     document.getElementById('adminModSection').style.display = 'block';
   }
+}
+
+/* ---- GLOBAL: Poll ---- */
+const _POLL_COLORS_HTML = `
+  <option value="#00c853">🟢 Green</option>
+  <option value="#d50000">🔴 Red</option>
+  <option value="#2979ff">🔵 Blue</option>
+  <option value="#f50057">🩷 Pink</option>
+  <option value="#ffd600">🟡 Yellow</option>
+  <option value="#ff6d00">🟠 Orange</option>
+  <option value="#aa00ff">🟣 Purple</option>
+  <option value="#00bfa5">🩵 Teal</option>
+  <option value="#ffffff">⬜ White</option>
+  <option value="#212121">⬛ Black</option>
+  <option value="#795548">🟤 Brown</option>
+  <option value="#546e7a">🩶 Steel</option>
+  <option value="#e91e63">💗 Magenta</option>
+  <option value="#00e5ff">🩵 Cyan</option>
+  <option value="#8bc34a">🌿 Lime</option>`;
+const _POLL_DEFAULT_COLORS = ['#00c853','#d50000','#2979ff','#f50057'];
+function adminAddPollOption() {
+  const container = document.getElementById('apPollOptions');
+  const count = container.querySelectorAll('.ap-poll-opt').length;
+  if (count >= 4) { showToast('Maximum 4 options'); return; }
+  const defColor = _POLL_DEFAULT_COLORS[count] || '#2979ff';
+  const div = document.createElement('div');
+  div.className = 'ap-poll-row ap-row';
+  div.style.marginBottom = '5px';
+  div.innerHTML = `<input class="ap-input ap-poll-opt" placeholder="Option ${count+1}" style="flex:1;">
+    <select class="ap-select ap-poll-color" style="max-width:95px;">${_POLL_COLORS_HTML}</select>`;
+  container.appendChild(div);
+  // Set default color for new select
+  const newSel = div.querySelector('.ap-poll-color');
+  if (newSel) newSel.value = defColor;
+}
+function adminRemovePollOption() {
+  const container = document.getElementById('apPollOptions');
+  const rows = container.querySelectorAll('.ap-poll-row');
+  if (rows.length <= 2) { showToast('Minimum 2 options'); return; }
+  rows[rows.length - 1].remove();
+}
+async function adminSendPoll() {
+  if (!_isAdminUser()) return;
+  const question = document.getElementById('apPollQuestion').value.trim();
+  if (!question) { showToast('Enter a question'); return; }
+  const opts = [...document.querySelectorAll('.ap-poll-opt')].map(i => i.value.trim()).filter(Boolean);
+  if (opts.length < 2) { showToast('Need at least 2 options'); return; }
+  const cols = [...document.querySelectorAll('.ap-poll-color')].map(i => i.value);
+  const dur = Number(document.getElementById('apPollDur').value) || 10;
+  const onlineOnly = document.getElementById('apPollOnline')?.checked || false;
+  const ts = Date.now();
+  await _db.ref('admin/poll').set({ question, options: opts, colors: cols, dur, onlineOnly, ts });
+  await _db.ref('admin/pollVotes').remove();
+  setTimeout(() => _db.ref('admin/poll').remove(), (dur + 10) * 1000);
+  showToast('🗳 Poll sent!');
 }
 
 /* ---- GLOBAL: Broadcast ---- */
@@ -7242,6 +7343,16 @@ async function adminGiveTicketsPlayer() {
   showToast(`🎫 +${count} tickets queued`);
 }
 
+/* ---- MOD: Remove from Leaderboard ---- */
+async function adminRemoveFromLeaderboard() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) return;
+  if (!window._firebaseReady) { showToast('Firebase not ready'); return; }
+  await _db.ref(`leaderboard/${uid}`).remove();
+  showToast(`🗑 Removed ${uid} from leaderboard`);
+  setTimeout(() => _adminLoadPlayers(), 1500);
+}
+
 /* ---- MOD: Personal message ---- */
 async function adminSendPersonalMsg() {
   if (!_isAdminUser()) return;
@@ -7262,7 +7373,8 @@ async function adminSendPersonalMsg() {
    ============================================================ */
 const _adminStartTs = Date.now();
 let _adminPollTs = { broadcast: _adminStartTs, tapEvent: _adminStartTs, giveOpening: _adminStartTs,
-                     skipCooldown: _adminStartTs, giveTickets: _adminStartTs, tempSkin: _adminStartTs };
+                     skipCooldown: _adminStartTs, giveTickets: _adminStartTs, tempSkin: _adminStartTs,
+                     poll: _adminStartTs, forceMusic: _adminStartTs, effects: _adminStartTs, uiChaos: _adminStartTs };
 let _adminEventInterval = null;
 
 function _startAdminListener() {
@@ -7333,7 +7445,121 @@ function _startAdminListener() {
     if (v.onlineOnly && !_wasOnline(v.ts)) return;
     if (v.end > Date.now()) {
       window._adminTempSkin = { skinId: v.skinId, end: v.end };
-      if (typeof ui === 'function') ui();
+      if (v.skinId && v.skinId !== 'default') {
+        if (!d.skins) d.skins = {};
+        // Save previous skin for restore
+        d._adminTempSkinPrevSkin = d.skin;
+        d._adminTempSkinPrevOwned = d.skins[v.skinId]; // undefined / 0 / 1
+        // Grant temp ownership and equip
+        if (!d.skins[v.skinId]) d.skins[v.skinId] = '_temp';
+        d.skin = v.skinId;
+        save();
+        if (typeof ui === 'function') ui();
+        // Auto-restore after duration
+        const msLeft = v.end - Date.now();
+        clearTimeout(window._adminTempSkinTimeout);
+        window._adminTempSkinTimeout = setTimeout(() => {
+          if (window._adminTempSkin && window._adminTempSkin.skinId === v.skinId) {
+            window._adminTempSkin = null;
+            if (d.skins[v.skinId] === '_temp') delete d.skins[v.skinId];
+            d.skin = d._adminTempSkinPrevSkin || 'default';
+            delete d._adminTempSkinPrevSkin;
+            delete d._adminTempSkinPrevOwned;
+            save();
+            if (typeof ui === 'function') ui();
+            showToast('🎨 Temp skin expired');
+          }
+        }, msLeft);
+        showToast(`🎨 Temp skin "${v.skinId}" applied! (${Math.round(msLeft/60000)}min)`);
+      }
+    }
+  });
+
+// Poll listener
+  _db.ref('admin/poll').on('value', snap => {
+    const v = snap.val();
+    if (!v || v.ts <= _adminPollTs.poll) return;
+    _adminPollTs.poll = v.ts;
+    if (v.onlineOnly && !_wasOnline(v.ts)) return;
+    _adminShowPoll(v);
+  });
+
+  // Force Music listener
+  _db.ref('admin/forceMusic').on('value', snap => {
+    const v = snap.val();
+    if (!v) {
+      window._adminForcedMusic = null;
+      clearTimeout(window._adminMusicTimeout);
+      if (typeof ensureMusicPlays === 'function') ensureMusicPlays();
+      _adminUpdateActiveBar();
+      return;
+    }
+    if (v.ts <= _adminPollTs.forceMusic) return;
+    _adminPollTs.forceMusic = v.ts;
+    if (v.onlineOnly && !_wasOnline(v.ts)) return;
+    if (!v.track || v.end <= Date.now()) {
+      window._adminForcedMusic = null;
+      if (typeof ensureMusicPlays === 'function') ensureMusicPlays();
+      _adminUpdateActiveBar();
+      return;
+    }
+    window._adminForcedMusic = { track: v.track, end: v.end };
+    const trackFiles = {
+      mistic:'mistic.mp3', gabber:'gabber.mp3', onion:'onion.mp3', calm:'calm.mp3',
+      siulai:'siulai.mp3', funny:'funny.mp3', code:'code.mp3',
+      catito:'catito.mp3', event:'event.mp3'
+    };
+    try {
+      window.appMusic.src = trackFiles[v.track] || (v.track + '.mp3');
+      window.appMusic.currentTime = 0;
+      window.appMusic.play().catch(() => {
+        const resume = () => { window.appMusic.play().catch(()=>{}); document.removeEventListener('click', resume); document.removeEventListener('touchstart', resume); };
+        document.addEventListener('click', resume, {once:true});
+        document.addEventListener('touchstart', resume, {once:true});
+      });
+      _adminShowOverlay(`🎵 Now playing: ${v.track}`, '#c084fc', 4000);
+      const msLeft = v.end - Date.now();
+      clearTimeout(window._adminMusicTimeout);
+      window._adminMusicTimeout = setTimeout(() => {
+        window._adminForcedMusic = null;
+        if (typeof ensureMusicPlays === 'function') ensureMusicPlays();
+        _adminUpdateActiveBar();
+      }, msLeft);
+      window._adminForcedMusicEndTs = v.end;
+      _adminUpdateActiveBar();
+      _adminGlobalStatusUpdate();
+    } catch(e) { console.warn('admin forceMusic:', e); }
+  });
+
+  // Effects listener
+  _db.ref('admin/effects').on('value', snap => {
+    const v = snap.val();
+    if (!v || v.ts <= _adminPollTs.effects) return;
+    _adminPollTs.effects = v.ts;
+    if (v.onlineOnly && !_wasOnline(v.ts)) return;
+    if (v.end > Date.now()) {
+      window._adminEffectsEndTs = v.end;
+      _adminApplyEffects(v.effects, v.end - Date.now());
+      _adminGlobalStatusUpdate();
+    } else {
+      window._adminEffectsEndTs = 0;
+      _adminClearEffects();
+    }
+  });
+
+  // UI Chaos listener
+  _db.ref('admin/uiChaos').on('value', snap => {
+    const v = snap.val();
+    if (!v || v.ts <= _adminPollTs.uiChaos) return;
+    _adminPollTs.uiChaos = v.ts;
+    if (v.onlineOnly && !_wasOnline(v.ts)) return;
+    if (v.end > Date.now()) {
+      window._adminChaosEndTs = v.end;
+      _adminApplyUIChaos(Number(v.rotate)||0, Number(v.scale)||1, v.end - Date.now());
+      _adminGlobalStatusUpdate();
+    } else {
+      window._adminChaosEndTs = 0;
+      _adminResetUIChaos();
     }
   });
 
@@ -7348,6 +7574,329 @@ function _startAdminListener() {
       _db.ref(`admin/modActions/${myUid}`).remove();
     });
   }
+}
+
+/* ---- Active bar refresh ---- */
+function _adminUpdateActiveBar() {
+  const bar = document.getElementById('apActiveStatus');
+  if (!bar || !window._firebaseReady) return;
+  _db.ref('admin').once('value', snap => {
+    const data = snap.val() || {};
+    const now = Date.now();
+    const lines = [];
+    if (data.tapEvent && data.tapEvent.active && data.tapEvent.end > now) {
+      const left = Math.ceil((data.tapEvent.end - now) / 1000);
+      lines.push(`⚡ Tap Event x${data.tapEvent.multi} — ${left}s left`);
+    }
+    if (data.forceMusic && data.forceMusic.track && data.forceMusic.end > now) {
+      const left = Math.ceil((data.forceMusic.end - now) / 1000);
+      lines.push(`🎵 Music: ${data.forceMusic.track} — ${_adminFmtLeft(data.forceMusic.end)}`);
+    }
+    if (data.effects && data.effects.end > now) {
+      lines.push(`✨ Effects active — ${_adminFmtLeft(data.effects.end)}`);
+    }
+    if (data.uiChaos && data.uiChaos.end > now) {
+      lines.push(`🌀 UI Chaos — ${_adminFmtLeft(data.uiChaos.end)}`);
+    }
+    if (data.tempSkin && data.tempSkin.end > now) {
+      lines.push(`🎨 Temp Skin: ${data.tempSkin.skinId} — ${_adminFmtLeft(data.tempSkin.end)}`);
+    }
+    if (lines.length > 0) {
+      bar.style.display = 'block';
+      bar.innerHTML = '🟢 <b style="color:#a5d6a7">Active right now:</b><br>' + lines.join('<br>');
+    } else {
+      bar.style.display = 'none';
+    }
+  });
+}
+function _adminFmtLeft(endTs) {
+  const s = Math.ceil((endTs - Date.now()) / 1000);
+  if (s < 60) return `${s}s left`;
+  const m = Math.floor(s / 60), sec = s % 60;
+  return `${m}m ${sec}s left`;
+}
+
+/* ---- Show Poll ---- */
+function _adminShowPoll(v) {
+  // Remove old poll if any
+  const old = document.getElementById('adminPollOverlay');
+  if (old) old.remove();
+
+  const el = document.createElement('div');
+  el.id = 'adminPollOverlay';
+  el.style.cssText = `
+    position:fixed; top:60px; left:50%; transform:translateX(-50%);
+    z-index:99998; background:rgba(8,8,24,0.97);
+    border:1.5px solid #3f51b5; border-radius:16px;
+    padding:16px 14px; width:min(310px,90vw);
+    box-shadow:0 8px 32px rgba(0,0,0,0.8); pointer-events:all;`;
+
+  let voted = false;
+  const localVotes = {};
+  v.options.forEach((_, i) => localVotes[i] = 0);
+  let totalVotes = 0;
+
+  function render() {
+    const pcts = v.options.map((_, i) => totalVotes > 0 ? Math.round(localVotes[i] / totalVotes * 100) : 0);
+    el.innerHTML = `
+      <div style="font-weight:700;font-size:14px;color:#e8eaf6;margin-bottom:12px;text-align:center;">${v.question}</div>
+      ${v.options.map((opt, i) => `
+        <div onclick="${voted?'':'window._adminPollVote('+i+')'}"
+          style="margin-bottom:7px;border-radius:10px;overflow:hidden;
+            border:1.5px solid ${voted ? '#333' : (v.colors[i] || '#3f51b5')};
+            cursor:${voted?'default':'pointer'};transition:.15s;">
+          <div style="background:${v.colors[i]||'#3f51b5'};opacity:${voted?0.7:1};
+            padding:9px 12px;display:flex;justify-content:space-between;align-items:center;">
+            <span style="font-size:13px;font-weight:600;color:#fff;">${opt}</span>
+            ${voted ? `<span style="font-size:12px;color:#fff;font-weight:700;">${pcts[i]}%</span>` : ''}
+          </div>
+          ${voted ? `<div style="height:4px;background:rgba(255,255,255,0.1);">
+            <div style="height:100%;width:${pcts[i]}%;background:${v.colors[i]||'#3f51b5'};transition:width .4s;"></div>
+          </div>` : ''}
+        </div>`).join('')}
+      <div style="font-size:11px;color:#555;text-align:center;margin-top:4px;">${totalVotes} vote${totalVotes!==1?'s':''}</div>`;
+  }
+
+  window._adminPollVote = function(idx) {
+    if (voted) return;
+    voted = true;
+    localVotes[idx]++;
+    totalVotes++;
+    render();
+    // Push to Firebase
+    try { _db.ref(`admin/pollVotes/${idx}`).transaction(n => (n || 0) + 1); } catch(e) {}
+  };
+
+  // Live vote subscription
+  const voteRef = _db.ref('admin/pollVotes');
+  voteRef.on('value', snap => {
+    const data = snap.val() || {};
+    totalVotes = 0;
+    v.options.forEach((_, i) => { localVotes[i] = data[i] || 0; totalVotes += localVotes[i]; });
+    render();
+  });
+
+  render();
+  document.body.appendChild(el);
+
+  // Auto-remove after duration
+  setTimeout(() => {
+    el.remove();
+    try { voteRef.off(); } catch(e) {}
+    try { _db.ref('admin/pollVotes').remove(); } catch(e) {}
+  }, v.dur * 1000);
+}
+
+/* ---- Force Music functions ---- */
+async function adminForceMusic() {
+  if (!_isAdminUser()) return;
+  const track = document.getElementById('apMusicTrack').value;
+  const dur = Number(document.getElementById('apMusicDur').value) || 60;
+  const onlineOnly = document.getElementById('apMusicOnline')?.checked || false;
+  const end = Date.now() + dur * 1000;
+  await _db.ref('admin/forceMusic').set({ track, end, onlineOnly, ts: Date.now() });
+  setTimeout(() => _db.ref('admin/forceMusic').remove(), (dur + 10) * 1000);
+  showToast(`🎵 Sent: ${track} for ${dur}s`);
+  _adminUpdateActiveBar();
+}
+async function adminStopMusic() {
+  if (!_isAdminUser()) return;
+  await _db.ref('admin/forceMusic').remove();
+  showToast('🎵 Music stopped');
+  _adminUpdateActiveBar();
+}
+
+/* ---- Effects functions ---- */
+async function adminSendEffects() {
+  if (!_isAdminUser()) return;
+  const effects = {};
+  document.querySelectorAll('.ap-effect-strength').forEach(sel => {
+    if (sel.closest('.ap-effect-row')?.querySelector('.ap-effect-check')?.checked) {
+      effects[sel.dataset.effect] = sel.value;
+    }
+  });
+  if (Object.keys(effects).length === 0) { showToast('Select at least one effect'); return; }
+  const dur = Number(document.getElementById('apEffectsDur').value) || 60;
+  const onlineOnly = document.getElementById('apEffectsOnline')?.checked || false;
+  const end = Date.now() + dur * 1000;
+  await _db.ref('admin/effects').set({ effects, end, onlineOnly, ts: Date.now() });
+  setTimeout(() => _db.ref('admin/effects').remove(), (dur + 10) * 1000);
+  showToast('✨ Effects sent!');
+  _adminUpdateActiveBar();
+}
+async function adminStopEffects() {
+  if (!_isAdminUser()) return;
+  await _db.ref('admin/effects').remove();
+  _adminClearEffects();
+  showToast('Effects cleared');
+  _adminUpdateActiveBar();
+}
+async function adminSendUIChaos() {
+  if (!_isAdminUser()) return;
+  const rotate = document.getElementById('apChaosRotate').value;
+  const scale = document.getElementById('apChaosScale').value;
+  const dur = Number(document.getElementById('apChaosDur').value) || 30;
+  const onlineOnly = document.getElementById('apChaosOnline')?.checked || false;
+  const end = Date.now() + dur * 1000;
+  await _db.ref('admin/uiChaos').set({ rotate, scale, end, onlineOnly, ts: Date.now() });
+  setTimeout(() => _db.ref('admin/uiChaos').remove(), (dur + 10) * 1000);
+  showToast('🌀 UI Chaos sent!');
+  _adminUpdateActiveBar();
+}
+async function adminResetUIForAll() {
+  if (!_isAdminUser()) return;
+  await _db.ref('admin/uiChaos').set({ rotate:'0', scale:'1', end: 0, ts: Date.now() });
+  showToast('↺ UI reset sent');
+}
+
+/* ---- Effects Engine ---- */
+let _adminEffectTimers = {};
+let _adminEffectRAF = null;
+let _adminEffectParticles = [];
+
+function _adminApplyEffects(effects, durationMs) {
+  _adminClearEffects();
+  if (!effects || Object.keys(effects).length === 0) return;
+
+  let canvas = document.getElementById('adminEffectCanvas');
+  if (!canvas) {
+    canvas = document.createElement('canvas');
+    canvas.id = 'adminEffectCanvas';
+    canvas.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;z-index:89000;pointer-events:none;';
+    document.body.appendChild(canvas);
+  }
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const sMap = { weak: 0.3, medium: 0.65, strong: 1.0 };
+
+  _adminEffectParticles = [];
+
+  if (effects.rain) {
+    const n = Math.round(100 * (sMap[effects.rain] || 0.65));
+    for (let i = 0; i < n; i++) _adminEffectParticles.push({ t:'rain', x:Math.random()*W, y:Math.random()*H, speed:5+Math.random()*8, len:10+Math.random()*18, op:0.35+Math.random()*0.4 });
+  }
+  if (effects.snow) {
+    const n = Math.round(70 * (sMap[effects.snow] || 0.65));
+    for (let i = 0; i < n; i++) _adminEffectParticles.push({ t:'snow', x:Math.random()*W, y:Math.random()*H, r:1.5+Math.random()*4, speed:0.6+Math.random()*2, drift:Math.random()*0.6-0.3, op:0.6+Math.random()*0.4 });
+  }
+  if (effects.coins) {
+    const n = Math.round(22 * (sMap[effects.coins] || 0.65));
+    const coinImg = new Image(); coinImg.src = 'kspt.png';
+    for (let i = 0; i < n; i++) _adminEffectParticles.push({ t:'coin', img:coinImg, x:Math.random()*W, y:H + Math.random()*H, speed:1+Math.random()*2.5, rot:Math.random()*Math.PI*2, spin:0.02+Math.random()*0.06 });
+  }
+  if (effects.rays) {
+    const n = Math.round(9 * (sMap[effects.rays] || 0.65));
+    for (let i = 0; i < n; i++) _adminEffectParticles.push({ t:'ray', angle:(Math.PI*2/n)*i, speed:0.003+Math.random()*0.003, hue:Math.round(Math.random()*360), alpha:0, dir:1 });
+  }
+  if (effects.lightning) {
+    const intv = effects.lightning === 'weak' ? 130 : effects.lightning === 'strong' ? 18 : 55;
+    _adminEffectParticles.push({ t:'lightning', timer:0, interval:intv });
+  }
+  if (effects.concert) {
+    const n = Math.round(7 * (sMap[effects.concert] || 0.65));
+    for (let i = 0; i < n; i++) _adminEffectParticles.push({ t:'concert', x:Math.random()*W, angle:-Math.PI/2 + Math.random()*0.5-0.25, hue:Math.round(Math.random()*360), speed:0.04+Math.random()*0.06, sweep:0 });
+  }
+
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+    _adminEffectParticles.forEach(p => {
+      switch (p.t) {
+        case 'rain':
+          ctx.save(); ctx.globalAlpha = p.op; ctx.strokeStyle = '#88ccff'; ctx.lineWidth = 1.5;
+          ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.x - 2, p.y + p.len); ctx.stroke(); ctx.restore();
+          p.y += p.speed; p.x -= 1.2;
+          if (p.y > H + p.len) { p.y = -p.len; p.x = Math.random() * W; }
+          break;
+        case 'snow':
+          ctx.save(); ctx.globalAlpha = p.op; ctx.fillStyle = '#ddeeff';
+          ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+          p.y += p.speed; p.x += p.drift;
+          if (p.y > H + p.r) { p.y = -p.r; p.x = Math.random() * W; }
+          if (p.x < 0 || p.x > W) p.drift *= -1;
+          break;
+        case 'coin':
+          if (p.img.complete) {
+            ctx.save(); ctx.globalAlpha = 0.88;
+            const sx = Math.abs(Math.cos(p.rot));
+            ctx.translate(p.x, p.y); ctx.scale(sx, 1);
+            ctx.drawImage(p.img, -13, -13, 26, 26);
+            ctx.restore();
+          }
+          p.y -= p.speed; p.rot += p.spin;
+          if (p.y < -30) { p.y = H + 30; p.x = Math.random() * W; }
+          break;
+        case 'ray':
+          ctx.save(); ctx.globalAlpha = p.alpha * 0.3;
+          ctx.fillStyle = `hsl(${p.hue},100%,65%)`;
+          ctx.beginPath(); ctx.moveTo(W / 2, H / 2);
+          ctx.arc(W / 2, H / 2, Math.max(W, H) * 1.6, p.angle, p.angle + 0.2);
+          ctx.closePath(); ctx.fill(); ctx.restore();
+          p.angle += p.speed; p.alpha += p.dir * 0.015;
+          if (p.alpha > 1) { p.alpha = 1; p.dir = -1; }
+          if (p.alpha < 0) { p.alpha = 0; p.dir = 1; }
+          break;
+        case 'lightning':
+          p.timer++;
+          if (p.timer >= p.interval) {
+            p.timer = 0;
+            ctx.save(); ctx.globalAlpha = 0.6; ctx.fillStyle = 'rgba(220,220,255,0.18)'; ctx.fillRect(0, 0, W, H);
+            ctx.strokeStyle = '#ffffcc'; ctx.lineWidth = 2; ctx.globalAlpha = 0.9;
+            ctx.beginPath();
+            let lx = W * 0.2 + Math.random() * W * 0.6, ly = 0;
+            ctx.moveTo(lx, ly);
+            while (ly < H) { ly += 15 + Math.random() * 35; lx += Math.random() * 50 - 25; ctx.lineTo(lx, ly); }
+            ctx.stroke(); ctx.restore();
+          }
+          break;
+        case 'concert':
+          ctx.save(); ctx.globalAlpha = 0.16;
+          const x2 = p.x + Math.cos(p.angle + p.sweep) * H * 1.6;
+          const y2 = H - Math.abs(Math.sin(p.angle + p.sweep)) * H * 1.4;
+          const grad = ctx.createLinearGradient(p.x, H, x2, y2);
+          grad.addColorStop(0, `hsl(${p.hue},100%,55%)`); grad.addColorStop(1, 'transparent');
+          ctx.fillStyle = grad;
+          ctx.beginPath(); ctx.moveTo(p.x, H);
+          ctx.arc(p.x, H, H * 1.5, p.angle + p.sweep - 0.13, p.angle + p.sweep + 0.13);
+          ctx.closePath(); ctx.fill(); ctx.restore();
+          p.sweep += p.speed; if (Math.abs(p.sweep) > 0.65) p.speed *= -1;
+          break;
+      }
+    });
+    _adminEffectRAF = requestAnimationFrame(draw);
+  }
+  draw();
+
+  _adminEffectTimers.main = setTimeout(() => _adminClearEffects(), durationMs);
+  showToast('✨ Effects active!');
+  _adminUpdateActiveBar();
+}
+
+function _adminClearEffects() {
+  if (_adminEffectRAF) { cancelAnimationFrame(_adminEffectRAF); _adminEffectRAF = null; }
+  const c = document.getElementById('adminEffectCanvas');
+  if (c) c.remove();
+  _adminEffectParticles = [];
+  if (_adminEffectTimers.main) { clearTimeout(_adminEffectTimers.main); delete _adminEffectTimers.main; }
+}
+
+/* ---- UI Chaos ---- */
+function _adminApplyUIChaos(rotate, scale, durationMs) {
+  const app = document.querySelector('.app') || document.body;
+  app.style.transition = 'transform 0.7s cubic-bezier(.34,1.56,.64,1)';
+  app.style.transform = `rotate(${rotate}deg) scale(${scale})`;
+  app.style.transformOrigin = 'center center';
+  _adminShowOverlay(`🌀 UI Chaos: rotate ${rotate}° × ${scale}`, '#f97316', 3000);
+  clearTimeout(window._adminChaosTimeout);
+  window._adminChaosTimeout = setTimeout(() => _adminResetUIChaos(), durationMs);
+  _adminUpdateActiveBar();
+}
+function _adminResetUIChaos() {
+  const app = document.querySelector('.app') || document.body;
+  app.style.transition = 'transform 0.5s ease';
+  app.style.transform = '';
+  _adminUpdateActiveBar();
 }
 
 /* ---- Show overlay banner ---- */
@@ -7384,7 +7933,9 @@ function _adminApplyTapEvent(v) {
       ric:"url('ric.png')", heaven:"url('heaven.png')", bug:"url('bug.png')",
       chrisp:"url('chrisp.png')", hell:"url('hell.png')", math:"url('math.png')",
       xfone:"url('xfone.png')", code:"url('code.png')", cosmops:"url('cosmops.png')",
-      ligting:"url('ligting.png')", fire:"url('fire.png')", ogon:"url('ogon.png')"
+      ligting:"url('ligting.png')", fire:"url('fire.png')", ogon:"url('ogon.png')",
+      king:"url('king.png')", castle:"url('castle.png')", admin:"url('admin.png')",
+      meme:"url('meme.png')", hole:"url('hole.png')"
     };
     document.body.style.backgroundImage = bgMap[v.bg] || 'none';
     document.body.style.backgroundSize = 'cover';
@@ -7393,7 +7944,7 @@ function _adminApplyTapEvent(v) {
   }
   // Apply multiplier
   window._adminEventMulti = v.multi || 1;
-  // Timer display
+  window._adminEventEndTs = v.end;
   _adminEventTimerDisplay(v.end);
   showToast(`⚡ TAP EVENT x${v.multi}!`);
 }
@@ -7402,30 +7953,77 @@ function _adminClearTapEvent() {
   _adminEventActive = false;
   window._adminEventMulti = 1;
   window._adminEventBgForced = false;
+  window._adminEventEndTs = 0;
   if (_adminEventInterval) { clearInterval(_adminEventInterval); _adminEventInterval = null; }
   const el = document.getElementById('adminEventTimer');
   if (el) el.remove();
   if (typeof updateBackground === 'function') updateBackground();
 }
 function _adminEventTimerDisplay(endTs) {
-  let el = document.getElementById('adminEventTimer');
-  if (!el) {
-    el = document.createElement('div');
-    el.id = 'adminEventTimer';
-    el.style.cssText = `
-      position:fixed; bottom:90px; left:14px; z-index:8999;
-      background:rgba(0,0,0,0.7); border:1px solid #ff9800;
-      border-radius:10px; padding:5px 10px; font-size:12px;
-      color:#ff9800; font-weight:bold; pointer-events:none;
-    `;
-    document.body.appendChild(el);
-  }
-  if (_adminEventInterval) clearInterval(_adminEventInterval);
-  _adminEventInterval = setInterval(() => {
-    const left = Math.max(0, endTs - Date.now());
-    if (left <= 0) { _adminClearTapEvent(); return; }
-    const m = Math.floor(left/60000), s = Math.floor((left%60000)/1000);
-    el.textContent = `⚡ Event: ${m}:${String(s).padStart(2,'0')}`;
+  _adminGlobalStatusUpdate();
+}
+function _adminGlobalStatusUpdate() {
+  clearInterval(window._adminGlobalStatusInterval);
+  window._adminGlobalStatusInterval = setInterval(function() {
+    const now = Date.now();
+    const lines = [];
+
+    if (window._adminEventEndTs && now < window._adminEventEndTs) {
+      const left = window._adminEventEndTs - now;
+      const m = Math.floor(left/60000), s = Math.floor((left%60000)/1000);
+      lines.push(`⚡ Event: ${m}:${String(s).padStart(2,'0')}`);
+    } else if (window._adminEventEndTs && now >= window._adminEventEndTs) {
+      window._adminEventEndTs = 0;
+      _adminClearTapEvent();
+    }
+
+    if (window._adminForcedMusic && now < window._adminForcedMusic.end) {
+      const left = window._adminForcedMusic.end - now;
+      const m = Math.floor(left/60000), s = Math.floor((left%60000)/1000);
+      lines.push(`🎵 Music: ${m}:${String(s).padStart(2,'0')}`);
+    }
+
+    if (window._adminEffectsEndTs && now < window._adminEffectsEndTs) {
+      const left = window._adminEffectsEndTs - now;
+      const m = Math.floor(left/60000), s = Math.floor((left%60000)/1000);
+      lines.push(`✨ Effects: ${m}:${String(s).padStart(2,'0')}`);
+    }
+
+    if (window._adminChaosEndTs && now < window._adminChaosEndTs) {
+      const left = window._adminChaosEndTs - now;
+      const m = Math.floor(left/60000), s = Math.floor((left%60000)/1000);
+      lines.push(`🌀 UI Chaos: ${m}:${String(s).padStart(2,'0')}`);
+    }
+
+    if (window._adminTempSkin && now < window._adminTempSkin.end) {
+      const left = window._adminTempSkin.end - now;
+      const m = Math.floor(left/60000), s = Math.floor((left%60000)/1000);
+      lines.push(`🎨 Skin: ${m}:${String(s).padStart(2,'0')}`);
+    }
+
+    // Always get fresh reference to element
+    let el = document.getElementById('adminEventTimer');
+
+    if (lines.length === 0) {
+      if (el) el.remove();
+      clearInterval(window._adminGlobalStatusInterval);
+      window._adminGlobalStatusInterval = null;
+      return;
+    }
+
+    // Create if not exists
+    if (!el) {
+      el = document.createElement('div');
+      el.id = 'adminEventTimer';
+      el.style.cssText = `
+        position:fixed; bottom:90px; left:14px; z-index:8999;
+        background:rgba(0,0,0,0.82); border:1px solid #ff9800;
+        border-radius:10px; padding:6px 12px; font-size:12px;
+        color:#ff9800; font-weight:bold; pointer-events:none; line-height:1.8;
+      `;
+      document.body.appendChild(el);
+    }
+    el.innerHTML = lines.join('<br>');
   }, 500);
 }
 
@@ -7455,12 +8053,22 @@ function _adminApplyOpening(type) {
       break;
     case 'glitchBox':
       if (!d.glitchBox) d.glitchBox = { taps: 0, doubled: 1, duplicates: 0, cooldownDays: 20, lastOpen: 0, firstOpen: true };
-      d.glitchBox.firstOpen = true; // bypass cooldown check
+      d.glitchBox.firstOpen = true;
       d.glitchBox.taps = 0;
+      d.glitchBox.doubled = 1;
+      d.glitchBox.duplicates = 0;
+      d.glitchBox._dup10Checked = false;
+      d.glitchBox._dup20Checked = false;
+      d.glitchRewards = [];
+      d.glitchBoxIsOpening = false; // KEY FIX: сброс защитного флага
       save(); showToast('🎁 Glitch Box from Admin!');
-      // Show the tap modal first, then player taps to open
-      const _gm = document.getElementById('glitchModal');
-      if (_gm) { _gm.classList.add('active'); if(typeof updateGlitchModal==='function') updateGlitchModal(); }
+      setTimeout(() => {
+        const _gm = document.getElementById('glitchModal');
+        if (_gm) {
+          _gm.classList.add('active');
+          if (typeof updateGlitchModal === 'function') updateGlitchModal();
+        }
+      }, 80);
       break;
     case 'keyBox':
       if (!d.keyBox) d.keyBox = { taps: 0 };
@@ -7468,10 +8076,35 @@ function _adminApplyOpening(type) {
       save(); showToast('🗝️ Key Box from Admin!');
       if (typeof startKeyBoxSequence === 'function') startKeyBoxSequence();
       break;
-    case 'fortuneWheel':
+    case 'bombBox':
+      if (!d.bombBox) d.bombBox = { obtained: false };
+      d.bombBox.obtained = true;
+      save(); showToast('💣 Bomb Box from Admin!');
+      if (typeof startBombBoxSequence === 'function') startBombBoxSequence();
+      break;
+      case 'fortuneWheel':
       window._freeWheelSpin = true;
+      // Reset cooldown so openFortuneWheel passes all checks
+      if (!d.fortuneWheel) d.fortuneWheel = { spinsUsed: 0, lastResetTime: 0 };
+      d.fortuneWheel.spinsUsed = 0;
+      d.fortuneWheel.lastResetTime = 0;
+      save();
       showToast('🎡 Free Wheel Spin from Admin!');
-      if (typeof openFortuneWheel === 'function') openFortuneWheel();
+      // Open modal directly, bypassing rate/cooldown guards
+      setTimeout(() => {
+        const modal = document.getElementById('fortuneWheelModal');
+        if (modal) {
+          modal.style.display = 'flex';
+          const resEl = document.getElementById('fortuneWheelResult');
+          if (resEl) resEl.textContent = '';
+          const spinBtn = document.getElementById('fortuneWheelSpinBtn');
+          if (spinBtn) spinBtn.disabled = false;
+          const priceLabel = document.getElementById('fortuneWheelModalPrice');
+          if (priceLabel) priceLabel.textContent = '🎁 Free spin from Admin!';
+          if (typeof preloadWheelImages === 'function')
+            preloadWheelImages(() => { if (typeof drawWheel === 'function') drawWheel(typeof wheelCurrentAngle !== 'undefined' ? wheelCurrentAngle : 0); });
+        }
+      }, 100);
       break;
   }
 }
@@ -7526,17 +8159,21 @@ function _adminApplyModAction(v) {
       _adminShowOverlay(`👑 Admin: EK ${v.mode==='set'?'set to':'+ '}${v.val}`, '#00e5ff', 5000);
       break;
     case 'ban':
-      d.banned = true; save();
-      document.body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0b0b0b;color:red;font-size:22px;font-weight:bold;">🚫 You have been banned by an admin.</div>';
+      d.adminBanned = true; save();
+      document.body.innerHTML = `
+        <div id="adminBanScreen" style="display:flex;flex-direction:column;align-items:center;
+          justify-content:center;height:100vh;background:#0b0b0b;color:red;
+          font-size:22px;font-weight:bold;text-align:center;padding:20px;">
+          🚫 You have been banned by an admin.
+        </div>`;
       break;
     case 'unban':
-      d.banned = false; save();
-      // Also clear cheat stage so red screen goes away
+      d.adminBanned = false;
       cheatStage = 0;
       localStorage.setItem('kspt_cheat_stage', '0');
-      const _rs = document.getElementById('redScreen');
-      if (_rs) _rs.style.display = 'none';
-      _adminShowOverlay('✅ You have been unbanned!', '#00e676', 6000);
+      save();
+      // Reload the page — cleanest way to restore DOM after ban
+      location.reload();
       break;
     case 'giveOpening':
       _adminApplyOpening(v.type);
@@ -7574,6 +8211,229 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 // Also call immediately in case DOMContentLoaded already fired
 _adminInjectButton();
+
+// ==========================================
+// BOMB BOX
+// ==========================================
+
+let _bombHoldTimer = null;
+let _bombShakeInterval = null;
+let _bombExploding = false;
+
+function startBombBoxSequence() {
+  if (_bombExploding) return;
+  if (!d.bombBox || !d.bombBox.obtained) {
+    showToast(t('locked'));
+    return;
+  }
+  const modal = document.getElementById('bombBoxModal');
+  const img = document.getElementById('bombBoxImg');
+  const hint = document.getElementById('bombBoxHint');
+  if (!modal || !img) return;
+
+  img.src = 'bomb.png';
+  img.style.transform = '';
+  img.style.filter = '';
+  if (hint) hint.textContent = t('bomb_box_hold');
+  modal.classList.add('active');
+
+  // Reset state
+  _bombExploding = false;
+  let holdStart = null;
+  let shakeLevel = 0;
+
+  function onPointerDown(e) {
+    e.preventDefault();
+    holdStart = Date.now();
+    shakeLevel = 0;
+
+    // Escalating shake + vibration
+    _bombShakeInterval = setInterval(() => {
+      const elapsed = Date.now() - holdStart;
+      const progress = Math.min(elapsed / 5000, 1); // 0..1 over 5 seconds
+      shakeLevel = progress;
+
+      // Visual shake — gets more intense
+      const intensity = Math.round(progress * 14);
+      const freq = 50 + Math.round(progress * 200); // faster frequency
+      img.style.animation = 'none';
+      img.style.transform = `translate(${(Math.random()-0.5)*intensity*2}px, ${(Math.random()-0.5)*intensity}px) rotate(${(Math.random()-0.5)*intensity}deg)`;
+
+      // Red glow intensifies
+      const glow = Math.round(progress * 40);
+      img.style.filter = `drop-shadow(0 0 ${glow}px rgba(255,50,0,${progress.toFixed(2)}))`;
+
+      // Vibration escalates
+      if (navigator.vibrate) {
+        const vDur = Math.round(20 + progress * 80);
+        navigator.vibrate(vDur);
+      }
+
+      if (hint) {
+        const left = Math.ceil((5000 - elapsed) / 1000);
+        hint.textContent = left > 0 ? `💣 ${left}...` : '💥 BOOM!';
+      }
+    }, 80);
+
+    // After 5 seconds — EXPLODE
+    _bombHoldTimer = setTimeout(() => {
+      clearInterval(_bombShakeInterval);
+      _bombShakeInterval = null;
+      _explodeBomb();
+    }, 5000);
+  }
+
+  function onPointerUp(e) {
+    // Released too early — reset
+    if (_bombExploding) return;
+    clearTimeout(_bombHoldTimer);
+    clearInterval(_bombShakeInterval);
+    _bombHoldTimer = null;
+    _bombShakeInterval = null;
+    img.style.transform = '';
+    img.style.filter = '';
+    if (hint) hint.textContent = t('bomb_box_hold');
+  }
+
+  img.removeEventListener('pointerdown', img._bombDown);
+  img.removeEventListener('pointerup', img._bombUp);
+  img.removeEventListener('pointerleave', img._bombUp);
+  img._bombDown = onPointerDown;
+  img._bombUp = onPointerUp;
+  img.addEventListener('pointerdown', onPointerDown);
+  img.addEventListener('pointerup', onPointerUp);
+  img.addEventListener('pointerleave', onPointerUp);
+}
+
+function _explodeBomb() {
+  _bombExploding = true;
+  const modal = document.getElementById('bombBoxModal');
+  const img = document.getElementById('bombBoxImg');
+  const hint = document.getElementById('bombBoxHint');
+
+  if (!img) return;
+
+  // Switch to explosion sprite
+  img.src = 'bomb1.png';
+  img.style.transform = 'scale(1.6)';
+  img.style.filter = 'drop-shadow(0 0 60px rgba(255,120,0,0.95))';
+  img.style.transition = 'transform 0.3s, filter 0.3s';
+  if (hint) hint.textContent = '💥 BOOM!';
+
+  // Big vibration
+  if (navigator.vibrate) navigator.vibrate([100, 50, 200, 50, 300]);
+
+  // White flash
+  const whiteFade = document.getElementById('whiteFade');
+  if (whiteFade) {
+    whiteFade.classList.add('active');
+    setTimeout(() => whiteFade.classList.remove('active'), 300);
+  }
+
+  setTimeout(() => {
+    // Get reward
+    const reward = _getBombBoxReward();
+    let rewardText = '';
+    let rewardImg = 'bomb.png';
+
+    switch (reward.type) {
+      case 'kspt': {
+        const rate = getHourlyRate();
+        const amount = Math.round(rate * 0.5); // 30 min = 0.5h
+        d.tokens += amount;
+        rewardText = `+${amount} KSPT (30min income)!`;
+        rewardImg = 'kspt.png';
+        break;
+      }
+      case 'puzzle': {
+        const missing1 = [];
+        for (let i = 0; i < 9; i++) if (d.puzzles[i] === 0) missing1.push(i);
+        const missing2 = [];
+        for (let i = 0; i < 9; i++) if (d.puzzles2[i] === 0) missing2.push(i);
+        const allMissing = [...missing1.map(i => ({p:1,i})), ...missing2.map(i => ({p:2,i}))];
+        if (allMissing.length > 0) {
+          const pick = allMissing[Math.floor(Math.random() * allMissing.length)];
+          if (pick.p === 1) {
+            d.puzzles[pick.i] = 1;
+            rewardText = `Puzzle Piece ${pick.i+1} obtained!`;
+            rewardImg = `pazl${pick.i+1}.png`;
+          } else {
+            d.puzzles2[pick.i] = 1;
+            rewardText = `Puzzle Piece ${pick.i+11} obtained!`;
+            rewardImg = `pazl${pick.i+11}.png`;
+          }
+        } else {
+          d.tokens += 10;
+          rewardText = '+10 KSPT (All puzzles owned)!';
+          rewardImg = 'kspt.png';
+        }
+        break;
+      }
+      case 'yellowKey':
+        if (!d.keys) d.keys = defaultData.keys;
+        d.keys.yellow = (d.keys.yellow || 0) + 1;
+        rewardText = '🟡 Yellow Key obtained!';
+        rewardImg = 'kspt.png';
+        break;
+      case 'blackKey':
+        if (!d.keys) d.keys = defaultData.keys;
+        d.keys.black = (d.keys.black || 0) + 1;
+        rewardText = '⚫ Black Key (Joker) obtained!';
+        rewardImg = 'kspt.png';
+        break;
+      case 'bg':
+        if (!d.ownedBgs) d.ownedBgs = ['default'];
+        if (!d.ownedBgs.includes('waterbomb')) {
+          d.ownedBgs.push('waterbomb');
+          d.bg = 'waterbomb';
+          rewardText = t('bomb_box_bg');
+        } else {
+          // Already owned — give 30min income instead
+          const rate2 = getHourlyRate();
+          const amount2 = Math.round(rate2 * 0.5);
+          d.tokens += amount2;
+          rewardText = `+${amount2} KSPT (bg already owned)!`;
+        }
+        rewardImg = 'waterbomb.png';
+        break;
+    }
+
+    // Mark bomb as used
+    d.bombBox.obtained = false;
+    save();
+    if (typeof ui === 'function') ui();
+    if (typeof updatePuzzleUI === 'function') updatePuzzleUI();
+    if (typeof updateSecondPuzzleUI === 'function') updateSecondPuzzleUI();
+
+    // Close modal
+    if (modal) modal.classList.remove('active');
+    _bombExploding = false;
+
+    // Show reward popup
+    showReward(rewardText, rewardImg);
+  }, 600);
+}
+
+function _getBombBoxReward() {
+  const rand = Math.random() * 100;
+  if (rand < 95)   return { type: 'kspt' };
+  if (rand < 97)   return { type: 'puzzle' };
+  if (rand < 99)   return { type: 'yellowKey' };
+  if (rand < 99.9) return { type: 'blackKey' };
+  return { type: 'bg' };
+}
+
+function closeBombBoxModal() {
+  clearTimeout(_bombHoldTimer);
+  clearInterval(_bombShakeInterval);
+  _bombHoldTimer = null;
+  _bombShakeInterval = null;
+  _bombExploding = false;
+  const modal = document.getElementById('bombBoxModal');
+  const img = document.getElementById('bombBoxImg');
+  if (img) { img.style.transform = ''; img.style.filter = ''; }
+  if (modal) modal.classList.remove('active');
+}
 
  // ==========================================
 // CAPSULE FUNCTIONS - UPDATED WITH FIXES

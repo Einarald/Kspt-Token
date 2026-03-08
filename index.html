@@ -1384,5 +1384,355 @@ document.addEventListener('DOMContentLoaded', function () {
   </div>
 </div>
 
+<!-- ===================== ADMIN PANEL MODAL ===================== -->
+<div id="adminPanelModal" style="display:none; position:fixed; inset:0; z-index:50000;
+  background:rgba(0,0,0,0.94); flex-direction:column; align-items:center; overflow-y:auto;">
+
+<style>
+.ap-wrap { width:min(420px,96vw); margin:0 auto; padding:14px 0 100px; }
+.ap-header { display:flex; align-items:center; gap:10px; margin-bottom:14px; padding: 0 4px; }
+.ap-title { font-size:20px; font-weight:800; color:#e8eaf6; letter-spacing:.5px; flex:1; }
+.ap-close { background:#1a1a2e; border:1px solid #3f51b5; color:#9fa8da; border-radius:10px;
+  padding:7px 14px; cursor:pointer; font-size:14px; font-weight:600; }
+.ap-tabs { display:flex; gap:8px; margin-bottom:16px; }
+.ap-tab { flex:1; padding:10px; border-radius:12px; border:1.5px solid #283593;
+  background:#10102a; color:#9fa8da; font-weight:700; font-size:14px; cursor:pointer;
+  text-align:center; transition:.15s; }
+.ap-tab-active { background:linear-gradient(135deg,#1a237e,#283593); color:#e8eaf6;
+  border-color:#5c6bc0; box-shadow:0 0 12px rgba(92,107,192,.4); }
+.ap-card { background:#10102a; border:1px solid #1e2a5a; border-radius:14px;
+  padding:14px; margin-bottom:12px; }
+.ap-card h3 { color:#7986cb; font-size:13px; font-weight:700; margin:0 0 10px;
+  text-transform:uppercase; letter-spacing:.8px; }
+.ap-row { display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin-bottom:8px; }
+.ap-label { color:#9fa8da; font-size:12px; min-width:60px; }
+.ap-input { background:#0d0d20; border:1px solid #283593; border-radius:8px;
+  color:#e8eaf6; padding:7px 10px; font-size:13px; flex:1; min-width:60px; }
+.ap-select { background:#0d0d20; border:1px solid #283593; border-radius:8px;
+  color:#e8eaf6; padding:7px 10px; font-size:13px; flex:1; }
+.ap-btn { padding:9px 16px; border-radius:10px; border:none; cursor:pointer;
+  font-weight:700; font-size:13px; transition:.1s; }
+.ap-btn:active { transform:scale(.96); }
+.ap-btn-blue { background:linear-gradient(135deg,#1565c0,#1976d2); color:#fff; }
+.ap-btn-green { background:linear-gradient(135deg,#2e7d32,#388e3c); color:#fff; }
+.ap-btn-red   { background:linear-gradient(135deg,#b71c1c,#c62828); color:#fff; }
+.ap-btn-amber { background:linear-gradient(135deg,#e65100,#f57c00); color:#fff; }
+.ap-btn-purple{ background:linear-gradient(135deg,#4a148c,#7b1fa2); color:#fff; }
+.ap-btn-sm { padding:6px 10px; font-size:12px; }
+#apPlayerList { width:100%; min-height:90px; max-height:140px; background:#0d0d20;
+  border:1px solid #283593; border-radius:8px; color:#e8eaf6; font-size:12px; }
+.ap-divider { border:none; border-top:1px solid #1e2a5a; margin:10px 0; }
+</style>
+
+<div class="ap-wrap">
+  <div class="ap-header">
+    <img src="kspt.png" style="width:32px;height:32px;filter:hue-rotate(220deg) brightness(1.3);">
+    <div class="ap-title">🛡 Admin Panel</div>
+    <button class="ap-close" onclick="closeAdminPanel()">✕ Close</button>
+  </div>
+
+  <div class="ap-tabs">
+    <div id="adminTabGlobal" class="ap-tab ap-tab-active" onclick="adminTab('global')">🌐 Global</div>
+    <div id="adminTabMod"    class="ap-tab" onclick="adminTab('mod')">🔨 Moderation</div>
+  </div>
+
+  <!-- ===== GLOBAL ===== -->
+  <div id="adminGlobalSection">
+
+    <!-- Broadcast -->
+    <div class="ap-card">
+      <h3>📢 Broadcast Message</h3>
+      <textarea id="apBroadcastText" class="ap-input" rows="2"
+        style="width:100%;resize:none;box-sizing:border-box;"
+        placeholder="Message for all players…"></textarea>
+      <div class="ap-row" style="margin-top:8px;">
+        <span class="ap-label">Duration</span>
+        <select id="apBroadcastDur" class="ap-select" style="max-width:100px;">
+          <option value="3">3 sec</option>
+          <option value="5" selected>5 sec</option>
+          <option value="10">10 sec</option>
+        </select>
+        <span class="ap-label">Color</span>
+        <select id="apBroadcastColor" class="ap-select" style="max-width:110px;">
+          <option value="#ffffff" selected>White</option>
+          <option value="#ffd700">Yellow</option>
+          <option value="#ff4444">Red</option>
+        </select>
+      </div>
+      <div class="ap-row" style="margin-top:6px;">
+        <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="apBroadcastOnline" style="width:16px;height:16px;">
+          Online players only
+        </label>
+      </div>
+      <button class="ap-btn ap-btn-blue" style="width:100%;margin-top:6px;"
+        onclick="adminBroadcast()">📢 Send to All</button>
+    </div>
+
+    <!-- Tap Event -->
+    <div class="ap-card">
+      <h3>⚡ Tap Event</h3>
+      <div class="ap-row">
+        <span class="ap-label">Multiplier</span>
+        <input id="apEventMulti" type="number" class="ap-input" value="3" min="3" max="999">
+        <span class="ap-label">Duration</span>
+        <input id="apEventDur" type="number" class="ap-input" value="300" min="1" max="3600"
+          placeholder="sec">
+      </div>
+      <div class="ap-row">
+        <span class="ap-label">Background</span>
+        <select id="apEventBg" class="ap-select">
+          <option value="default">Default</option>
+          <option value="forest">Forest</option>
+          <option value="space">Space</option>
+          <option value="ric">Rich Edition</option>
+          <option value="heaven">Heaven</option>
+          <option value="bug">Dead Pixel</option>
+          <option value="chrisp">Chrispy Candle</option>
+          <option value="hell">Hell</option>
+          <option value="math">Math</option>
+          <option value="xfone">Xfone</option>
+          <option value="code">Code</option>
+          <option value="cosmops">Computer Club</option>
+          <option value="ligting">Lighting</option>
+          <option value="fire">Fire (tap boost)</option>
+          <option value="ogon">Ogon (overdrive)</option>
+        </select>
+      </div>
+      <div class="ap-row" style="gap:8px;">
+        <button class="ap-btn ap-btn-amber" style="flex:1;" onclick="adminStartEvent()">▶ Start Event</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminStopEvent()">■ Stop</button>
+      </div>
+    </div>
+
+    <!-- Give Opening to All -->
+    <div class="ap-card">
+      <h3>🎁 Give Opening to All</h3>
+      <div class="ap-row">
+        <select id="apOpeningType" class="ap-select">
+          <option value="noobBox">Noob Box</option>
+          <option value="capsule">Capsule</option>
+          <option value="goldCapsule">Gold Capsule</option>
+          <option value="glitchBox">Glitch Box</option>
+          <option value="keyBox">Key Box</option>
+          <option value="fortuneWheel">Fortune Wheel Spin</option>
+        </select>
+        <button class="ap-btn ap-btn-green" onclick="adminGiveOpeningAll()">🎁 Give All</button>
+      </div>
+      <div class="ap-row">
+        <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="apOpeningOnline" style="width:16px;height:16px;">
+          Online players only
+        </label>
+      </div>
+    </div>
+
+    <!-- Skip Cooldown -->
+    <div class="ap-card">
+      <h3>⏩ Skip Cooldown for All</h3>
+      <div class="ap-row">
+        <select id="apCooldownType" class="ap-select">
+          <option value="capsule">Capsule</option>
+          <option value="glitchBox">Glitch Box</option>
+          <option value="fortuneWheel">Fortune Wheel</option>
+          <option value="tickets">Ticket Regen</option>
+          <option value="boost">Overdrive Boost</option>
+          <option value="all">ALL Cooldowns</option>
+        </select>
+        <button class="ap-btn ap-btn-blue" onclick="adminSkipCooldownAll()">⏩ Skip</button>
+      </div>
+      <div class="ap-row">
+        <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="apCooldownOnline" style="width:16px;height:16px;">
+          Online players only
+        </label>
+      </div>
+    </div>
+
+    <!-- Give Tickets -->
+    <div class="ap-card">
+      <h3>🎫 Give Tickets to All</h3>
+      <div class="ap-row">
+        <input id="apTicketsCount" type="number" class="ap-input" value="5" min="1" max="999"
+          placeholder="Count">
+        <button class="ap-btn ap-btn-purple" onclick="adminGiveTicketsAll()">🎫 Give All</button>
+      </div>
+      <div class="ap-row">
+        <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="apTicketsOnline" style="width:16px;height:16px;">
+          Online players only
+        </label>
+      </div>
+    </div>
+
+    <!-- Temp Skin for All -->
+    <div class="ap-card">
+      <h3>🎨 Temp Skin for All</h3>
+      <div class="ap-row">
+        <select id="apTempSkinId" class="ap-select">
+          <option value="default">Default (reset)</option>
+          <option value="what">What</option>
+          <option value="burger">Burger</option>
+          <option value="joost">Joost</option>
+          <option value="dog">Dog</option>
+          <option value="diam">Diamond</option>
+          <option value="tung">Tung</option>
+          <option value="euro">Euro</option>
+          <option value="space">Space</option>
+          <option value="kostia">Kostia</option>
+          <option value="pixe">Pixel</option>
+          <option value="onion">Onion</option>
+          <option value="cookie">Cookie</option>
+          <option value="metka">Metka</option>
+          <option value="seri">Seri</option>
+          <option value="mystic">Mystic</option>
+          <option value="capsule">Capsule</option>
+          <option value="artem">Artem</option>
+          <option value="ruka">Ruka</option>
+          <option value="banditx">Bandit X</option>
+          <option value="goldcoin">Gold Coin</option>
+          <option value="gkspt">Gold KSPT</option>
+          <option value="cyber_android">Cyber Android</option>
+          <option value="siulai">Siulai</option>
+          <option value="dirty">Dirty</option>
+          <option value="crypto_heart">Crypto Heart</option>
+          <option value="tetris">Tetris</option>
+          <option value="joystick">Joystick</option>
+          <option value="snake">Snake</option>
+          <option value="brb">Big Red Button</option>
+          <option value="corrupted">Corrupted</option>
+          <option value="failed">Failed</option>
+          <option value="doge">Doge</option>
+        </select>
+      </div>
+      <div class="ap-row">
+        <span class="ap-label">Duration</span>
+        <select id="apTempSkinDurPreset" class="ap-select" onchange="document.getElementById('apTempSkinDur').value=this.value">
+          <option value="60">1 minute</option>
+          <option value="300">5 minutes</option>
+          <option value="1800">30 minutes</option>
+          <option value="3600" selected>1 hour</option>
+          <option value="21600">6 hours</option>
+          <option value="86400">1 day</option>
+          <option value="259200">3 days</option>
+          <option value="604800">1 week</option>
+        </select>
+        <input id="apTempSkinDur" type="number" class="ap-input" value="3600"
+          min="1" max="604800" placeholder="sec" style="max-width:80px;">
+      </div>
+      <div class="ap-row">
+        <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="apTempSkinOnline" style="width:16px;height:16px;">
+          Online players only
+        </label>
+      </div>
+      <button class="ap-btn ap-btn-purple" style="width:100%;" onclick="adminGiveTempSkin()">🎨 Apply to All</button>
+    </div>
+
+  </div><!-- /globalSection -->
+
+  <!-- ===== MODERATION ===== -->
+  <div id="adminModSection" style="display:none;">
+
+    <!-- Player picker -->
+    <div class="ap-card">
+      <h3>👤 Select Player</h3>
+      <p style="color:#7986cb;font-size:11px;margin:0 0 8px;">
+        Showing up to 200 players from leaderboard.</p>
+      <select id="apPlayerList" size="6"></select>
+      <button class="ap-btn ap-btn-blue ap-btn-sm" style="margin-top:8px;"
+        onclick="_adminLoadPlayers()">🔄 Refresh</button>
+    </div>
+
+    <!-- KSPT -->
+    <div class="ap-card">
+      <h3>💰 KSPT</h3>
+      <div class="ap-row">
+        <select id="apKSPTMode" class="ap-select" style="max-width:80px;">
+          <option value="set">Set</option>
+          <option value="add">Add</option>
+        </select>
+        <input id="apKSPTVal" type="number" class="ap-input" value="1000" min="0">
+        <button class="ap-btn ap-btn-green" onclick="adminSetKSPT()">Apply</button>
+      </div>
+    </div>
+
+    <!-- EK -->
+    <div class="ap-card">
+      <h3>💎 EK</h3>
+      <div class="ap-row">
+        <select id="apEKMode" class="ap-select" style="max-width:80px;">
+          <option value="set">Set</option>
+          <option value="add">Add</option>
+        </select>
+        <input id="apEKVal" type="number" class="ap-input" value="50" min="0">
+        <button class="ap-btn ap-btn-green" onclick="adminSetEK()">Apply</button>
+      </div>
+    </div>
+
+    <!-- Give Opening (personal) -->
+    <div class="ap-card">
+      <h3>🎁 Give Opening</h3>
+      <div class="ap-row">
+        <select id="apModOpeningType" class="ap-select">
+          <option value="noobBox">Noob Box</option>
+          <option value="capsule">Capsule</option>
+          <option value="goldCapsule">Gold Capsule</option>
+          <option value="glitchBox">Glitch Box</option>
+          <option value="keyBox">Key Box</option>
+          <option value="fortuneWheel">Fortune Wheel Spin</option>
+        </select>
+        <button class="ap-btn ap-btn-amber" onclick="adminGiveOpeningPlayer()">🎁 Give</button>
+      </div>
+    </div>
+
+    <!-- Give Tickets (personal) -->
+    <div class="ap-card">
+      <h3>🎫 Give Tickets</h3>
+      <div class="ap-row">
+        <input id="apModTickets" type="number" class="ap-input" value="5" min="1" max="999">
+        <button class="ap-btn ap-btn-purple" onclick="adminGiveTicketsPlayer()">🎫 Give</button>
+      </div>
+    </div>
+
+    <!-- Ban / Unban -->
+    <div class="ap-card">
+      <h3>🚫 Ban / Unban</h3>
+      <div class="ap-row">
+        <button class="ap-btn ap-btn-red" style="flex:1;" onclick="adminBanPlayer(true)">🚫 Ban</button>
+        <button class="ap-btn ap-btn-green" style="flex:1;" onclick="adminBanPlayer(false)">✅ Unban</button>
+      </div>
+    </div>
+
+    <!-- Personal Message -->
+    <div class="ap-card">
+      <h3>💬 Personal Message</h3>
+      <textarea id="apPersonalMsg" class="ap-input" rows="2"
+        style="width:100%;resize:none;box-sizing:border-box;"
+        placeholder="Message for selected player…"></textarea>
+      <div class="ap-row" style="margin-top:8px;">
+        <span class="ap-label">Duration</span>
+        <select id="apPersonalMsgDur" class="ap-select" style="max-width:100px;">
+          <option value="3">3 sec</option>
+          <option value="5" selected>5 sec</option>
+          <option value="10">10 sec</option>
+        </select>
+        <span class="ap-label">Color</span>
+        <select id="apPersonalMsgColor" class="ap-select" style="max-width:110px;">
+          <option value="#ffffff" selected>White</option>
+          <option value="#ffd700">Yellow</option>
+          <option value="#ff4444">Red</option>
+          <option value="#00e676">Green</option>
+        </select>
+      </div>
+      <button class="ap-btn ap-btn-blue" style="width:100%;margin-top:4px;"
+        onclick="adminSendPersonalMsg()">💬 Send Message</button>
+    </div>
+
+  </div><!-- /modSection -->
+</div><!-- /ap-wrap -->
+</div>
+<!-- ===================== /ADMIN PANEL MODAL ===================== -->
+
 </body>
 </html>

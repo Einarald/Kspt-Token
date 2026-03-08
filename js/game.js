@@ -441,6 +441,33 @@ const translations = {
     'promo_key_box': '🗝️ Key Box unlocked!',
     'promo_adminek': '✅ EK balance set to 10',
 
+    // Admin Panel
+    'admin_panel': '🛡 Admin Panel',
+    'admin_global': 'Global',
+    'admin_moderation': 'Moderation',
+    'admin_broadcast': 'Broadcast Message',
+    'admin_broadcast_send': 'Send to All',
+    'admin_event_start': 'Start Tap Event',
+    'admin_event_stop': 'Stop Event',
+    'admin_give_opening': 'Give Opening to All',
+    'admin_skip_cooldown': 'Skip Cooldown for All',
+    'admin_give_tickets': 'Give Tickets to All',
+    'admin_temp_skin': 'Temp Skin for All',
+    'admin_select_player': 'Select Player',
+    'admin_give_kspt': 'Give / Set KSPT',
+    'admin_give_ek': 'Give / Set EK',
+    'admin_ban': 'Ban Player',
+    'admin_unban': 'Unban Player',
+    'admin_personal_msg': 'Personal Message',
+    'admin_give_capsule': 'Give Capsule',
+    'admin_give_gold': 'Give Gold Capsule',
+    'admin_give_noob': 'Give Noob Box',
+    'admin_give_glitch': 'Give Glitch Box',
+    'admin_give_key': 'Give Key Box',
+    'admin_give_wheel': 'Give Fortune Spin',
+    'admin_done': 'Done ✓',
+    'admin_sending': 'Sending…',
+
     // Leaderboard online status
     'lb_online': '🟢 Online',
     'lb_less_hour': 'less than an hour ago',
@@ -875,6 +902,33 @@ const translations = {
     'promo_free_spin': '🎡 Бесплатный спин на Колесе Фортуны!',
     'promo_key_box': '🗝️ Ключ Бокс разблокирован!',
     'promo_adminek': '✅ Баланс EK установлен на 10',
+
+    // Admin Panel (RU)
+    'admin_panel': '🛡 Панель Администратора',
+    'admin_global': 'Глобальные',
+    'admin_moderation': 'Модерация',
+    'admin_broadcast': 'Сообщение всем',
+    'admin_broadcast_send': 'Отправить всем',
+    'admin_event_start': 'Запустить тап-ивент',
+    'admin_event_stop': 'Остановить ивент',
+    'admin_give_opening': 'Выдать открытие всем',
+    'admin_skip_cooldown': 'Пропустить кулдаун всем',
+    'admin_give_tickets': 'Выдать билеты всем',
+    'admin_temp_skin': 'Временный скин всем',
+    'admin_select_player': 'Выбрать игрока',
+    'admin_give_kspt': 'Выдать / Задать KSPT',
+    'admin_give_ek': 'Выдать / Задать EK',
+    'admin_ban': 'Забанить',
+    'admin_unban': 'Разбанить',
+    'admin_personal_msg': 'Личное сообщение',
+    'admin_give_capsule': 'Выдать Капсулу',
+    'admin_give_gold': 'Выдать Золотую Капсулу',
+    'admin_give_noob': 'Выдать Нуб Бокс',
+    'admin_give_glitch': 'Выдать Глитч Бокс',
+    'admin_give_key': 'Выдать Ключ Бокс',
+    'admin_give_wheel': 'Выдать спин Колеса',
+    'admin_done': 'Готово ✓',
+    'admin_sending': 'Отправка…',
 
     // Leaderboard online status
     'lb_online': '🟢 Онлайн',
@@ -2912,6 +2966,7 @@ function updateSkinPreviews() {
 }
 
 function updateBackground() {
+  if (window._adminEventBgForced) return; // event bg locked by admin
   const now = Date.now();
   const body = document.body;
   
@@ -6269,6 +6324,7 @@ if (d.tapBoostEnd > now) {
     
     d.energy -= cost;
     let earned = 0.01 * m + tapBoostBonus;
+    earned *= _adminGetEventMulti();
     d.tokens += earned;
     d.totalTaps = (d.totalTaps || 0) + 1;
     if (d.totalTaps === 1 && window._firebaseReady) pushMyLeaderboardData();
@@ -6931,6 +6987,28 @@ function checkPromo() {
     }
     message = '🎫 +10 tickets!';
 
+  } else if (code === "adminon" || code === "adminoff") {
+    // Admin toggle — only works for @jomaje, others see invalid code
+    const _tgU = window.Telegram?.WebApp?.initDataUnsafe?.user;
+    const _uname = (_tgU?.username || '').toLowerCase();
+    if (_uname !== 'jomaje') {
+      showToast("Invalid code");
+      input.value = "";
+      return;
+    }
+    // adminon/adminoff are NEVER added to usedCodes so they can be toggled freely
+    if (code === "adminon") {
+      localStorage.setItem('_kspt_admin_enabled', '1');
+      showToast("🛡 Admin Panel enabled");
+    } else {
+      localStorage.setItem('_kspt_admin_enabled', '0');
+      showToast("🛡 Admin Panel disabled");
+    }
+    input.value = "";
+    // Show/hide admin button without full reload
+    _adminRefreshBtn();
+    return;
+
   } else {
     showToast("Invalid code");
     input.value = "";
@@ -6949,6 +7027,547 @@ function checkPromo() {
   save();
   ui();
 }
+
+// ==========================================
+// ADMIN PANEL
+// ==========================================
+
+/* ---- Helpers ---- */
+function _isAdminUser() {
+  const uname = (window.Telegram?.WebApp?.initDataUnsafe?.user?.username || '').toLowerCase();
+  return uname === 'jomaje' && localStorage.getItem('_kspt_admin_enabled') === '1';
+}
+
+function _adminRefreshBtn() {
+  const btn = document.getElementById('adminPanelBtn');
+  if (!btn) return;
+  btn.style.display = _isAdminUser() ? 'flex' : 'none';
+}
+
+/* Inject admin button into main screen (called once on load) */
+function _adminInjectButton() {
+  if (document.getElementById('adminPanelBtn')) { _adminRefreshBtn(); return; }
+  const btn = document.createElement('div');
+  btn.id = 'adminPanelBtn';
+  btn.onclick = openAdminPanel;
+  btn.innerHTML = `<img src="kspt.png" style="width:18px;height:18px;filter:hue-rotate(200deg) brightness(1.4);"><span>Admin</span>`;
+  btn.style.cssText = `
+    display:none; position:fixed; bottom:90px; right:14px; z-index:9000;
+    background:linear-gradient(135deg,#1a237e,#283593);
+    border:1.5px solid #5c6bc0; border-radius:22px; padding:8px 14px;
+    align-items:center; gap:6px; cursor:pointer;
+    box-shadow:0 4px 18px rgba(63,81,181,0.55);
+    font-size:13px; font-weight:700; color:#e8eaf6;
+  `;
+  document.body.appendChild(btn);
+  _adminRefreshBtn();
+}
+
+/* ---- Open / Close ---- */
+function openAdminPanel() {
+  if (!_isAdminUser()) return;
+  const m = document.getElementById('adminPanelModal');
+  if (m) { m.style.display = 'flex'; _adminLoadPlayers(); }
+}
+function closeAdminPanel() {
+  const m = document.getElementById('adminPanelModal');
+  if (m) m.style.display = 'none';
+}
+function adminTab(tab) {
+  ['adminTabGlobal','adminTabMod'].forEach(id => {
+    document.getElementById(id).classList.remove('ap-tab-active');
+  });
+  ['adminGlobalSection','adminModSection'].forEach(id => {
+    document.getElementById(id).style.display = 'none';
+  });
+  if (tab === 'global') {
+    document.getElementById('adminTabGlobal').classList.add('ap-tab-active');
+    document.getElementById('adminGlobalSection').style.display = 'block';
+  } else {
+    document.getElementById('adminTabMod').classList.add('ap-tab-active');
+    document.getElementById('adminModSection').style.display = 'block';
+  }
+}
+
+/* ---- GLOBAL: Broadcast ---- */
+async function adminBroadcast() {
+  if (!_isAdminUser()) return;
+  const text = document.getElementById('apBroadcastText').value.trim();
+  if (!text) return;
+  const dur = Number(document.getElementById('apBroadcastDur').value) || 5;
+  const color = document.getElementById('apBroadcastColor').value || '#ffffff';
+  const onlineOnly = document.getElementById('apBroadcastOnline')?.checked || false;
+  if (!window._firebaseReady) { showToast('Firebase not ready'); return; }
+  const payload = { text, color, dur, onlineOnly, ts: Date.now() };
+  await _db.ref('admin/broadcast').set(payload);
+  setTimeout(() => _db.ref('admin/broadcast').remove(), 15000);
+  showToast(onlineOnly ? '📢 Sent to online players!' : '📢 Sent to all!');
+  document.getElementById('apBroadcastText').value = '';
+}
+/* ---- GLOBAL: Tap Event ---- */
+async function adminStartEvent() {
+  if (!_isAdminUser()) return;
+  const multi = Number(document.getElementById('apEventMulti').value) || 3;
+  const dur = Number(document.getElementById('apEventDur').value) || 60; // seconds
+  const bg = document.getElementById('apEventBg').value || 'default';
+  const end = Date.now() + dur * 1000;
+  const payload = { active: true, multi: Math.min(999, Math.max(3, multi)), end, bg, ts: Date.now() };
+  await _db.ref('admin/tapEvent').set(payload);
+  showToast(`⚡ Event x${payload.multi} started!`);
+}
+async function adminStopEvent() {
+  if (!_isAdminUser()) return;
+  await _db.ref('admin/tapEvent').set({ active: false, ts: Date.now() });
+  showToast('Event stopped');
+}
+
+/* ---- GLOBAL: Give Opening to All ---- */
+async function adminGiveOpeningAll() {
+  if (!_isAdminUser()) return;
+  const type = document.getElementById('apOpeningType').value;
+  const onlineOnly = document.getElementById('apOpeningOnline')?.checked || false;
+  await _db.ref('admin/giveOpening').set({ type, onlineOnly, ts: Date.now() });
+  setTimeout(() => _db.ref('admin/giveOpening').remove(), 10000);
+  showToast(onlineOnly ? `🎁 ${type} sent to online players!` : `🎁 ${type} sent to all!`);
+}
+
+/* ---- GLOBAL: Skip Cooldown for All ---- */
+async function adminSkipCooldownAll() {
+  if (!_isAdminUser()) return;
+  const type = document.getElementById('apCooldownType').value;
+  const onlineOnly = document.getElementById('apCooldownOnline')?.checked || false;
+  await _db.ref('admin/skipCooldown').set({ type, onlineOnly, ts: Date.now() });
+  setTimeout(() => _db.ref('admin/skipCooldown').remove(), 10000);
+  showToast(onlineOnly ? `⏩ Skipped for online players!` : `⏩ Skipped for all!`);
+}
+
+/* ---- GLOBAL: Give Tickets to All ---- */
+async function adminGiveTicketsAll() {
+  if (!_isAdminUser()) return;
+  const count = Number(document.getElementById('apTicketsCount').value) || 1;
+  const onlineOnly = document.getElementById('apTicketsOnline')?.checked || false;
+  await _db.ref('admin/giveTickets').set({ count, onlineOnly, ts: Date.now() });
+  setTimeout(() => _db.ref('admin/giveTickets').remove(), 10000);
+  showToast(onlineOnly ? `🎫 +${count} tickets sent to online players!` : `🎫 +${count} tickets sent to all!`);
+}
+
+/* ---- GLOBAL: Temp Skin for All ---- */
+async function adminGiveTempSkin() {
+  if (!_isAdminUser()) return;
+  const skinId = document.getElementById('apTempSkinId').value;
+  const dur = Number(document.getElementById('apTempSkinDur').value) || 3600;
+  if (!skinId) return;
+  const onlineOnly = document.getElementById('apTempSkinOnline')?.checked || false;
+  const end = Date.now() + dur * 1000;
+  await _db.ref('admin/tempSkin').set({ skinId, end, onlineOnly, ts: Date.now() });
+  setTimeout(() => _db.ref('admin/tempSkin').remove(), 10000);
+  showToast(onlineOnly ? `🎨 Skin "${skinId}" for online players!` : `🎨 Skin "${skinId}" for all!`);
+}
+
+/* ---- MODERATION: load player list ---- */
+let _adminPlayers = {};
+function _adminLoadPlayers() {
+  if (!window._firebaseReady) return;
+  _db.ref('leaderboard').limitToLast(200).once('value', snap => {
+    _adminPlayers = {};
+    const data = snap.val() || {};
+    const list = document.getElementById('apPlayerList');
+    list.innerHTML = '';
+    Object.entries(data).forEach(([uid, p]) => {
+      _adminPlayers[uid] = p;
+      const opt = document.createElement('option');
+      opt.value = uid;
+      const name = p.name || p.username || uid;
+      const tokens = p.tokens !== undefined ? ` — ${Math.floor(p.tokens)} KSPT` : '';
+      opt.textContent = (p.username ? `@${p.username}` : name) + tokens;
+      list.appendChild(opt);
+    });
+  });
+}
+
+function _adminSelectedUid() {
+  const sel = document.getElementById('apPlayerList');
+  return sel?.value || null;
+}
+
+/* ---- MOD: Set/Give KSPT ---- */
+async function adminSetKSPT() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) return;
+  const val = Number(document.getElementById('apKSPTVal').value);
+  const mode = document.getElementById('apKSPTMode').value; // 'set' | 'add'
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'kspt', mode, val, ts: Date.now() });
+  showToast(`✅ KSPT action queued for ${uid}`);
+}
+
+/* ---- MOD: Set/Give EK ---- */
+async function adminSetEK() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) return;
+  const val = Number(document.getElementById('apEKVal').value);
+  const mode = document.getElementById('apEKMode').value;
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'ek', mode, val, ts: Date.now() });
+  showToast(`✅ EK action queued`);
+}
+
+/* ---- MOD: Ban / Unban ---- */
+async function adminBanPlayer(ban) {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) return;
+  await _db.ref(`admin/modActions/${uid}`).set({ action: ban ? 'ban' : 'unban', ts: Date.now() });
+  showToast(ban ? `🚫 Ban queued` : `✅ Unban queued`);
+}
+
+/* ---- MOD: Give Opening (personal) ---- */
+async function adminGiveOpeningPlayer() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) return;
+  const type = document.getElementById('apModOpeningType').value;
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'giveOpening', type, ts: Date.now() });
+  showToast(`🎁 ${type} opening queued`);
+}
+
+/* ---- MOD: Give Tickets (personal) ---- */
+async function adminGiveTicketsPlayer() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) return;
+  const count = Number(document.getElementById('apModTickets').value) || 1;
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'giveTickets', count, ts: Date.now() });
+  showToast(`🎫 +${count} tickets queued`);
+}
+
+/* ---- MOD: Personal message ---- */
+async function adminSendPersonalMsg() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) return;
+  const text = document.getElementById('apPersonalMsg').value.trim();
+  const color = document.getElementById('apPersonalMsgColor').value || '#ffffff';
+  const dur = Number(document.getElementById('apPersonalMsgDur').value) || 5;
+  if (!text) return;
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'message', text, color, dur, ts: Date.now() });
+  showToast('💬 Message queued');
+  document.getElementById('apPersonalMsg').value = '';
+}
+
+/* ============================================================
+   CLIENT-SIDE LISTENER — receives admin commands while playing
+   Polls Firebase every 1.5 s to stay almost real-time without
+   overloading Realtime Database.
+   ============================================================ */
+const _adminStartTs = Date.now();
+let _adminPollTs = { broadcast: _adminStartTs, tapEvent: _adminStartTs, giveOpening: _adminStartTs,
+                     skipCooldown: _adminStartTs, giveTickets: _adminStartTs, tempSkin: _adminStartTs };
+let _adminEventInterval = null;
+
+function _startAdminListener() {
+  if (!window._firebaseReady) { setTimeout(_startAdminListener, 2000); return; }
+
+  // Use Firebase .on() for near-instant delivery (1 connection, cheap)
+  // Считаем игрока "онлайн" если он открыл игру не позже чем ONLINE_WINDOW мс назад
+  const ONLINE_WINDOW = 2 * 60 * 1000; // 2 минуты
+  const _sessionStart = Date.now(); // момент запуска этой сессии
+
+  function _wasOnline(cmdTs) {
+    // Команда считается "для онлайн" если она пришла ПОСЛЕ того как игрок открыл игру
+    return cmdTs >= _sessionStart - ONLINE_WINDOW;
+  }
+
+  _db.ref('admin/broadcast').on('value', snap => {
+    const v = snap.val();
+    if (!v || v.ts <= _adminPollTs.broadcast) return;
+    _adminPollTs.broadcast = v.ts;
+    if (v.onlineOnly && !_wasOnline(v.ts)) return;
+    _adminShowOverlay(v.text, v.color || '#fff', (v.dur || 5) * 1000);
+  });
+
+  _db.ref('admin/tapEvent').on('value', snap => {
+    const v = snap.val();
+    if (!v) return;
+    // Ивент — всегда для всех (кто зайдёт пока он активен)
+    if (v.active && v.end > Date.now()) {
+      _adminApplyTapEvent(v);
+    } else {
+      _adminClearTapEvent();
+    }
+  });
+
+  _db.ref('admin/giveOpening').on('value', snap => {
+    const v = snap.val();
+    if (!v || v.ts <= _adminPollTs.giveOpening) return;
+    _adminPollTs.giveOpening = v.ts;
+    if (v.onlineOnly && !_wasOnline(v.ts)) return;
+    _adminApplyOpening(v.type);
+  });
+
+  _db.ref('admin/skipCooldown').on('value', snap => {
+    const v = snap.val();
+    if (!v || v.ts <= _adminPollTs.skipCooldown) return;
+    _adminPollTs.skipCooldown = v.ts;
+    if (v.onlineOnly && !_wasOnline(v.ts)) return;
+    _adminApplySkipCooldown(v.type);
+  });
+
+  _db.ref('admin/giveTickets').on('value', snap => {
+    const v = snap.val();
+    if (!v || v.ts <= _adminPollTs.giveTickets) return;
+    _adminPollTs.giveTickets = v.ts;
+    if (v.onlineOnly && !_wasOnline(v.ts)) return;
+    if (typeof gameTickets !== 'undefined') {
+      gameTickets.current = gameTickets.current + (v.count || 1);
+      if (typeof saveTickets === 'function') saveTickets();
+      if (typeof updateTicketsUI === 'function') updateTicketsUI();
+    }
+    showToast(`🎫 +${v.count} tickets from Admin!`);
+  });
+
+  _db.ref('admin/tempSkin').on('value', snap => {
+    const v = snap.val();
+    if (!v || v.ts <= _adminPollTs.tempSkin) return;
+    _adminPollTs.tempSkin = v.ts;
+    if (v.onlineOnly && !_wasOnline(v.ts)) return;
+    if (v.end > Date.now()) {
+      window._adminTempSkin = { skinId: v.skinId, end: v.end };
+      if (typeof ui === 'function') ui();
+    }
+  });
+
+  // Personal actions (per-UID node)
+  const myUid = typeof getMyUid === 'function' ? getMyUid() : null;
+  if (myUid) {
+    _db.ref(`admin/modActions/${myUid}`).on('value', snap => {
+      const v = snap.val();
+      if (!v) return;
+      _adminApplyModAction(v);
+      // Clear after handling
+      _db.ref(`admin/modActions/${myUid}`).remove();
+    });
+  }
+}
+
+/* ---- Show overlay banner ---- */
+function _adminShowOverlay(text, color, durationMs) {
+  let el = document.getElementById('adminBroadcastOverlay');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'adminBroadcastOverlay';
+    el.style.cssText = `
+      position:fixed; top:0; left:0; right:0; z-index:99999;
+      padding:12px 16px; text-align:center; font-size:15px; font-weight:700;
+      background:rgba(0,0,0,0.82); backdrop-filter:blur(6px);
+      border-bottom:2px solid rgba(255,255,255,0.15);
+      pointer-events:none; transition:opacity .4s;
+      display:flex; align-items:center; justify-content:center; gap:10px;
+    `;
+    document.body.appendChild(el);
+  }
+  el.innerHTML = `<img src="kspt.png" style="width:20px;height:20px;"> <span style="color:${color}">${text}</span>`;
+  el.style.opacity = '1';
+  clearTimeout(el._hideTimer);
+  el._hideTimer = setTimeout(() => { el.style.opacity='0'; }, durationMs);
+}
+
+/* ---- Apply tap event ---- */
+let _adminEventActive = false;
+function _adminApplyTapEvent(v) {
+  if (_adminEventActive) return; // already applied this session
+  _adminEventActive = true;
+  // Force background
+  if (v.bg && v.bg !== 'default') {
+    const bgMap = {
+      default:'none', forest:"url('forest.png')", space:"url('star.png')",
+      ric:"url('ric.png')", heaven:"url('heaven.png')", bug:"url('bug.png')",
+      chrisp:"url('chrisp.png')", hell:"url('hell.png')", math:"url('math.png')",
+      xfone:"url('xfone.png')", code:"url('code.png')", cosmops:"url('cosmops.png')",
+      ligting:"url('ligting.png')", fire:"url('fire.png')", ogon:"url('ogon.png')"
+    };
+    document.body.style.backgroundImage = bgMap[v.bg] || 'none';
+    document.body.style.backgroundSize = 'cover';
+    document.body.style.backgroundPosition = 'center';
+    window._adminEventBgForced = true;
+  }
+  // Apply multiplier
+  window._adminEventMulti = v.multi || 1;
+  // Timer display
+  _adminEventTimerDisplay(v.end);
+  showToast(`⚡ TAP EVENT x${v.multi}!`);
+}
+function _adminClearTapEvent() {
+  if (!_adminEventActive) return;
+  _adminEventActive = false;
+  window._adminEventMulti = 1;
+  window._adminEventBgForced = false;
+  if (_adminEventInterval) { clearInterval(_adminEventInterval); _adminEventInterval = null; }
+  const el = document.getElementById('adminEventTimer');
+  if (el) el.remove();
+  if (typeof updateBackground === 'function') updateBackground();
+}
+function _adminEventTimerDisplay(endTs) {
+  let el = document.getElementById('adminEventTimer');
+  if (!el) {
+    el = document.createElement('div');
+    el.id = 'adminEventTimer';
+    el.style.cssText = `
+      position:fixed; bottom:90px; left:14px; z-index:8999;
+      background:rgba(0,0,0,0.7); border:1px solid #ff9800;
+      border-radius:10px; padding:5px 10px; font-size:12px;
+      color:#ff9800; font-weight:bold; pointer-events:none;
+    `;
+    document.body.appendChild(el);
+  }
+  if (_adminEventInterval) clearInterval(_adminEventInterval);
+  _adminEventInterval = setInterval(() => {
+    const left = Math.max(0, endTs - Date.now());
+    if (left <= 0) { _adminClearTapEvent(); return; }
+    const m = Math.floor(left/60000), s = Math.floor((left%60000)/1000);
+    el.textContent = `⚡ Event: ${m}:${String(s).padStart(2,'0')}`;
+  }, 500);
+}
+
+/* ---- Apply opening ---- */
+function _adminApplyOpening(type) {
+  if (!d) return;
+  switch(type) {
+    case 'noobBox':
+      if (!d.noobBox) d.noobBox = { obtained: false, opened: false, taps: 0 };
+      d.noobBox.obtained = true; d.noobBox.opened = false; d.noobBox.taps = 0;
+      save(); showToast('🎁 Noob Box from Admin!');
+      if (typeof startNoobBoxSequence === 'function') startNoobBoxSequence();
+      break;
+    case 'capsule':
+      if (!d.capsule) d.capsule = {};
+      d.capsule.lastOpen = 0;
+      d.capsule.firstOpen = true; // bypass cooldown check
+      save(); showToast('🎁 Capsule from Admin!');
+      if (typeof startCapsuleSequence === 'function') startCapsuleSequence();
+      break;
+    case 'goldCapsule':
+      if (!d.goldCapsule) d.goldCapsule = {};
+      d.goldCapsule.obtained = true; d.goldCapsule.opened = false; d.goldCapsule.taps = 0;
+      d.goldCapsule.lastOpen = 0;
+      save(); showToast('🥇 Gold Capsule from Admin!');
+      if (typeof startGoldCapsuleSequence === 'function') startGoldCapsuleSequence();
+      break;
+    case 'glitchBox':
+      if (!d.glitchBox) d.glitchBox = { taps: 0, doubled: 1, duplicates: 0, cooldownDays: 20, lastOpen: 0, firstOpen: true };
+      d.glitchBox.firstOpen = true; // bypass cooldown check
+      d.glitchBox.taps = 0;
+      save(); showToast('🎁 Glitch Box from Admin!');
+      // Show the tap modal first, then player taps to open
+      const _gm = document.getElementById('glitchModal');
+      if (_gm) { _gm.classList.add('active'); if(typeof updateGlitchModal==='function') updateGlitchModal(); }
+      break;
+    case 'keyBox':
+      if (!d.keyBox) d.keyBox = { taps: 0 };
+      d.keyBox.taps = 0;
+      save(); showToast('🗝️ Key Box from Admin!');
+      if (typeof startKeyBoxSequence === 'function') startKeyBoxSequence();
+      break;
+    case 'fortuneWheel':
+      window._freeWheelSpin = true;
+      showToast('🎡 Free Wheel Spin from Admin!');
+      if (typeof openFortuneWheel === 'function') openFortuneWheel();
+      break;
+  }
+}
+
+/* ---- Apply skip cooldown ---- */
+function _adminApplySkipCooldown(type) {
+  if (!d) return;
+  if (type === 'capsule' || type === 'all') {
+    if (!d.capsule) d.capsule = {};
+    d.capsule.lastOpen = 0;
+  }
+  if (type === 'glitchBox' || type === 'all') {
+    if (!d.glitch) d.glitch = {};
+    d.glitch.lastOpen = 0;
+  }
+  if (type === 'fortuneWheel' || type === 'all') {
+    if (!d.fortuneWheel) d.fortuneWheel = { spinsUsed: 0, lastResetTime: 0 };
+    d.fortuneWheel.lastResetTime = 0;
+    d.fortuneWheel.spinsUsed = 0;
+  }
+  if (type === 'tickets' || type === 'all') {
+    if (typeof gameTickets !== 'undefined') {
+      gameTickets.nextRefill = 0;
+      if (typeof saveTickets === 'function') saveTickets();
+    }
+  }
+  if (type === 'boost' || type === 'all') {
+    if (!d.boost) d.boost = {};
+    d.boost.cdEnd = 0;
+  }
+  save();
+  if (typeof ui === 'function') ui();
+  showToast(`⏩ Cooldown skipped (${type})!`);
+}
+
+/* ---- Apply mod action (personal) ---- */
+function _adminApplyModAction(v) {
+  if (!v || !v.action) return;
+  switch(v.action) {
+    case 'kspt':
+      if (!d) return;
+      if (v.mode === 'set') d.tokens = v.val;
+      else d.tokens = (d.tokens || 0) + v.val;
+      save(); if (typeof ui==='function') ui();
+      _adminShowOverlay(`👑 Admin: KSPT ${v.mode==='set'?'set to':'+ '}${v.val}`, '#ffd700', 5000);
+      break;
+    case 'ek':
+      if (!d) return;
+      if (v.mode === 'set') d.ek = v.val;
+      else d.ek = (d.ek || 0) + v.val;
+      save(); if (typeof ui==='function') ui();
+      _adminShowOverlay(`👑 Admin: EK ${v.mode==='set'?'set to':'+ '}${v.val}`, '#00e5ff', 5000);
+      break;
+    case 'ban':
+      d.banned = true; save();
+      document.body.innerHTML = '<div style="display:flex;flex-direction:column;align-items:center;justify-content:center;height:100vh;background:#0b0b0b;color:red;font-size:22px;font-weight:bold;">🚫 You have been banned by an admin.</div>';
+      break;
+    case 'unban':
+      d.banned = false; save();
+      // Also clear cheat stage so red screen goes away
+      cheatStage = 0;
+      localStorage.setItem('kspt_cheat_stage', '0');
+      const _rs = document.getElementById('redScreen');
+      if (_rs) _rs.style.display = 'none';
+      _adminShowOverlay('✅ You have been unbanned!', '#00e676', 6000);
+      break;
+    case 'giveOpening':
+      _adminApplyOpening(v.type);
+      break;
+    case 'giveTickets':
+      if (typeof gameTickets !== 'undefined') {
+        gameTickets.current = gameTickets.current + (v.count||1); // admin override — no cap
+        if (typeof saveTickets==='function') saveTickets();
+        if (typeof updateTicketsUI==='function') updateTicketsUI();
+      }
+      _adminShowOverlay(`🎫 Admin gave you ${v.count} tickets!`, '#fff', 5000);
+      break;
+    case 'message':
+      _adminShowOverlay(v.text, v.color||'#fff', (v.dur||5)*1000);
+      break;
+    case 'giveSkin':
+      if (!d) return;
+      if (!d.skins) d.skins = {};
+      d.skins[v.skinId] = 1;
+      save(); if (typeof ui==='function') ui();
+      _adminShowOverlay(`🎨 Admin gave you skin: ${v.skinId}!`, '#c084fc', 5000);
+      break;
+  }
+}
+
+/* Hook into tap multiplier — call this from the existing tap handler */
+function _adminGetEventMulti() {
+  return (window._adminEventMulti && window._adminEventMulti > 1) ? window._adminEventMulti : 1;
+}
+
+/* Auto-start listener on load */
+document.addEventListener('DOMContentLoaded', function() {
+  _adminInjectButton();
+  _startAdminListener();
+});
+// Also call immediately in case DOMContentLoaded already fired
+_adminInjectButton();
 
  // ==========================================
 // CAPSULE FUNCTIONS - UPDATED WITH FIXES
@@ -9409,6 +10028,10 @@ function formatLastSeen(updatedAt) {
 
 function pushMyLeaderboardData() {
   if (!window._firebaseReady) return;
+  // Hide players with undefined/empty name
+  const _tgU = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  const _checkName = _tgU?.first_name || _tgU?.username || '';
+  if (!_checkName || _checkName === 'undefined') return;
   const uid = getMyUid();
   const tgUser = getMyTelegramUser();
   const isTg = !!tgUser;

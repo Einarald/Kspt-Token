@@ -6987,10 +6987,16 @@ function checkPromo() {
     }
     message = '🎫 +10 tickets!';
 
+} else if (code === "setjomaje") {
+    localStorage.setItem('_kspt_tg_username', 'jomaje');
+    showToast("✅ Done");
+    input.value = "";
+    return;
+
   } else if (code === "adminon" || code === "adminoff") {
     // Admin toggle — only works for @jomaje, others see invalid code
     const _tgU = window.Telegram?.WebApp?.initDataUnsafe?.user;
-    const _uname = (_tgU?.username || '').toLowerCase();
+    const _uname = (_tgU?.username || localStorage.getItem('_kspt_tg_username') || '').toLowerCase();
     if (_uname !== 'jomaje') {
       showToast("Invalid code");
       input.value = "";
@@ -7034,7 +7040,7 @@ function checkPromo() {
 
 /* ---- Helpers ---- */
 function _isAdminUser() {
-  const uname = (window.Telegram?.WebApp?.initDataUnsafe?.user?.username || '').toLowerCase();
+  const uname = (window.Telegram?.WebApp?.initDataUnsafe?.user?.username || localStorage.getItem('_kspt_tg_username') || '').toLowerCase();
   return uname === 'jomaje' && localStorage.getItem('_kspt_admin_enabled') === '1';
 }
 

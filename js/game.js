@@ -8228,10 +8228,19 @@ function startBombBoxSequence() {
   }
   const modal = document.getElementById('bombBoxModal');
   const img = document.getElementById('bombBoxImg');
+
+if (img) {
+  img.setAttribute('draggable', 'false'); // запрещает перетаскивание
+  img.ondragstart = () => false;
+  img.oncontextmenu = (e) => e.preventDefault(); // убирает "открыть изображение"
+}
   const hint = document.getElementById('bombBoxHint');
   if (!modal || !img) return;
 
   img.src = 'bomb.png';
+img.style.userSelect = 'none';
+img.style.webkitUserSelect = 'none';
+img.style.webkitTouchCallout = 'none';
   img.style.transform = '';
   img.style.filter = '';
   if (hint) hint.textContent = t('bomb_box_hold');

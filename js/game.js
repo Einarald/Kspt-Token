@@ -6943,7 +6943,9 @@ function buyTempBoost() {
   d.boost.active = true;
   d.boost.end = now + (25 + Math.floor(Math.random() * 10)) * 1000;
   d.boost.cdEnd = now + 10 * 60 * 1000;
-  
+  d.questOverdriveUses = (d.questOverdriveUses || 0) + 1;
+  checkQuestProgress('overdrive');
+
   showToast(t('purchase_success'));
   save();
   ui();
@@ -13560,3 +13562,6 @@ if (window._firebaseReady) _updateLastSeen();
 setInterval(_updateLastSeen, 10000);
 
 document.querySelectorAll('img').forEach(img => img.setAttribute('draggable', 'false'));
+
+// Блокируем контекстное меню на Android при удержании спрайтов
+document.addEventListener('contextmenu', e => e.preventDefault());

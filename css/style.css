@@ -28,6 +28,19 @@ body{
   z-index: 1; /* Ensure app content is above body bg */
 }
 
+img, canvas, button {
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  pointer-events: auto;
+}
+
+img {
+  -webkit-user-drag: none;
+  draggable: false;
+}
+
 /* ===== COMMON ===== */
 .screen{display:none}
 .screen.active{display:block; animation: fadeIn 0.2s ease;}

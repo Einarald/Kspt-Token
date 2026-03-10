@@ -239,6 +239,7 @@ const translations = {
     'ivent_title': 'Temporary Events',
     'ivent_desc': 'Get rewards every day!',
     'ivent_no_events': 'No events are active right now. Check back later.',
+    'zneton_label': 'Tokens',
     'ivent_error': 'Error loading events',
 
     // Noob and Bomb Box
@@ -670,6 +671,7 @@ const translations = {
      'ivent_title': 'Временные события',
     'ivent_desc': 'Получайте награды каждый день!',
     'ivent_no_events': 'В данный момент нет активных событий',
+    'zneton_label': 'Жетоны',
     'ivent_error': 'Ошибка загрузки событий',
 
     // Noob and Bomb Box
@@ -1457,6 +1459,8 @@ const defaultData = {
   puzzleDone: false,
   puzzles2: [0,0,0,0,0,0,0,0,0],
   puzzle2Done: false,
+  puzzles3: [0,0,0,0,0,0,0,0,0],
+  puzzle3Done: false,
   puzzleDoneTime: 0,
   unbanUsed: false,
   capsule: { lastOpen: 0, firstOpen: true },
@@ -1723,6 +1727,9 @@ if (d.adminBanned) {
 }
 if (typeof d.keys.black === 'undefined') d.keys.black = 0;
 
+if (!d.puzzles3) d.puzzles3 = [0,0,0,0,0,0,0,0,0];
+if (typeof d.puzzle3Done === 'undefined') d.puzzle3Done = false;
+
 if (!d.glitchBox) {
   d.glitchBox = defaultData.glitchBox;
 }
@@ -1858,9 +1865,13 @@ const SKIN_INCOME = {
   skin_8bit_coin: 5,
   skin_zombie_train: 40,
   brb: 500,
+  goldensafe: 100,
   corrupted: 20,
   failed: 35,
-  doge: 50
+  doge: 50,
+  bhole: 100,
+  toilet: 0,
+  capsulememe: 0
   };
 
 // Card data - UPDATED WITH EXACT VALUES
@@ -2190,6 +2201,7 @@ updateBoostTimers();
   window.updateCardUI();
   updatePuzzleUI();
   updateSecondPuzzleUI();
+  updateThirdPuzzleUI();
   updateSkinPreviews();
   
   if (!document.getElementById("market")?.classList.contains("active")) {
@@ -2267,7 +2279,8 @@ function getSkinImage(skinId, euroVar = 1, artemVar = 0) {
     'ruka': 'ruka.png',
     'banditx': 'banditx.png',
     'goldcoin': 'def.png',
-    'gkspt': 'gkspt.png',                    
+    'gkspt': 'gkspt.png',
+    'goldensafe': 'sgold.png',                   
     'cyber_android': 'robotic.png', 
     'siulai': 'siulai.png',   
     'dirty': 'dirty.png',
@@ -2275,7 +2288,10 @@ function getSkinImage(skinId, euroVar = 1, artemVar = 0) {
     'brb': 'knopka.png',
     'corrupted': 'corr.png',
     'failed': 'fail.png',
-    'doge': 'doge.png'
+    'doge': 'doge.png',
+    'bhole': 'bhole.png',
+    'toilet': 'toilet.png',
+    'capsulememe': 'capsule.png'
   };
   return skinImages[skinId] || 'kspt.png';
 }
@@ -2283,6 +2299,51 @@ function getSkinImage(skinId, euroVar = 1, artemVar = 0) {
 function updateSkinImage() {
   const coin = document.getElementById("coin");
   if (!coin) return;
+
+// Black Hole particles
+  const existingParticles = document.getElementById('bholeParticles');
+  if (d.skin === 'bhole') {
+    if (!existingParticles) {
+      const container = document.createElement('div');
+      container.id = 'bholeParticles';
+      container.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:10;';
+      coin.parentNode.style.position = 'relative';
+      coin.parentNode.appendChild(container);
+      for (let i = 0; i < 8; i++) {
+        const p = document.createElement('div');
+        const isKspt = i < 3;
+        const angle = (i / 8) * 360;
+        p.style.cssText = `
+          position:absolute; width:${isKspt?18:6}px; height:${isKspt?18:6}px;
+          border-radius:50%; top:50%; left:50%;
+          background:${isKspt?'transparent':'#1a1a2e'};
+          border:${isKspt?'none':'2px solid #333'};
+          animation: bholeOrbit${i} ${2+i*0.3}s linear infinite;
+          transform-origin: ${40+i*8}px 0;
+        `;
+        if (isKspt) {
+          const img = document.createElement('img');
+          img.src = 'kspt.png';
+          img.style.cssText = 'width:100%;height:100%;border-radius:50%;';
+          p.appendChild(img);
+        }
+        container.appendChild(p);
+      }
+      // inject keyframes
+      if (!document.getElementById('bholeStyle')) {
+        const style = document.createElement('style');
+        style.id = 'bholeStyle';
+        let kf = '';
+        for (let i = 0; i < 8; i++) {
+          kf += `@keyframes bholeOrbit${i} { from { transform: rotate(${i*45}deg) translateX(${50+i*7}px); } to { transform: rotate(${i*45+360}deg) translateX(${50+i*7}px); } }`;
+        }
+        style.textContent = kf;
+        document.head.appendChild(style);
+      }
+    }
+  } else {
+    if (existingParticles) existingParticles.remove();
+  }
 
   let imgName;
   let currentSkinId = d.skin; // по умолчанию основной скин
@@ -2356,12 +2417,17 @@ function applySkin(skinId, variant = null) {
     window.skinAnimationTimer = null;
   }
   
-  // Check if skin is owned
-  if (skinId !== 'default' && !d.skins[skinId]) {
+  // Check if skin is owned (включая secretSkins)
+  const _skinOwnedViaSecret = d.secretSkins && d.secretSkins[skinId];
+  if (skinId !== 'default' && !d.skins[skinId] && !_skinOwnedViaSecret) {
     // Особые скины из боксов (не покупаются)
     if (skinId === 'gkspt' || skinId === 'cyber_android' || skinId === 'dirty' || skinId === 'doge') {
       showToast(t('locked'));
       return;
+    }
+    if (skinId === 'bhole' && !d.puzzle3Done) { showToast(t('locked')); return; }
+    if ((skinId === 'toilet' || skinId === 'capsulememe') && !(d.secretSkins && d.secretSkins[skinId])) {
+      showToast(t('locked')); return;
     }
     // ==========================================
     // Skin not owned, try to buy it
@@ -2536,6 +2602,30 @@ function handleTapSkinAnimation() {
   else if (dogeStage === 1) coin.src = "doge1.png";
   else coin.src = "doge2.png";
   break;
+    case "goldensafe":
+  coin.dataset.gsToggle = coin.dataset.gsToggle === '1' ? '0' : '1';
+  coin.src = coin.dataset.gsToggle === '1' ? 'sgold1.png' : 'sgold.png';
+  break;
+   case "bhole":
+  let bholeStage = parseInt(coin.dataset.bholeStage || "0", 10);
+  bholeStage = (bholeStage + 1) % 3;
+  coin.dataset.bholeStage = bholeStage;
+  if (bholeStage === 0) coin.src = "bhole.png";
+  else if (bholeStage === 1) coin.src = "bhole1.png";
+  else coin.src = "bhole2.png";
+  break;
+    case "toilet":
+  coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+  coin.src = coin.dataset.toggle === "1" ? "toilet1.png" : "toilet.png";
+  break;
+    case "capsulememe": {
+  let cmStage = parseInt(coin.dataset.cmStage || "0", 10);
+  cmStage = (cmStage + 1) % 6;
+  coin.dataset.cmStage = cmStage;
+  const cmFrames = ["capsule.png","capsule1.png","capsule2.png","capsule3.png","capsule4.png","capsule5.png"];
+  coin.src = cmFrames[cmStage];
+  break;
+    }
     case "cyber_android":
       let cyberStage = parseInt(coin.dataset.cyberStage || "0", 10);
       cyberStage = (cyberStage + 1) % 4;
@@ -2766,17 +2856,22 @@ function updateSkinButtons() {
     "skinCardDirty": 'dirty',
     "skinCardCryptoHeart": 'crypto_heart',
     "skinCardCorrupted": 'corrupted',
-    "skinCardFailed": 'failed'
+    "skinCardFailed": 'failed',
+    "skinCardGoldenSafe": 'goldensafe',
+    "skinCardBlackHole": 'bhole',
+    "skinCardToilet": 'toilet',
+    "skinCardCapsuleMeme": 'capsulememe'
   };
   
   for (const [cardId, skinKey] of Object.entries(secretSkins)) {
     const card = document.getElementById(cardId);
     if (card) {
-      card.style.display = d.skins && d.skins[skinKey] ? "block" : "none";
+      const owned = (d.skins && d.skins[skinKey]) || (d.secretSkins && d.secretSkins[skinKey]);
+      card.style.display = owned ? "block" : "none";
     }
   }
   
-  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android",  "brb", "doge", "corrupted", "failed"];
+  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android",  "brb", "doge", "corrupted", "failed", "goldensafe", "bhole", "toilet", "capsulememe"];
   
   skins.forEach(s => {
     const button = document.getElementById("skin-" + s);
@@ -2873,11 +2968,8 @@ function updateSkinButtons() {
                 button.onclick = null;
             }
 
-        // === ВСТАВЛЕННЫЙ ФРАГМЕНТ ДЛЯ ГЛИТЧ СКИНОВ ===
         } else if (s === "corrupted" || s === "failed") {
-            // Проверяем, есть ли скин (куплен или в секретных)
             const isOwned = d.skins[s] || (d.secretSkins && d.secretSkins[s]);
-
             if (d.skin === s) {
                 button.textContent = t('active');
                 button.className = "active";
@@ -2891,6 +2983,53 @@ function updateSkinButtons() {
                 button.onclick = null;
             }
         // =============================================
+
+        } else if (s === "goldensafe") {
+            const isOwned = d.secretSkins && d.secretSkins['goldensafe'];
+            if (d.skin === 'goldensafe') {
+                button.textContent = t('active');
+                button.className = "active";
+            } else if (isOwned) {
+                button.textContent = t('select');
+                button.className = "";
+                button.onclick = () => applySkin('goldensafe');
+            }
+        } else if (s === "bhole") {
+            const isOwned = d.puzzle3Done;
+            if (d.skin === 'bhole') {
+                button.textContent = t('active');
+                button.className = "active";
+            } else if (isOwned) {
+                button.textContent = t('select');
+                button.className = "";
+                button.onclick = () => applySkin('bhole');
+            }
+        } else if (s === "toilet" || s === "capsulememe") {
+            const isOwned = d.secretSkins && d.secretSkins[s];
+            if (d.skin === s) {
+                button.textContent = t('active');
+                button.className = "active";
+            } else if (isOwned) {
+                button.textContent = t('select');
+                button.className = "";
+                button.onclick = () => applySkin(s);
+            }
+            // если не получен — кнопку вообще не трогаем (карточка hidden)
+
+        } else if (s === "crypto_heart") {
+            const isOwned = d.skins['crypto_heart'] || (d.secretSkins && d.secretSkins['crypto_heart']);
+            if (d.skin === 'crypto_heart') {
+                button.textContent = t('active');
+                button.className = "active";
+            } else if (isOwned) {
+                button.textContent = t('select');
+                button.className = "";
+                button.onclick = () => applySkin('crypto_heart');
+            } else {
+                button.textContent = t('locked');
+                button.className = "owned";
+                button.onclick = null;
+            }
 
         } else if (prices[s] > 0) {
             // Обычная покупка за цену
@@ -2911,7 +3050,7 @@ function updateSkinButtons() {
             button.onclick = null;
         }
     }
-});
+  });
 }
 
 function updateSkinPreviews() {
@@ -2938,7 +3077,11 @@ function updateSkinPreviews() {
     'ruka': 'ruka.png',
     'banditx': 'banditx.png',
     'goldcoin': 'goldcoin.png',
-    'gkspt': 'gkspt.png',                
+    'gkspt': 'gkspt.png',
+    'goldensafe': 'sgold.png',
+    'bhole': 'bhole.png',
+    'toilet': 'toilet.png',
+    'capsulememe': 'capsule.png',              
     'cyber_android': 'robotic.png',
     'dirty': 'dirty.png',
     'siulai': 'siulai.png',
@@ -2968,9 +3111,11 @@ function updateSkinPreviews() {
       } else if (skin === 'artem' || skin === 'kostia' || skin === 'metka' || skin === 'seri') {
         isOwned = d.skins[skin] || false;
       } else if (skin === 'dirty') {
-      isOwned = d.skins[skin] || false;
+        isOwned = d.skins[skin] || false;
       } else if (skin === 'siulai') {
-  isOwned = d.skins && d.skins['siulai'] || d.puzzle2Done;  // Проверяем и владение, и завершение пазла ёпта
+        isOwned = d.skins && d.skins['siulai'] || d.puzzle2Done;
+      } else if (skin === 'goldensafe' || skin === 'corrupted' || skin === 'failed') {
+        isOwned = (d.skins && d.skins[skin]) || (d.secretSkins && d.secretSkins[skin]);
       } else {
         isOwned = d.skins[skin] || (skin === 'default');
       }
@@ -3083,6 +3228,26 @@ function updateBackground() {
         break;
       case "waterbomb":
         body.style.backgroundImage = "url('waterbomb.png')";
+        body.style.backgroundColor = "transparent";
+        break;
+      case "dirt":
+        body.style.backgroundImage = "url('dirt.png')";
+        body.style.backgroundColor = "transparent";
+        break;
+      case "bank":
+        body.style.backgroundImage = "url('bank.png')";
+        body.style.backgroundColor = "transparent";
+        break;
+      case "elit":
+        body.style.backgroundImage = "url('elit.png')";
+        body.style.backgroundColor = "transparent";
+        break;
+      case "alone":
+        body.style.backgroundImage = "url('one.png')";
+        body.style.backgroundColor = "transparent";
+        break;
+      case "scary":
+        body.style.backgroundImage = "url('knife.png')";
         body.style.backgroundColor = "transparent";
         break;
       default:
@@ -3921,6 +4086,7 @@ function checkSecondPuzzleCompletion() {
     updateSkinButtons();
     updateSkinPreviews();
     updateMusicUI();
+    updateThirdPuzzleUI();
   }
 }
 
@@ -3937,27 +4103,7 @@ function updateSecondPuzzleUI() {
     return;
   }
 
-  const delay = 24 * 60 * 60 * 1000;
-  const unlockTime = (d.puzzleDoneTime || 0) + delay;
-
-  if (now < unlockTime) {
-    let timer = document.getElementById("puzzleTimer");
-    if (!timer) {
-      timer = document.createElement('div');
-      timer.id = "puzzleTimer";
-      timer.style.cssText = "color:#ff9800; font-weight:bold; margin-top:10px;";
-      const controls = document.querySelector("#pz1")?.closest(".puzzle-controls");
-      if (controls) controls.appendChild(timer);
-    }
-    const remaining = unlockTime - now;
-    const h = String(Math.floor(remaining / 3600000)).padStart(2,'0');
-    const m = String(Math.floor((remaining % 3600000) / 60000)).padStart(2,'0');
-    const s = String(Math.floor((remaining % 60000) / 1000)).padStart(2,'0');
-    timer.textContent = `Next puzzle in ${h}:${m}:${s}`;
-    timer.style.display = "block";
-    if (card) card.style.display = "none";
-    return;
-  }
+  // Второй пазл появляется сразу после первого
 
   if (card) card.style.display = "block";
   const timerElem = document.getElementById("puzzleTimer");
@@ -4017,6 +4163,69 @@ function updateSecondPuzzleUI() {
     if (completedText) completedText.style.display = "none";
     if (placeBtn) placeBtn.style.display = ownedCount2 > 0 ? "inline-block" : "none";
   }
+}
+
+function checkThirdPuzzleCompletion() {
+  if (d.puzzle3Done) return;
+  let all = true;
+  for (let i = 0; i < 9; i++) { if (d.puzzles3[i] !== 1) { all = false; break; } }
+  if (!all) return;
+
+  d.puzzle3Done = true;
+  if (!d.skins) d.skins = {};
+  d.skins['bhole'] = 1;
+  showToast('🕳️ Black Hole skin unlocked!');
+  save();
+  updateSkinButtons();
+  updateSkinPreviews();
+  updateThirdPuzzleUI();
+}
+
+function updateThirdPuzzleUI() {
+  const card = document.getElementById('thirdPuzzleCard');
+  if (!card) return;
+
+  // Показываем только после завершения второго пазла
+  if (!d.puzzle2Done) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+
+  let owned = 0;
+  for (let i = 0; i < 9; i++) {
+    const cell = document.getElementById('pz3_' + (i + 1));
+    if (cell) {
+      if (d.puzzles3[i] === 1) { cell.classList.add('filled'); owned++; }
+      else cell.classList.remove('filled');
+    }
+  }
+
+  const statusEl = document.getElementById('puzzleStatus3');
+  if (statusEl) statusEl.textContent = d.puzzle3Done ? 'Complete!' : `Owned: ${owned}/9`;
+
+  const fullImg = document.getElementById('puzzleFull3');
+  const doneText = document.getElementById('puzzleCompletedText3');
+  const placeBtn = document.getElementById('btnPlacePiece3');
+
+  if (d.puzzle3Done) {
+    if (fullImg) fullImg.style.display = 'block';
+    if (doneText) doneText.style.display = 'block';
+    if (placeBtn) placeBtn.style.display = 'none';
+  } else {
+    if (fullImg) fullImg.style.display = 'none';
+    if (doneText) doneText.style.display = 'none';
+    if (placeBtn) placeBtn.style.display = owned > 0 ? 'inline-block' : 'none';
+  }
+}
+
+function placePuzzlePieces3() {
+  let placed = false;
+  for (let i = 0; i < 9; i++) {
+    if (d.puzzles3[i] === 1) {
+      const cell = document.getElementById('pz3_' + (i + 1));
+      if (cell) cell.classList.add('filled');
+      placed = true;
+    }
+  }
+  if (placed) { showToast('Puzzle pieces placed!'); save(); checkThirdPuzzleCompletion(); updateThirdPuzzleUI(); ui(); }
 }
 
 function updateCapsuleUI() {
@@ -4088,6 +4297,9 @@ function updateSettingsUI() {
     {id: 'bg-btn-math', key: 'math', price: 0},
     {id: 'bg-btn-code', key: 'code', price: 0},
     {id: 'bg-btn-waterbomb', key: 'waterbomb', price: 0},
+    {id: 'bg-btn-dirt',      key: 'dirt',      price: 0},
+    {id: 'bg-btn-bank',      key: 'bank',      price: 0},
+    {id: 'bg-btn-elit',      key: 'elit',      price: 0},
   ];
   
   bgButtons.forEach(bg => {
@@ -4145,6 +4357,36 @@ function updateSettingsUI() {
              btn.onclick = () => equipBackground('waterbomb');
          } else {
              btn.textContent = '🔒 Bomb Box Only';
+             btn.className = "owned";
+             btn.onclick = null;
+         }
+      } else if (bg.key === 'dirt') {
+         if (d.ownedBgs.includes('dirt')) {
+             btn.textContent = t('select');
+             btn.className = "";
+             btn.onclick = () => equipBackground('dirt');
+         } else {
+             btn.textContent = '🔒 Noob Safe Only';
+             btn.className = "owned";
+             btn.onclick = null;
+         }
+      } else if (bg.key === 'bank') {
+         if (d.ownedBgs.includes('bank')) {
+             btn.textContent = t('select');
+             btn.className = "";
+             btn.onclick = () => equipBackground('bank');
+         } else {
+             btn.textContent = '🔒 Iron Safe Only';
+             btn.className = "owned";
+             btn.onclick = null;
+         }
+      } else if (bg.key === 'elit') {
+         if (d.ownedBgs.includes('elit')) {
+             btn.textContent = t('select');
+             btn.className = "";
+             btn.onclick = () => equipBackground('elit');
+         } else {
+             btn.textContent = '🔒 Elite Safe Only';
              btn.className = "owned";
              btn.onclick = null;
          }
@@ -5870,6 +6112,8 @@ function buyToken() {
   }
   
   d.tokens -= amountKSPT;
+  d.questCryptoBought = (d.questCryptoBought || 0) + amountKSPT;
+  checkQuestProgress('buy_crypto');
   let tokensBought = amountKSPT / tokenData.price;
   tokenData.owned += tokensBought;
   tokenData.lastBuyTime = now;
@@ -5919,6 +6163,8 @@ function sellToken() {
   tokenData.owned -= amountTokens;
   let earnedKSPT = amountTokens * tokenData.price;
   d.tokens += earnedKSPT;
+  d.questExchangeVolume = (d.questExchangeVolume || 0) + earnedKSPT;
+  checkQuestProgress('exchange_volume');
   tokenData.lastUserSellPrice = tokenData.price;
   save();
   ui();
@@ -6357,10 +6603,13 @@ if (d.tapBoostEnd > now) {
     
     d.energy -= cost;
     let earned = 0.01 * m + tapBoostBonus;
+    d.questTapEarned = (d.questTapEarned || 0) + earned;
     earned *= _adminGetEventMulti();
     d.tokens += earned;
     d.totalTaps = (d.totalTaps || 0) + 1;
+    d.questTapCount = (d.questTapCount || 0) + 1;
     if (d.totalTaps === 1 && window._firebaseReady) pushMyLeaderboardData();
+    checkQuestProgress('tap_coin');
     
     showTapFloat(e, earned);
     
@@ -6809,6 +7058,8 @@ function confirmBet() {
     const won = amount * mult;
     d.tokens += won;
     
+    d.questBetWins = (d.questBetWins || 0) + 1;
+    checkQuestProgress('bet_win');
     if (mult === 10 && !d.wonX10) {
       d.wonX10 = true;
       showToast(`WON x${mult} BET! ${won} KSPT! Prize skin unlocked!`);
@@ -7343,6 +7594,35 @@ async function adminGiveTicketsPlayer() {
   showToast(`🎫 +${count} tickets queued`);
 }
 
+/* ---- MOD: View / Give / Take player skins ---- */
+async function adminLoadPlayerSkins() {
+  const uid = _adminSelectedUid();
+  if (!uid) { showToast('Select a player first'); return; }
+  const container = document.getElementById('apPlayerSkinsList');
+  if (!container) return;
+  container.textContent = 'Loading...';
+  const snap = await _db.ref(`users/${uid}/skins`).once('value').catch(() => null)
+    || await _db.ref(`leaderboard/${uid}/skins`).once('value').catch(() => null);
+  const skins = snap ? snap.val() : null;
+  if (!skins) { container.textContent = 'No skins data found.'; return; }
+  const owned = Object.entries(skins).filter(([k,v]) => v && v !== '0').map(([k]) => k);
+  container.textContent = owned.length ? owned.join(', ') : 'No skins owned.';
+}
+async function adminModGiveSkin() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) { showToast('Select a player'); return; }
+  const skinId = document.getElementById('apModSkinId').value;
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'giveSkinMod', skinId, take: false, ts: Date.now() });
+  showToast(`✅ Skin "${skinId}" give queued`);
+}
+async function adminModTakeSkin() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) { showToast('Select a player'); return; }
+  const skinId = document.getElementById('apModSkinId').value;
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'giveSkinMod', skinId, take: true, ts: Date.now() });
+  showToast(`✅ Skin "${skinId}" take queued`);
+}
+
 /* ---- MOD: Remove from Leaderboard ---- */
 async function adminRemoveFromLeaderboard() {
   if (!_isAdminUser()) return;
@@ -7440,37 +7720,49 @@ function _startAdminListener() {
 
   _db.ref('admin/tempSkin').on('value', snap => {
     const v = snap.val();
-    if (!v || v.ts <= _adminPollTs.tempSkin) return;
-    _adminPollTs.tempSkin = v.ts;
+    if (!v) return;
     if (v.onlineOnly && !_wasOnline(v.ts)) return;
     if (v.end > Date.now()) {
-      window._adminTempSkin = { skinId: v.skinId, end: v.end };
+      // Сначала откатываем предыдущий temp скин если был
+      if (window._adminTempSkin) {
+        const prev = window._adminTempSkin.skinId;
+        if (d.skins && d.skins[prev] === '_temp') delete d.skins[prev];
+        // Восстанавливаем оригинальный скин до применения нового
+        d.skin = d._adminTempSkinOrigSkin || 'default';
+      }
+      clearTimeout(window._adminTempSkinTimeout);
+
       if (v.skinId && v.skinId !== 'default') {
         if (!d.skins) d.skins = {};
-        // Save previous skin for restore
-        d._adminTempSkinPrevSkin = d.skin;
-        d._adminTempSkinPrevOwned = d.skins[v.skinId]; // undefined / 0 / 1
-        // Grant temp ownership and equip
+        // Сохраняем ОРИГИНАЛЬНЫЙ скин (не временный)
+        if (!window._adminTempSkin) {
+          d._adminTempSkinOrigSkin = d.skin;
+        }
+        window._adminTempSkin = { skinId: v.skinId, end: v.end };
         if (!d.skins[v.skinId]) d.skins[v.skinId] = '_temp';
         d.skin = v.skinId;
         save();
         if (typeof ui === 'function') ui();
-        // Auto-restore after duration
         const msLeft = v.end - Date.now();
-        clearTimeout(window._adminTempSkinTimeout);
         window._adminTempSkinTimeout = setTimeout(() => {
           if (window._adminTempSkin && window._adminTempSkin.skinId === v.skinId) {
             window._adminTempSkin = null;
-            if (d.skins[v.skinId] === '_temp') delete d.skins[v.skinId];
-            d.skin = d._adminTempSkinPrevSkin || 'default';
-            delete d._adminTempSkinPrevSkin;
-            delete d._adminTempSkinPrevOwned;
+            if (d.skins && d.skins[v.skinId] === '_temp') delete d.skins[v.skinId];
+            d.skin = d._adminTempSkinOrigSkin || 'default';
+            delete d._adminTempSkinOrigSkin;
             save();
             if (typeof ui === 'function') ui();
             showToast('🎨 Temp skin expired');
           }
         }, msLeft);
         showToast(`🎨 Temp skin "${v.skinId}" applied! (${Math.round(msLeft/60000)}min)`);
+      } else {
+        // default — сбрасываем
+        window._adminTempSkin = null;
+        d.skin = d._adminTempSkinOrigSkin || 'default';
+        delete d._adminTempSkinOrigSkin;
+        save();
+        if (typeof ui === 'function') ui();
       }
     }
   });
@@ -7494,9 +7786,12 @@ function _startAdminListener() {
       _adminUpdateActiveBar();
       return;
     }
-    if (v.ts <= _adminPollTs.forceMusic) return;
-    _adminPollTs.forceMusic = v.ts;
     if (v.onlineOnly && !_wasOnline(v.ts)) return;
+    if (v.end <= Date.now()) {
+      window._adminForcedMusic = null;
+      if (typeof ensureMusicPlays === 'function') ensureMusicPlays();
+      return;
+    }
     if (!v.track || v.end <= Date.now()) {
       window._adminForcedMusic = null;
       if (typeof ensureMusicPlays === 'function') ensureMusicPlays();
@@ -7507,7 +7802,10 @@ function _startAdminListener() {
     const trackFiles = {
       mistic:'mistic.mp3', gabber:'gabber.mp3', onion:'onion.mp3', calm:'calm.mp3',
       siulai:'siulai.mp3', funny:'funny.mp3', code:'code.mp3',
-      catito:'catito.mp3', event:'event.mp3'
+      catito:'catito.mp3', event:'event.mp3',
+      amarrun:'amarrun.mp3', brain:'brain.mp3', saliutas:'saliutas.mp3',
+      klikobak:'klikobak.mp3', rickroll:'rickroll.mp3', tiktok:'tiktok.mp3',
+      batidao:'batidao.mp3', eind:'eind.mp3'
     };
     try {
       window.appMusic.src = trackFiles[v.track] || (v.track + '.mp3');
@@ -7534,8 +7832,7 @@ function _startAdminListener() {
   // Effects listener
   _db.ref('admin/effects').on('value', snap => {
     const v = snap.val();
-    if (!v || v.ts <= _adminPollTs.effects) return;
-    _adminPollTs.effects = v.ts;
+    if (!v) { _adminClearEffects(); return; }
     if (v.onlineOnly && !_wasOnline(v.ts)) return;
     if (v.end > Date.now()) {
       window._adminEffectsEndTs = v.end;
@@ -7550,8 +7847,7 @@ function _startAdminListener() {
   // UI Chaos listener
   _db.ref('admin/uiChaos').on('value', snap => {
     const v = snap.val();
-    if (!v || v.ts <= _adminPollTs.uiChaos) return;
-    _adminPollTs.uiChaos = v.ts;
+    if (!v) { _adminResetUIChaos(); return; }
     if (v.onlineOnly && !_wasOnline(v.ts)) return;
     if (v.end > Date.now()) {
       window._adminChaosEndTs = v.end;
@@ -7560,6 +7856,29 @@ function _startAdminListener() {
     } else {
       window._adminChaosEndTs = 0;
       _adminResetUIChaos();
+    }
+  });
+
+_db.ref('admin/bgVideo').on('value', snap => {
+    const v = snap.val();
+    if (!v) { _adminClearBgVideo(); return; }
+    if (v.onlineOnly && !_wasOnline(v.ts)) return;
+    if (v.end > Date.now()) {
+      _adminApplyBgVideo(v.src, v.end - Date.now());
+    } else {
+      _adminClearBgVideo();
+    }
+  });
+
+_db.ref('admin/coinControl').on('value', snap => {
+    const v = snap.val();
+    if (!v) { _adminClearCoinControl(); return; }
+    if (v.end > Date.now()) {
+      _adminApplyCoinControl(v.dir, v.speed);
+      clearTimeout(window._adminCoinControlTimeout);
+      window._adminCoinControlTimeout = setTimeout(() => _adminClearCoinControl(), v.end - Date.now());
+    } else {
+      _adminClearCoinControl();
     }
   });
 
@@ -7798,6 +8117,18 @@ function _adminApplyEffects(effects, durationMs) {
     const n = Math.round(7 * (sMap[effects.concert] || 0.65));
     for (let i = 0; i < n; i++) _adminEffectParticles.push({ t:'concert', x:Math.random()*W, angle:-Math.PI/2 + Math.random()*0.5-0.25, hue:Math.round(Math.random()*360), speed:0.04+Math.random()*0.06, sweep:0 });
   }
+ if (effects.beat) {
+    const intensity = effects.beat === 'weak' ? 3 : effects.beat === 'strong' ? 12 : 6;
+    const freq = effects.beat === 'weak' ? 600 : effects.beat === 'strong' ? 180 : 350;
+    _adminEffectParticles.push({ t:'beat', intensity, freq, timer:0 });
+  }
+  if (effects.yinyang) {
+    const strength = sMap[effects.yinyang] || 0.65;
+    _adminEffectParticles.push({ t:'yinyang', strength, phase:0 });
+    // Apply grayscale to body
+    document.body.style.filter = `grayscale(${Math.round(strength * 100)}%)`;
+    window._adminYinYangActive = true;
+  }
 
   function draw() {
     ctx.clearRect(0, 0, W, H);
@@ -7862,6 +8193,34 @@ function _adminApplyEffects(effects, durationMs) {
           ctx.closePath(); ctx.fill(); ctx.restore();
           p.sweep += p.speed; if (Math.abs(p.sweep) > 0.65) p.speed *= -1;
           break;
+        case 'beat':
+          p.timer++;
+          if (p.timer >= Math.round(p.freq / 16)) {
+            p.timer = 0;
+            const app = document.querySelector('.app') || document.body;
+            const dx = (Math.random() - 0.5) * p.intensity;
+            const dy = (Math.random() - 0.5) * p.intensity;
+            app.style.transform = `translate(${dx}px,${dy}px)`;
+            setTimeout(() => { app.style.transform = ''; }, 80);
+          }
+          break;
+        case 'yinyang':
+          p.phase += 0.02;
+          // Animated b&w blobs on canvas
+          const blobCount = 3;
+          for (let b = 0; b < blobCount; b++) {
+            const bx = W * 0.5 + Math.cos(p.phase + b * Math.PI * 2 / blobCount) * W * 0.3;
+            const by = H * 0.5 + Math.sin(p.phase * 0.7 + b * Math.PI * 2 / blobCount) * H * 0.3;
+            const grad2 = ctx.createRadialGradient(bx, by, 0, bx, by, W * 0.4);
+            const isWhite = b % 2 === 0;
+            grad2.addColorStop(0, isWhite ? 'rgba(255,255,255,0.18)' : 'rgba(0,0,0,0.22)');
+            grad2.addColorStop(1, 'rgba(0,0,0,0)');
+            ctx.save(); ctx.globalAlpha = p.strength * 0.8;
+            ctx.fillStyle = grad2;
+            ctx.beginPath(); ctx.arc(bx, by, W * 0.4, 0, Math.PI * 2);
+            ctx.fill(); ctx.restore();
+          }
+          break;
       }
     });
     _adminEffectRAF = requestAnimationFrame(draw);
@@ -7879,6 +8238,14 @@ function _adminClearEffects() {
   if (c) c.remove();
   _adminEffectParticles = [];
   if (_adminEffectTimers.main) { clearTimeout(_adminEffectTimers.main); delete _adminEffectTimers.main; }
+  // Clear beat transform
+  const app = document.querySelector('.app') || document.body;
+  app.style.transform = '';
+  // Clear yinyang grayscale
+  if (window._adminYinYangActive) {
+    document.body.style.filter = '';
+    window._adminYinYangActive = false;
+  }
 }
 
 /* ---- UI Chaos ---- */
@@ -7935,7 +8302,9 @@ function _adminApplyTapEvent(v) {
       xfone:"url('xfone.png')", code:"url('code.png')", cosmops:"url('cosmops.png')",
       ligting:"url('ligting.png')", fire:"url('fire.png')", ogon:"url('ogon.png')",
       king:"url('king.png')", castle:"url('castle.png')", admin:"url('admin.png')",
-      meme:"url('meme.png')", hole:"url('hole.png')"
+      meme:"url('meme.png')", hole:"url('hole.png')",
+      waterbomb:"url('waterbomb.png')", dirt:"url('dirt.png')", bank:"url('bank.png')",
+      elit:"url('elit.png')", alone:"url('one.png')", scary:"url('knife.png')"
     };
     document.body.style.backgroundImage = bgMap[v.bg] || 'none';
     document.body.style.backgroundSize = 'cover';
@@ -8082,6 +8451,30 @@ function _adminApplyOpening(type) {
       save(); showToast('💣 Bomb Box from Admin!');
       if (typeof startBombBoxSequence === 'function') startBombBoxSequence();
       break;
+    case 'safeNoob':
+    case 'safeIron':
+    case 'safeElite': {
+      const st = type.replace('safe','').toLowerCase();
+      if (!d.safe) d.safe = {};
+      d.safe.lastOpen = 0;
+      save(); showToast(`🔒 ${st} Safe from Admin!`);
+      if (typeof _startSafeOpening === 'function') _startSafeOpening(st);
+      break;
+    }
+      case 'keyYellow':
+    case 'keyGreen':
+    case 'keyRed':
+    case 'keyBlue':
+    case 'keyBlack': {
+      if (!d.keys) d.keys = {};
+      const keyMap = { keyYellow:'yellow', keyGreen:'green', keyRed:'red', keyBlue:'blue', keyBlack:'black' };
+      const k = keyMap[type];
+      d.keys[k] = (d.keys[k] || 0) + 1;
+      const emoji = { yellow:'🟡', green:'🟢', red:'🔴', blue:'🔵', black:'⚫' };
+      save(); if (typeof ui === 'function') ui();
+      _adminShowOverlay(`${emoji[k]} Admin gave you a ${k} key!`, '#ffd700', 4000);
+      break;
+    }
       case 'fortuneWheel':
       window._freeWheelSpin = true;
       // Reset cooldown so openFortuneWheel passes all checks
@@ -8135,6 +8528,10 @@ function _adminApplySkipCooldown(type) {
     if (!d.boost) d.boost = {};
     d.boost.cdEnd = 0;
   }
+  if (type === 'safe' || type === 'all') {
+    if (!d.safe) d.safe = {};
+    d.safe.lastOpen = 0;
+  }
   save();
   if (typeof ui === 'function') ui();
   showToast(`⏩ Cooldown skipped (${type})!`);
@@ -8177,6 +8574,20 @@ function _adminApplyModAction(v) {
       break;
     case 'giveOpening':
       _adminApplyOpening(v.type);
+      break;
+    case 'giveSkinMod':
+      if (!d) return;
+      if (!d.skins) d.skins = {};
+      if (v.take) {
+        delete d.skins[v.skinId];
+        if (d.secretSkins) delete d.secretSkins[v.skinId];
+        if (d.skin === v.skinId) d.skin = 'default';
+      } else {
+        d.skins[v.skinId] = 1;
+      }
+      save(); if (typeof ui === 'function') ui();
+      if (typeof updateSkinButtons === 'function') updateSkinButtons();
+      _adminShowOverlay(v.take ? `🎨 Skin "${v.skinId}" removed` : `🎨 Admin gave skin: ${v.skinId}!`, '#c084fc', 4000);
       break;
     case 'giveTickets':
       if (typeof gameTickets !== 'undefined') {
@@ -8359,17 +8770,28 @@ function _explodeBomb() {
         for (let i = 0; i < 9; i++) if (d.puzzles[i] === 0) missing1.push(i);
         const missing2 = [];
         for (let i = 0; i < 9; i++) if (d.puzzles2[i] === 0) missing2.push(i);
-        const allMissing = [...missing1.map(i => ({p:1,i})), ...missing2.map(i => ({p:2,i}))];
+        const missing3 = [];
+        for (let i = 0; i < 9; i++) if (d.puzzles3[i] === 0) missing3.push(i);
+        const allMissing = [
+          ...(!d.puzzleDone ? missing1.map(i => ({p:1,i})) : []),
+          ...(!d.puzzle2Done ? missing2.map(i => ({p:2,i})) : []),
+          ...(!d.puzzle3Done ? missing3.map(i => ({p:3,i})) : [])
+        ];
         if (allMissing.length > 0) {
           const pick = allMissing[Math.floor(Math.random() * allMissing.length)];
           if (pick.p === 1) {
             d.puzzles[pick.i] = 1;
             rewardText = `Puzzle Piece ${pick.i+1} obtained!`;
             rewardImg = `pazl${pick.i+1}.png`;
-          } else {
+          } else if (pick.p === 2) {
             d.puzzles2[pick.i] = 1;
             rewardText = `Puzzle Piece ${pick.i+11} obtained!`;
             rewardImg = `pazl${pick.i+11}.png`;
+          } else {
+            d.puzzles3[pick.i] = 1;
+            rewardText = `Puzzle Piece ${pick.i+20} obtained!`;
+            rewardImg = `puzl${pick.i+1}.png`;
+            if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI();
           }
         } else {
           d.tokens += 10;
@@ -8382,13 +8804,13 @@ function _explodeBomb() {
         if (!d.keys) d.keys = defaultData.keys;
         d.keys.yellow = (d.keys.yellow || 0) + 1;
         rewardText = '🟡 Yellow Key obtained!';
-        rewardImg = 'kspt.png';
+        rewardImg = 'yellow.png';
         break;
       case 'blackKey':
         if (!d.keys) d.keys = defaultData.keys;
         d.keys.black = (d.keys.black || 0) + 1;
-        rewardText = '⚫ Black Key (Joker) obtained!';
-        rewardImg = 'kspt.png';
+        rewardText = '⚫ Black Key obtained!';
+        rewardImg = 'black.png';
         break;
       case 'bg':
         if (!d.ownedBgs) d.ownedBgs = ['default'];
@@ -8413,6 +8835,7 @@ function _explodeBomb() {
     if (typeof ui === 'function') ui();
     if (typeof updatePuzzleUI === 'function') updatePuzzleUI();
     if (typeof updateSecondPuzzleUI === 'function') updateSecondPuzzleUI();
+    if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI(); 
 
     // Close modal
     if (modal) modal.classList.remove('active');
@@ -8420,6 +8843,19 @@ function _explodeBomb() {
 
     // Show reward popup
     showReward(rewardText, rewardImg);
+
+    // Если бомба из сейфа — перехватываем Collect для следующей задачи
+    if (window._safeBoomCallback) {
+      const cb = window._safeBoomCallback;
+      window._safeBoomCallback = null;
+      const btn = document.querySelector('#rewardPopup button');
+      if (btn) {
+        btn.onclick = () => {
+          document.getElementById('rewardPopup').style.display = 'none';
+          setTimeout(cb, 400);
+        };
+      }
+    }
   }, 600);
 }
 
@@ -8442,6 +8878,13 @@ function closeBombBoxModal() {
   const img = document.getElementById('bombBoxImg');
   if (img) { img.style.transform = ''; img.style.filter = ''; }
   if (modal) modal.classList.remove('active');
+
+  // Запускаем следующую задачу из очереди сейфа
+  if (window._safeBoomCallback) {
+    const cb = window._safeBoomCallback;
+    window._safeBoomCallback = null;
+    setTimeout(cb, 400);
+  }
 }
 
  // ==========================================
@@ -8554,9 +8997,8 @@ function openNoobBox() {
 
       case 'puzzle':
         const now = Date.now();
-        const delay = 24 * 60 * 60 * 1000;
+        const delay = 0;
         if (!d.puzzleDone) {
-          // First puzzle
           const missing1 = [];
           for (let i = 0; i < 9; i++) if (d.puzzles[i] === 0) missing1.push(i);
           if (missing1.length > 0) {
@@ -8573,8 +9015,7 @@ function openNoobBox() {
           d.tokens += 5;
           rewardText = "+5 KSPT (Next puzzle not ready)!";
           rewardImg = "kspt.png";
-        } else {
-          // Second puzzle
+        } else if (!d.puzzle2Done) {
           const missing2 = [];
           for (let i = 0; i < 9; i++) if (d.puzzles2[i] === 0) missing2.push(i);
           if (missing2.length > 0) {
@@ -8583,8 +9024,22 @@ function openNoobBox() {
             rewardText = `Puzzle Piece ${idx+11} obtained!`;
             rewardImg = `pazl${idx+11}.png`;
           } else {
-            d.tokens += 5;
-            rewardText = "+5 KSPT (All puzzle pieces owned)!";
+            d.tokens += 50;
+            rewardText = "+50 KSPT (All puzzle pieces owned)!";
+            rewardImg = "kspt.png";
+          }
+        } else {
+          const missing3 = [];
+          for (let i = 0; i < 9; i++) if (d.puzzles3[i] === 0) missing3.push(i);
+          if (missing3.length > 0) {
+            const idx = missing3[Math.floor(Math.random() * missing3.length)];
+            d.puzzles3[idx] = 1;
+            rewardText = `Puzzle Piece ${idx+20} obtained!`;
+            rewardImg = `puzl${idx+1}.png`;
+            if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI();
+          } else {
+            d.tokens += 100;
+            rewardText = "+100 KSPT (All puzzle pieces owned)!";
             rewardImg = "kspt.png";
           }
         }
@@ -8634,6 +9089,22 @@ function openNoobBox() {
     ui();
     updatePuzzleUI();
     if (updateSecondPuzzleUI) updateSecondPuzzleUI();
+    if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI();
+
+    // Следующая задача из очереди сейфа — ждём нажатия Collect
+    if (window._safeNoobCallback) {
+      const cb = window._safeNoobCallback;
+      window._safeNoobCallback = null;
+      const btn = document.querySelector('#rewardPopup button');
+      if (btn) {
+        btn.onclick = () => {
+          document.getElementById('rewardPopup').style.display = 'none';
+          setTimeout(cb, 400);
+        };
+      } else {
+        setTimeout(cb, 400);
+      }
+    }
 
   }, 300);
 }
@@ -8705,6 +9176,8 @@ function openCapsule() {
     setTimeout(() => {
       // Select reward based on weighted probability
       const reward = getWeightedRandomReward();
+      d.questCapsuleOpened = (d.questCapsuleOpened || 0) + 1;
+      checkQuestProgress('capsule');
       let rewardText = "";
       let rewardImg = reward.img || "kspt.png";
       
@@ -8735,7 +9208,7 @@ function openCapsule() {
           
         case 'puzzle':
   const now = Date.now();
-  const delay = 24 * 60 * 60 * 1000;
+  const delay = 0;
   if (!d.puzzleDone) {
     const missing1 = [];
     for (let i = 0; i < 9; i++) if (d.puzzles[i] === 0) missing1.push(i);
@@ -8754,7 +9227,7 @@ function openCapsule() {
     d.tokens += 10;
     rewardText = "+10 KSPT (Next puzzle not ready)!";
     rewardImg = "kspt.png";
-  } else {
+  } else if (!d.puzzle2Done) {
     const missing2 = [];
     for (let i = 0; i < 9; i++) if (d.puzzles2[i] === 0) missing2.push(i);
     if (missing2.length > 0) {
@@ -8764,8 +9237,23 @@ function openCapsule() {
       rewardImg = `pazl${idx+11}.png`;
       showReward(rewardText, rewardImg);
     } else {
-      d.tokens += 10;
-      rewardText = "+10 KSPT (All second puzzle pieces owned)!";
+      d.tokens += 100;
+      rewardText = "+100 KSPT (All second puzzle pieces owned)!";
+      rewardImg = "kspt.png";
+    }
+  } else {
+    const missing3 = [];
+    for (let i = 0; i < 9; i++) if (d.puzzles3[i] === 0) missing3.push(i);
+    if (missing3.length > 0) {
+      const idx = missing3[Math.floor(Math.random() * missing3.length)];
+      d.puzzles3[idx] = 1;
+      rewardText = `Puzzle Piece ${idx+20} obtained!`;
+      rewardImg = `puzl${idx+1}.png`;
+      showReward(rewardText, rewardImg);
+      if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI();
+    } else {
+      d.tokens += 100;
+      rewardText = "+100 KSPT (All puzzle pieces owned)!";
       rewardImg = "kspt.png";
     }
   }
@@ -8833,6 +9321,21 @@ if (siulaiTopBtn) {
       
       // Show reward
       showReward(rewardText, rewardImg);
+
+      // Если капсула открыта из сейфа — перехватываем Collect
+      if (window._safeCapsuleActive) {
+        window._safeCapsuleActive = false;
+        const btn = document.querySelector('#rewardPopup button');
+        if (btn) {
+          btn.onclick = () => {
+            document.getElementById('rewardPopup').style.display = 'none';
+            if (window._safeCapsuleCallback) {
+              window._safeCapsuleCallback();
+              window._safeCapsuleCallback = null;
+            }
+          };
+        }
+      }
       
       // Hide capsule modal
       modal.classList.remove("active");
@@ -8842,15 +9345,9 @@ if (siulaiTopBtn) {
       updatePuzzleUI();
       
       // Reset capsule opening flag and cleanup
-      setTimeout(() => {
-        capsuleOpening = false;
-        // Remove the handler and reset capsuleTaps
-        const capsuleImg = document.getElementById("capsuleBreakImg");
-        if (capsuleImg) {
-          capsuleImg.removeEventListener('click', capsuleTapHandler);
-        }
-        capsuleTaps = 0;
-      }, 3000);
+      capsuleOpening = false;
+      capsuleTaps = 0;
+      if (capsuleImg) capsuleImg.removeEventListener('click', capsuleTapHandler);
       
     }, 1500);
     
@@ -8966,9 +9463,8 @@ function openGoldCapsule() {
       case 'puzzle':
         // follow same rules as main capsule:
         const now = Date.now();
-        const delay = 24 * 60 * 60 * 1000;
+        const delay = 0;
         if (!d.puzzleDone) {
-          // first puzzle logic
           const missing1 = [];
           for (let i = 0; i < 9; i++) if (d.puzzles[i] === 0) missing1.push(i);
           if (missing1.length > 0) {
@@ -8985,7 +9481,7 @@ function openGoldCapsule() {
           d.tokens += 10;
           rewardText = "+10 KSPT (Next puzzle not ready)!";
           rewardImg = "kspt.png";
-        } else {
+        } else if (!d.puzzle2Done) {
           const missing2 = [];
           for (let i = 0; i < 9; i++) if (d.puzzles2[i] === 0) missing2.push(i);
           if (missing2.length > 0) {
@@ -8994,8 +9490,22 @@ function openGoldCapsule() {
             rewardText = `Puzzle Piece ${idx+11} obtained!`;
             rewardImg = `pazl${idx+11}.png`;
           } else {
-            d.tokens += 40;
-            rewardText = "+40 KSPT (All second puzzle pieces owned)!";
+            d.tokens += 150;
+            rewardText = "+150 KSPT (All second puzzle pieces owned)!";
+            rewardImg = "kspt.png";
+          }
+        } else {
+          const missing3 = [];
+          for (let i = 0; i < 9; i++) if (d.puzzles3[i] === 0) missing3.push(i);
+          if (missing3.length > 0) {
+            const idx = missing3[Math.floor(Math.random() * missing3.length)];
+            d.puzzles3[idx] = 1;
+            rewardText = `Puzzle Piece ${idx+20} obtained!`;
+            rewardImg = `puzl${idx+1}.png`;
+            if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI();
+          } else {
+            d.tokens += 200;
+            rewardText = "+200 KSPT (All puzzle pieces owned)!";
             rewardImg = "kspt.png";
           }
         }
@@ -9083,6 +9593,7 @@ function openGoldCapsule() {
     if (typeof ui === 'function') ui();
     if (typeof updatePuzzleUI === 'function') updatePuzzleUI();
     if (typeof updateSecondPuzzleUI === 'function') updateSecondPuzzleUI();
+    if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI(); 
 
   }, 700);  // <-- это закрывает setTimeout
 }  // <-- это закрывает функцию openGoldCapsule
@@ -9160,6 +9671,7 @@ function placePuzzlePieces2() {
       save();
   checkSecondPuzzleCompletion();
   updateSecondPuzzleUI();
+  if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI();
   ui();
   }
 }
@@ -9474,6 +9986,8 @@ function initGame() {
             d.energy = Math.min(d.maxEnergy, d.energy + regenRate);
             ui();
         }
+        d.questOnlineSecs = (d.questOnlineSecs || 0) + 1;
+        if (d.questOnlineSecs % 10 === 0) checkQuestProgress('online_time');
     }, 1000);
 }
 
@@ -9520,18 +10034,8 @@ function showIventTab(tab) {
 }
 
 function loadIventsDirect() {
-  const container = document.getElementById('iventContainer');
-  if (!container) return;
-
-  // Используем FALLBACK_IVENTS напрямую
-  currentIvent = null;
-
-  if (!currentIvent) {
-    container.innerHTML = '<div class="ivent-info">' + t('ivent_no_events') + '</div>';
-    return;
-  }
-
-  renderIvent(currentIvent);
+  // Теперь эта вкладка — Quests & Safes
+  initQuestsTab();
 }
 
 // Загрузить события из файла
@@ -10066,7 +10570,7 @@ function buyKeyItem(keyColor, item) {
   // === НОВАЯ БЛОКИРОВКА ДЛЯ ПАЗЛОВ (КРАСНЫЙ КЛЮЧ) ===
   if (item.type === 'puzzle') {
       const now = Date.now();
-      const delay = 24 * 60 * 60 * 1000;
+      const delay = 0;
 
       // Проверяем 1-й набор пазлов
       if (!d.puzzleDone) {
@@ -10220,7 +10724,7 @@ function openMultipleCapsules(count) {
 // Дать случайный кусочек пазла
 function giveRandomPuzzlePiece() {
   const now = Date.now();
-  const delay = 24 * 60 * 60 * 1000;
+  const delay = 0;
   
   if (!d.puzzleDone) {
     // --- Первый пазл ---
@@ -10264,11 +10768,14 @@ function giveRandomPuzzlePiece() {
   updatePuzzleUI();
   // Добавляем проверку на существование функции, чтобы не было ошибок
   if (typeof updateSecondPuzzleUI === 'function') updateSecondPuzzleUI();
+  if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI(); 
 }
 
 // Активировать tap boost
 function activateTapBoost(durationSeconds) {
   d.tapBoostEnd = Date.now() + (durationSeconds * 1000);
+  d.questOverdriveUses = (d.questOverdriveUses || 0) + 1;
+  checkQuestProgress('overdrive');
   showToast(`Tap boost activated! +0.10 KSPT per tap for ${Math.floor(durationSeconds / 60)}min`);
   
   // Меняем фон на fire.png
@@ -10869,10 +11376,10 @@ function openLeaderboard() {
   const modal = document.getElementById('leaderboardModal');
   if (modal) modal.style.display = 'block';
   document.body.style.overflow = 'hidden';
+  // Сначала пишем свои данные, потом загружаем
+  pushMyLeaderboardData();
   loadLeaderboard();
   _lbInterval = setInterval(loadLeaderboard, 10000);
-  // Push own data first
-  pushMyLeaderboardData();
 }
 
 function closeLeaderboard() {
@@ -11591,17 +12098,17 @@ function openGlitchBox() {
 // Получить случайную награду из Glitch Box
 function getGlitchReward() {
   const rewards = [
-    // 20% - +4.5 часа offline дохода KSPT
-    { type: 'kspt', chance: 20, value: () => Math.floor(getHourlyRate() * 4.5 / 100) * 100, name: '+4.5h Income', img: 'kspt.png' },
+    // 20% - +6 часов offline дохода KSPT
+    { type: 'kspt', chance: 20, value: () => Math.floor(getHourlyRate() * 6.0 / 100) * 100, name: '+6.0h Income', img: 'kspt.png' },
     
-    // 20% - x2 offline доход на 8 часов
-    { type: 'offline2x', chance: 20, duration: 8, name: 'x2 Offline for 8h', img: 'k.png' },
+    // 20% - x2 offline доход на 12 часов
+    { type: 'offline2x', chance: 20, duration: 12, name: 'x2 Offline for 12h', img: 'k.png' },
     
     // 15% - fake jackpot (показываем 10M, потом реальную награду)
     { type: 'fakeJackpot', chance: 15, realValue: () => Math.floor(getHourlyRate() * 15 / 100) * 100, name: 'Jackpot!', img: 'kspt.png' },
     
-    // 10% - +5 EK
-    { type: 'ek', chance: 10, value: 5, name: '+5 EK', img: 'ek.png' },
+    // 10% - +10 EK
+    { type: 'ek', chance: 10, value: 10, name: '+10 EK', img: 'ek.png' },
     
     // 10% - Yellow key
     { type: 'key', chance: 10, color: 'yellow', name: 'Yellow Key', img: 'yellow.png' },
@@ -11613,7 +12120,7 @@ function getGlitchReward() {
     { type: 'bg', chance: 5, id: 'code', name: 'Background: Code', img: 'code.png' },
     
     // 5% - МУЗЫКА CODE
-    { type: 'music', chance: 5, id: 'code', name: 'Music: Code Rhythm', img: 'code.png' }, // Используем ту же картинку или другую
+    { type: 'music', chance: 5, id: 'code', name: 'Music: Code Rhythm', img: 'coder.png' }, // Используем ту же картинку или другую
     
     // 4% - Green key
     { type: 'key', chance: 4, color: 'green', name: 'Green Key', img: 'green.png' },
@@ -11672,6 +12179,8 @@ function applyGlitchReward(reward) {
     case 'ek':
       if (!d.ek) d.ek = 0;
       d.ek += reward.value;
+      d.questEkEarned = (d.questEkEarned || 0) + reward.value;
+      checkQuestProgress('earn_ek');
       break;
       
     case 'key':
@@ -12246,5 +12755,808 @@ function _startFirebaseSync() {
   }, 28000);
 }
 
+// ==========================================
+// QUESTS SYSTEM
+// ==========================================
+
+const QUEST_GAME_NAMES = ['Snake Game', 'Ping-Pong', 'BlocksFast', 'Slither: KSPT Mode', 'Ghost Train', 'KSPT Races'];
+const QUEST_GAME_IDS   = ['snake',      'pingpong',  'blocksfast', 'slither',            'train',       'race'];
+const QUEST_GAME_ICONS = ['snake.png',  'pong.png',  'tetris.png', 'slither.png',        'train.png',   'race.png'];
+
+function getQuestCryptoPool() {
+  const base = [
+    { name: 'KSP Token', icon: 'kspt.png' },
+    { name: 'BANX',       icon: 'banx.png' },
+    { name: 'JVM',        icon: 'jvm.png' },
+  ];
+  // Добавляем пользовательские токены из Firebase если есть
+  const userTokens = (d && d.market && d.market.myTokens) ? d.market.myTokens : [];
+  userTokens.forEach(tok => {
+    if (tok && tok.ticker) {
+      base.push({
+        name: tok.ticker,
+        icon: tok.icon || 'kspt.png'  // icon может быть base64 или путь
+      });
+    }
+  });
+  return base;
+}
+
+function getDailyQuestTemplates() {
+  const gi = Math.floor(Math.random() * QUEST_GAME_IDS.length);
+  const pool = getQuestCryptoPool();
+  const ci = Math.floor(Math.random() * pool.length);
+  return [
+    { id: 'tap_coin',    title: 'Tap the coin 1000 times',                                   icon: 'kspt.png',             target: 1000,  check: d => (d.questTapCount||0) },
+    { id: 'tap_earn',    title: 'Earn 25 KSPT from tapping',                                 icon: 'kspt.png',             target: 25,    check: d => (d.questTapEarned||0) },
+    { id: 'bet_win',     title: 'Win BET 3 times',                                           icon: 'yes.png',           target: 3,     check: d => (d.questBetWins||0) },
+    { id: 'overdrive',   title: 'Use Temporary Overdrive 3 times',                           icon: 'game.png',         target: 3,     check: d => (d.questOverdriveUses||0) },
+    { id: 'ticket_8',    title: 'Spend 8 tickets',                                           icon: 'ticket.png',          target: 8,     check: d => (d.questTicketsSpent||0) },
+    { id: 'ticket_game', title: `Spend 5 tickets in ${QUEST_GAME_NAMES[gi]}`,                icon: QUEST_GAME_ICONS[gi],   target: 5,     gameId: QUEST_GAME_IDS[gi], check: d => ((d.questTicketsInGame||{})[QUEST_GAME_IDS[gi]]||0) },
+    { id: 'earn_ek',     title: 'Earn 3 EK',                                                 icon: 'ek.png',           target: 3,     check: d => (d.questEkEarned||0) },
+    { id: 'buy_crypto',  title: `Buy ${pool[ci].name} for 1000 KSPT`,                        icon: pool[ci].icon,          target: 1000,  check: d => (d.questCryptoBought||0) },
+    { id: 'online_20',   title: 'Stay online for 20 minutes',                               icon: 'dzoi.png',         target: 1200,  check: d => (d.questOnlineSecs||0) },
+  ];
+}
+
+function getWeeklyQuestTemplates() {
+  const gi       = Math.floor(Math.random() * QUEST_GAME_IDS.length);
+  const ticketW  = 30 + Math.floor(Math.random() * 31);
+  const ticketG  = 20 + Math.floor(Math.random() * 11);
+  const exVol    = 5000 + Math.floor(Math.random() * 10001);
+  const ekTarget = 10  + Math.floor(Math.random() * 16);
+  const dqTarget = 8   + Math.floor(Math.random() * 5);
+  const tapK     = 100 + Math.floor(Math.random() * 101); // 100–200 KSPT
+  return [
+   { id: 'w_online',   title: 'Stay online for 90 minutes',                                icon: 'dzoi.png',         target: 5400,      check: d => (d.questOnlineSecs||0) },
+    { id: 'w_capsule',  title: 'Open 5 capsules',                                           icon: 'capsule.png',          target: 5,         check: d => (d.questCapsuleOpened||0) },
+    { id: 'w_tickets',  title: `Spend ${ticketW} tickets`,                                  icon: 'ticket.png',          target: ticketW,   check: d => (d.questTicketsSpent||0) },
+    { id: 'w_exchange', title: `Make ${exVol} KSPT in exchange trades`,                     icon: 'bir.png',             target: exVol,     check: d => (d.questExchangeVolume||0) },
+    { id: 'w_ek',       title: `Earn ${ekTarget} EK`,                                       icon: 'ek.png',           target: ekTarget,  check: d => (d.questEkEarned||0) },
+    { id: 'w_dq',       title: `Complete ${dqTarget} daily quests`,                         icon: 'kspt.png',             target: dqTarget,  check: d => (d.questDailyDone||0) },
+    { id: 'w_tap',      title: `Earn ${tapK} KSPT from tapping`,                            icon: 'kspt.png',             target: tapK,        check: d => (d.questTapEarned||0) },
+    { id: 'w_tgame',    title: `Spend ${ticketG} tickets in ${QUEST_GAME_NAMES[gi]}`,       icon: QUEST_GAME_ICONS[gi],   target: ticketG,   gameId: QUEST_GAME_IDS[gi], check: d => ((d.questTicketsInGame||{})[QUEST_GAME_IDS[gi]]||0) },
+  ];
+}
+
+// Таймеры: 24ч для daily, 7 дней для weekly — от первого открытия вкладки
+function getNextRefreshTime(isWeekly) {
+  return Date.now() + (isWeekly ? 7 * 24 * 3600 * 1000 : 24 * 3600 * 1000);
+}
+
+function generateQuests() {
+  const allDaily = getDailyQuestTemplates();
+  const shuffled = allDaily.sort(() => 0.5 - Math.random());
+  const daily = shuffled.slice(0, 2);
+  const allWeekly = getWeeklyQuestTemplates();
+  const weekly = [allWeekly[Math.floor(Math.random() * allWeekly.length)]];
+
+  // Сохраняем gameId чтобы он пережил JSON сериализацию
+  const ticketDaily = daily.find(q => q.id === 'ticket_game');
+  if (ticketDaily && ticketDaily.gameId) d.quests._ticketGameId = ticketDaily.gameId;
+  const ticketWeekly = weekly.find(q => q.id === 'w_tgame');
+  if (ticketWeekly && ticketWeekly.gameId) d.quests._weeklyGameId = ticketWeekly.gameId;
+
+  // Убираем функцию check перед сохранением (она не сериализуется)
+  const strip = q => ({ id: q.id, title: q.title, icon: q.icon, target: q.target, claimed: false });
+  return { daily: daily.map(strip), weekly: weekly.map(strip) };
+}
+
+function initQuestsData() {
+  if (!d.quests) d.quests = {};
+  const now = Date.now();
+
+  if (!d.quests.dailyExpire || isNaN(d.quests.dailyExpire) || now >= d.quests.dailyExpire) {
+    const generated = generateQuests();
+    d.quests.daily = generated.daily;
+    d.quests.dailyExpire = now + 24 * 3600 * 1000;
+    d.questTapCount = 0;
+    d.questBetWins = 0;
+    d.questOverdriveUses = 0;
+    d.questEkEarned = 0;
+    d.questCapsuleOpened = 0;
+    d.questCryptoBought = 0;
+    d.questTapEarned = 0;
+    d.questTicketsSpent = 0;
+    d.questTicketsInGame = {};
+    d.questOnlineSecs = 0;
+  }
+
+  if (!d.quests.weeklyExpire || isNaN(d.quests.weeklyExpire) || now >= d.quests.weeklyExpire) {
+    const generated = generateQuests();
+    d.quests.weekly = generated.weekly;
+    d.quests.weeklyExpire = now + 7 * 24 * 3600 * 1000;
+    d.questDailyDone = 0;
+    d.questExchangeVolume = 0;
+  }
+
+  if (!d.quests.znetons) d.quests.znetons = 0;
+  save();
+}
+
+function initQuestsTab() {
+  initQuestsData();
+  renderQuestsTab();
+  startQuestTimers();
+}
+
+function renderQuestsTab() {
+  const zEl = document.getElementById('znetonCount');
+  if (zEl) zEl.textContent = d.quests ? (d.quests.znetons || 0) : 0;
+  renderQuestList('dailyQuestsContainer', d.quests.daily || [], 1);
+  renderQuestList('weeklyQuestsContainer', d.quests.weekly || [], 5);
+}
+
+function getQuestCheck(id) {
+  const checks = {
+    'tap_coin':    d => (d.questTapCount||0),
+    'tap_earn':    d => (d.questTapEarned||0),
+    'bet_win':     d => (d.questBetWins||0),
+    'overdrive':   d => (d.questOverdriveUses||0),
+    'ticket_8':    d => (d.questTicketsSpent||0),
+    'ticket_game': d => ((d.questTicketsInGame||{})[d.quests._ticketGameId]||0),
+    'earn_ek':     d => (d.questEkEarned||0),
+    'buy_crypto':  d => (d.questCryptoBought||0),
+    'online_20':   d => (d.questOnlineSecs||0),
+    'w_online':    d => (d.questOnlineSecs||0),
+    'w_capsule':   d => (d.questCapsuleOpened||0),
+    'w_tickets':   d => (d.questTicketsSpent||0),
+    'w_exchange':  d => (d.questExchangeVolume||0),
+    'w_ek':        d => (d.questEkEarned||0),
+    'w_dq':        d => (d.questDailyDone||0),
+    'w_tap':       d => (d.questTapEarned||0),
+    'w_tgame':     d => ((d.questTicketsInGame||{})[d.quests._weeklyGameId]||0),
+  };
+  return checks[id] || (() => 0);
+}
+
+function renderQuestList(containerId, quests, reward) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  container.innerHTML = '';
+
+  quests.forEach((quest, idx) => {
+    const checkFn = getQuestCheck(quest.id);
+    const progress = checkFn(d);
+    const pct = Math.min(100, Math.floor((progress / quest.target) * 100));
+    const completed = pct >= 100;
+    const claimed = quest.claimed;
+
+    const card = document.createElement('div');
+    card.className = 'card';
+    card.style.cssText = 'margin-bottom:10px; position:relative;';
+    if (claimed) card.style.opacity = '0.6';
+
+    const iconSrc = claimed ? 'complete.png' : (quest.icon || 'kspt.png');
+
+    // Отображение прогресса: округляем до 2 знаков, большие числа в K
+    const fmtNum = n => {
+      if (n >= 1000) return `${(n/1000).toFixed(0)}K`;
+      if (Number.isInteger(n)) return n;
+      return parseFloat(n.toFixed(2));
+    };
+    const dispProgress = fmtNum(Math.min(progress, quest.target));
+    const dispTarget   = fmtNum(quest.target);
+
+    card.innerHTML = `
+      <div style="display:flex; align-items:center; gap:10px;">
+        <img src="${iconSrc}" style="width:36px;height:36px;object-fit:contain;border-radius:8px;" onerror="this.src='kspt.png'">
+        <div style="flex:1;">
+          <div style="font-weight:bold; font-size:13px; margin-bottom:4px;">${quest.title}</div>
+          <div style="background:#333; border-radius:6px; height:8px; overflow:hidden;">
+            <div style="width:${pct}%; background:${reward===1?'#4fc3f7':'#ce93d8'}; height:100%; border-radius:6px; transition:width 0.3s;"></div>
+          </div>
+          <div style="font-size:11px; color:#aaa; margin-top:3px;">${dispProgress} / ${dispTarget}</div>
+        </div>
+        <div style="display:flex;flex-direction:column;align-items:center;min-width:50px;">
+          <img src="zneton.png" style="width:20px;height:20px;" onerror="this.src='kspt.png'">
+          <span style="font-size:12px; color:#ffd54f;">+${reward}</span>
+          ${completed && !claimed ? `<button onclick="claimQuest('${reward===1?'daily':'weekly'}', ${idx})" style="margin-top:4px;background:#2e7d32;color:#fff;border:none;border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;">Claim</button>` : ''}
+          ${claimed ? `<span style="font-size:10px;color:#66bb6a;margin-top:4px;">✓ Done</span>` : ''}
+        </div>
+      </div>
+    `;
+    container.appendChild(card);
+  });
+}
+
+function claimQuest(type, idx) {
+  if (!d.quests) return;
+  const list = type === 'daily' ? d.quests.daily : d.quests.weekly;
+  if (!list || !list[idx]) return;
+  const quest = list[idx];
+  if (quest.claimed) return;
+
+  const checkFn = getQuestCheck(quest.id, quest.gameId);
+  const progress = checkFn(d);
+  if (progress < quest.target) {
+    showToast('Quest not completed yet!');
+    return;
+  }
+
+  const reward = type === 'daily' ? 1 : 5;
+  quest.claimed = true;
+  d.quests.znetons = (d.quests.znetons || 0) + reward;
+  if (type === 'daily') {
+    d.questDailyDone = (d.questDailyDone || 0) + 1;
+    checkQuestProgress('w_dq');
+  }
+  showToast(`+${reward} жетон${reward > 1 ? 'ов' : ''}! 🎖️`);
+  save();
+  renderQuestsTab();
+}
+
+function checkQuestProgress(eventId) {
+  if (!d.quests) return;
+  const iventTab = document.getElementById('iventTab');
+  if (iventTab && iventTab.style.display !== 'none') {
+    renderQuestsTab();
+  }
+}
+
+function startQuestTimers() {
+  updateQuestTimers();
+  if (window._questTimerInterval) clearInterval(window._questTimerInterval);
+  window._questTimerInterval = setInterval(updateQuestTimers, 1000);
+}
+
+function updateQuestTimers() {
+  if (!d.quests) return;
+  const now = Date.now();
+  const dailyEl  = document.getElementById('questDailyTimer');
+  const weeklyEl = document.getElementById('questWeeklyTimer');
+
+  if (dailyEl && d.quests.dailyExpire) {
+    const diff = Math.max(0, d.quests.dailyExpire - now);
+    dailyEl.textContent = formatQuestTime(diff, false);
+    if (diff === 0) { initQuestsData(); renderQuestsTab(); }
+  }
+  if (weeklyEl && d.quests.weeklyExpire) {
+    const diff = Math.max(0, d.quests.weeklyExpire - now);
+    weeklyEl.textContent = formatQuestTime(diff, true);
+    if (diff === 0) { initQuestsData(); renderQuestsTab(); }
+  }
+}
+
+function formatQuestTime(ms, showDays) {
+  const s = Math.floor(ms / 1000);
+  if (showDays) {
+    const days = Math.floor(s / 86400);
+    const h    = Math.floor((s % 86400) / 3600);
+    const m    = Math.floor((s % 3600) / 60);
+    const sec  = s % 60;
+    return `${days}d ${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  } else {
+    const h   = Math.floor(s / 3600);
+    const m   = Math.floor((s % 3600) / 60);
+    const sec = s % 60;
+    return `${String(h).padStart(2,'0')}:${String(m).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+  }
+}
+// ==========================================
+// END QUESTS SYSTEM
+// ==========================================
+
+// ==========================================
+// SAFES SYSTEM
+// ==========================================
+
+const SAFE_COSTS = { noob: 10, iron: 20, elite: 45 };
+const SAFE_COOLDOWN_MS = 35 * 3600 * 1000; // 35 часов
+
+const SAFE_PROMO_CODES = {
+  '11333': 'noob',
+  '24772': 'iron',
+  '94728': 'elite'
+};
+
+let _currentSafeType = null;
+let _safeTaps = 0;
+let _safeOpening = false;
+
+// --- Таблицы наград ---
+
+function getSafeRewards(type) {
+  const rate = getHourlyRate();
+  if (type === 'noob') {
+    return [
+      { w: 30,  id: 'kspt_offline3',  label: `+${Math.floor(rate*3)} KSPT (3h offline)`,  img: 'kspt.png',    apply: () => { d.tokens += Math.floor(rate*3); } },
+      { w: 20,  id: 'ek3',            label: '+3 EK',                                      img: 'ek.png',  apply: () => { d.ek = (d.ek||0)+3; } },
+      { w: 20,  id: 'tickets6',       label: '+6 Tickets',                                 img: 'ticket.png', apply: () => { if(typeof gameTickets!=='undefined'){gameTickets.current+=6;if(typeof saveTickets==='function')saveTickets();} } },
+      { w: 15,  id: 'key_yellow',     label: 'Yellow Key',                                 img: 'yellow.png',  apply: () => { if(!d.keys)d.keys={};d.keys.yellow=(d.keys.yellow||0)+1; } },
+      { w: 10,  id: 'capsule2',       label: '2 Capsules',                                 img: 'capsule.png', apply: () => { _queueSafeCapsules(2); } },
+      { w: 2,   id: 'free_spin',      label: 'Free Wheel Spin!',                           img: 'capskine.png',apply: () => { window._freeWheelSpin=true; if(!d.fortuneWheel)d.fortuneWheel={spinsUsed:0,lastResetTime:0}; d.fortuneWheel.spinsUsed=0; d.fortuneWheel.lastResetTime=0; } },
+      { w: 0.7, id: 'key_green',      label: 'Green Key',                                  img: 'green.png',   apply: () => { if(!d.keys)d.keys={};d.keys.green=(d.keys.green||0)+1; } },
+      { w: 0.2, id: 'znetons50',      label: '+50 Tokens',                                 img: 'zneton.png',  apply: () => { if(!d.quests)d.quests={};d.quests.znetons=(d.quests.znetons||0)+50; } },
+      { w: 0.1, id: 'bg_dirt',        label: 'Dirt World Background!',                     img: 'dirt.png',    apply: () => { if(!d.ownedBgs)d.ownedBgs=[];if(!d.ownedBgs.includes('dirt'))d.ownedBgs.push('dirt'); } },
+    ];
+  } else if (type === 'iron') {
+    const ekAmt = 8 + Math.floor(Math.random()*5); // 8-12
+    return [
+      { w: 20,  id: 'kspt_offline7',  label: `+${Math.floor(rate*7)} KSPT (7h offline)`,  img: 'kspt.png',    apply: () => { d.tokens += Math.floor(rate*7); } },
+      { w: 20,  id: 'capsule_noob',   label: 'Capsule + Noob Box',                         img: 'noob1.png', apply: () => { _queueSafeCapsuleAndNoob(); } },
+      { w: 20,  id: 'key_yellow',     label: 'Yellow Key',                                 img: 'yellow.png',  apply: () => { if(!d.keys)d.keys={};d.keys.yellow=(d.keys.yellow||0)+1; } },
+      { w: 20,  id: 'ek_rand',        label: `+${ekAmt} EK`,                              img: 'ek.png',  apply: () => { d.ek=(d.ek||0)+ekAmt; } },
+      { w: 10,  id: 'key_red',        label: 'Red Key',                                    img: 'red.png',     apply: () => { if(!d.keys)d.keys={};d.keys.red=(d.keys.red||0)+1; } },
+      { w: 5,   id: 'key_blue',       label: 'Blue Key',                                   img: 'blue.png',    apply: () => { if(!d.keys)d.keys={};d.keys.blue=(d.keys.blue||0)+1; } },
+      { w: 3,   id: 'puzzle',         label: 'Puzzle Piece!',                              img: 'puz.png',     apply(r) { r.img = _safeGivePuzzle() || 'puz.png'; } },
+      { w: 2,   id: 'bg_bank',        label: 'Financial City Background!',                 img: 'bank.png',    apply: () => { if(!d.ownedBgs)d.ownedBgs=[];if(!d.ownedBgs.includes('bank'))d.ownedBgs.push('bank'); } },
+    ];
+  } else { // elite
+    return [
+      { w: 25,  id: 'kspt_offline12', label: `+${Math.floor(rate*12)} KSPT (12h offline)`,img: 'kspt.png',    apply: () => { d.tokens += Math.floor(rate*12); } },
+      { w: 25,  id: 'boom3',          label: '3 BOOM Boxes!',                              img: 'boom.png',    apply: () => { _queueSafeBoomBoxes(3); } },
+      { w: 20,  id: 'key_blue',       label: 'Blue Key',                                   img: 'blue.png',    apply: () => { if(!d.keys)d.keys={};d.keys.blue=(d.keys.blue||0)+1; } },
+      { w: 10,  id: 'tickets20',      label: '+20 Tickets',                                img: 'ticket.png', apply: () => { if(typeof gameTickets!=='undefined'){gameTickets.current+=20;if(typeof saveTickets==='function')saveTickets();} } },
+      { w: 10,  id: 'puzzle',         label: 'Puzzle Piece!',                              img: 'puz.png',     apply(r) { r.img = _safeGivePuzzle() || 'puz.png'; } },
+      { w: 5,   id: 'key_black',      label: 'Black Key',                                  img: 'black.png',   apply: () => { if(!d.keys)d.keys={};d.keys.black=(d.keys.black||0)+1; } },
+      { w: 4,   id: 'free_spin2',     label: '2 Free Wheel Spins!',                        img: 'capskine1.png',apply: () => { window._freeWheelSpin=true; if(!d.fortuneWheel)d.fortuneWheel={spinsUsed:0,lastResetTime:0}; d.fortuneWheel.spinsUsed=0; d.fortuneWheel.lastResetTime=0; window._safeExtraFreeSpin=true; } },
+      { w: 0.5, id: 'bg_elit',        label: 'Elit Background!',                           img: 'elit.png',    apply: () => { if(!d.ownedBgs)d.ownedBgs=[];if(!d.ownedBgs.includes('elit'))d.ownedBgs.push('elit'); } },
+      { w: 0.5, id: 'skin_goldensafe',label: 'Golden Safe Skin!',                          img: 'sgold.png',   apply: () => { if(!d.secretSkins)d.secretSkins={};d.secretSkins['goldensafe']=true; } },
+    ];
+  }
+}
+
+function _weightedSafePick(rewards) {
+  const total = rewards.reduce((s,r)=>s+r.w, 0);
+  let roll = Math.random()*total;
+  for (const r of rewards) { roll-=r.w; if(roll<=0) return r; }
+  return rewards[0];
+}
+
+function _rollSafeCount() {
+  const r = Math.random()*100;
+  if (r < 1)   return 5;
+  if (r < 5)   return 4;
+  if (r < 20)  return 3;
+  return 2;
+}
+
+// --- Вспомогательные для наград ---
+
+let _safePendingRewards = [];
+let _safePendingCapsules = 0;
+let _safePendingNoob = false;
+let _safePendingBooms = 0;
+
+function _queueSafeCapsules(n) { _safePendingCapsules += n; }
+function _queueSafeCapsuleAndNoob() { _safePendingCapsules += 1; _safePendingNoob = true; }
+function _queueSafeBoomBoxes(n) { _safePendingBooms += n; }
+
+function _safeGivePuzzle() {
+  if (!d.puzzleDone) {
+    const missing = [];
+    for (let i=0;i<9;i++) if(d.puzzles[i]===0) missing.push(i);
+    if (missing.length>0) {
+      const idx = missing[Math.floor(Math.random()*missing.length)];
+      d.puzzles[idx]=1;
+      return `pazl${idx+1}.png`;
+    } else { d.tokens+=5; return 'kspt.png'; }
+  } else if (!d.puzzle2Done) {
+    const missing2=[];
+    for(let i=0;i<9;i++) if(d.puzzles2[i]===0) missing2.push(i);
+    if(missing2.length>0){
+      const idx=missing2[Math.floor(Math.random()*missing2.length)];
+      d.puzzles2[idx]=1;
+      return `pazl${idx+11}.png`;
+    } else { d.tokens+=5; return 'kspt.png'; }
+  } else if (!d.puzzle3Done) {
+    const missing3=[];
+    for(let i=0;i<9;i++) if(d.puzzles3[i]===0) missing3.push(i);
+    if(missing3.length>0){
+      const idx=missing3[Math.floor(Math.random()*missing3.length)];
+      d.puzzles3[idx]=1;
+      return `puzl${idx+1}.png`;
+    } else { d.tokens+=5; return 'kspt.png'; }
+  } else { d.tokens+=5; return 'kspt.png'; }
+}
+
+// --- Открытие сейфа (покупка / промокод) ---
+
+function openSafePurchaseModal(type) {
+  _currentSafeType = type;
+  const names = { noob:'Noob Safe', iron:'Iron Safe', elite:'Elite Safe' };
+  const imgs  = { noob:'snoob.png', iron:'sdef.png', elite:'selit.png' };
+  const costs = SAFE_COSTS;
+
+  document.getElementById('safeModalImg').src = imgs[type];
+  document.getElementById('safeModalName').textContent = names[type];
+  document.getElementById('safeModalCost').innerHTML =
+    `<img src="zneton.png" style="width:16px;height:16px;vertical-align:middle;" onerror="this.src='kspt.png'"> ${costs[type]} tokens`;
+
+  const modal = document.getElementById('safePurchaseModal');
+  if (modal) modal.style.display = 'flex';
+}
+
+function closeSafePurchaseModal() {
+  const modal = document.getElementById('safePurchaseModal');
+  if (modal) modal.style.display = 'none';
+}
+
+function confirmSafePurchase() {
+  if (!_currentSafeType) return;
+
+  // Проверка cooldown
+  if (!d.safe) d.safe = {};
+  const now = Date.now();
+  if (d.safe.lastOpen && (now - d.safe.lastOpen) < SAFE_COOLDOWN_MS) {
+    const left = SAFE_COOLDOWN_MS - (now - d.safe.lastOpen);
+    showToast(`Safe on cooldown! ${formatQuestTime(left, false)} left`);
+    closeSafePurchaseModal();
+    return;
+  }
+
+  // Проверка жетонов
+  const cost = SAFE_COSTS[_currentSafeType];
+  if (!d.quests) d.quests = {};
+  if ((d.quests.znetons||0) < cost) {
+    showToast(`Not enough tokens! Need ${cost}`);
+    closeSafePurchaseModal();
+    return;
+  }
+
+  d.quests.znetons -= cost;
+  closeSafePurchaseModal();
+  _startSafeOpening(_currentSafeType);
+}
+
+function checkSafeCode() {
+  const input = document.getElementById('safeCodeInput');
+  if (!input) return;
+  const code = input.value.trim();
+  const type = SAFE_PROMO_CODES[code];
+
+  if (!type) { showToast('Invalid code!'); return; }
+
+  if (!d.usedSafeCodes) d.usedSafeCodes = [];
+  if (d.usedSafeCodes.includes(code)) { showToast('Code already used!'); input.value=''; return; }
+
+  d.usedSafeCodes.push(code);
+  input.value = '';
+  save();
+  showToast(`${type.charAt(0).toUpperCase()+type.slice(1)} Safe unlocked!`);
+  _startSafeOpening(type);
+}
+
+// --- Анимация открытия ---
+
+function _startSafeOpening(type) {
+  _currentSafeType = type;
+  _safeTaps = 0;
+  _safeOpening = true;
+  _safePendingRewards = [];
+  _safePendingCapsules = 0;
+  _safePendingNoob = false;
+  _safePendingBooms = 0;
+
+  const imgs = { noob:'snoob.png', iron:'sdef.png', elite:'selit.png' };
+  const modal = document.getElementById('safeOpenModal');
+  const img   = document.getElementById('safeOpenImg');
+  const hint  = document.getElementById('safeOpenHint');
+
+  img.src = imgs[type];
+  hint.textContent = 'Tap to open! (0/5)';
+  modal.style.display = 'flex';
+
+  img.onclick = _safeOpenTapHandler;
+}
+
+function _safeOpenTapHandler() {
+  if (!_safeOpening) return;
+  _safeTaps++;
+
+  const img  = document.getElementById('safeOpenImg');
+  const hint = document.getElementById('safeOpenHint');
+
+  // Shake animation
+  img.style.transform = 'rotate(-6deg) scale(1.08)';
+  if (navigator.vibrate) navigator.vibrate(30);
+  setTimeout(()=>{ img.style.transform = 'rotate(4deg) scale(1.04)'; }, 80);
+  setTimeout(()=>{ img.style.transform = 'rotate(0deg) scale(1)'; }, 160);
+
+  hint.textContent = `Tap to open! (${_safeTaps}/5)`;
+
+  if (_safeTaps >= 5) {
+    img.onclick = null;
+    _safeOpening = false;
+
+    const openImgs = { noob:'snoob1.png', iron:'sdef1.png', elite:'selit1.png' };
+    img.src = openImgs[_currentSafeType] || img.src;
+    hint.textContent = 'Opening...';
+
+    setTimeout(()=>{
+      document.getElementById('safeOpenModal').style.display = 'none';
+      _deliverSafeRewards(_currentSafeType);
+    }, 500);
+  }
+}
+
+function _deliverSafeRewards(type) {
+  const count = _rollSafeCount();
+  const pool  = getSafeRewards(type);
+  const rewards = [];
+
+  for (let i=0; i<count; i++) {
+    const r = _weightedSafePick(pool);
+    rewards.push(r);
+  }
+
+  // Применяем всё сразу
+  rewards.forEach(r => r.apply(r));
+
+  // Записываем cooldown
+  if (!d.safe) d.safe = {};
+  d.safe.lastOpen = Date.now();
+  save();
+
+  // Показываем награды по очереди через rewardPopup
+  _showSafeRewardsSequentially(rewards, 0);
+
+  // Обновляем UI cooldown
+  _updateSafeCooldownUI();
+  if (typeof renderQuestsTab === 'function') renderQuestsTab();
+  ui();
+}
+
+function _showSafeRewardsSequentially(rewards, idx) {
+  // Обновляем счётчик
+  const counter = document.getElementById('safeRewardsCounter');
+  const leftEl  = document.getElementById('safeRewardsLeft');
+  const safeModal = document.getElementById('safeOpenModal');
+
+  if (idx >= rewards.length) {
+    // Скрываем счётчик и modal
+    if (counter) counter.style.display = 'none';
+    if (safeModal) safeModal.style.display = 'none';
+    _processSafeQueues();
+    return;
+  }
+
+  // Показываем счётчик поверх открытого сейфа
+  const remaining = rewards.length - idx;
+  if (counter && leftEl) {
+    counter.style.display = 'block';
+    leftEl.textContent = remaining;
+    safeModal.style.display = 'flex';
+  }
+
+  const r = rewards[idx];
+  showReward(r.label, r.img);
+
+  const btn = document.querySelector('#rewardPopup button');
+  if (btn) {
+    btn.onclick = () => {
+      document.getElementById('rewardPopup').style.display = 'none';
+      _showSafeRewardsSequentially(rewards, idx + 1);
+    };
+  }
+}
+
+// Единая очередь задач после наград сейфа
+let _safeTaskQueue = [];
+
+function _processSafeQueues() {
+  _safeTaskQueue = [];
+
+  // Набираем задачи в правильном порядке
+  for (let i = 0; i < _safePendingCapsules; i++) {
+    _safeTaskQueue.push({ type: 'capsule' });
+  }
+  if (_safePendingNoob) {
+    _safeTaskQueue.push({ type: 'noob' });
+  }
+  for (let i = 0; i < _safePendingBooms; i++) {
+    _safeTaskQueue.push({ type: 'boom' });
+  }
+  if (window._freeWheelSpin) {
+    _safeTaskQueue.push({ type: 'wheel' });
+  }
+
+  _safePendingCapsules = 0;
+  _safePendingNoob = false;
+  _safePendingBooms = 0;
+
+  _runNextSafeTask();
+}
+
+function _runNextSafeTask() {
+  if (_safeTaskQueue.length === 0) return;
+  const task = _safeTaskQueue.shift();
+
+  if (task.type === 'capsule') {
+    _openOneSafeCapsule(_runNextSafeTask);
+  } else if (task.type === 'noob') {
+    _openSafeNoobBox(_runNextSafeTask);
+  } else if (task.type === 'boom') {
+    _openOneSafeBoom(_runNextSafeTask);
+  } else if (task.type === 'wheel') {
+    window._freeWheelSpin = false;
+    setTimeout(() => { openFortuneWheel(); }, 400);
+  }
+}
+
+function _openOneSafeCapsule(callback) {
+  const origLastOpen = d.capsule ? d.capsule.lastOpen : 0;
+  if (!d.capsule) d.capsule = {};
+  d.capsule.lastOpen = 0;
+
+  window._safeCapsuleCallback = () => {
+    d.capsule.lastOpen = origLastOpen;
+    if (callback) callback();
+  };
+  window._safeCapsuleActive = true;
+
+  capsuleOpening = true;
+  capsuleTaps = 0;
+  lastCapsuleTapTime = 0;
+
+  const modal = document.getElementById('capsuleBreakModal');
+  const img   = document.getElementById('capsuleBreakImg');
+  const hint  = document.getElementById('capsuleHint');
+  if (!modal || !img) { if (callback) callback(); return; }
+
+  img.src = 'capsule.png';
+  img.classList.remove('tap-anim', 'zoomed');
+  if (hint) hint.textContent = 'Tap to open!';
+  modal.style.display = '';
+  modal.classList.add('active');
+
+  img.removeEventListener('click', capsuleTapHandler);
+  img.addEventListener('click', capsuleTapHandler);
+}
+
+function _openSafeNoobBox(callback) {
+  if (!d.noobBox) d.noobBox = { obtained: false, opened: false, taps: 0 };
+  d.noobBox.obtained = true;
+  d.noobBox.opened = false;
+  d.noobBox.taps = 0;
+  save();
+  window._safeNoobCallback = callback;
+  setTimeout(() => {
+    if (typeof startNoobBoxSequence === 'function') startNoobBoxSequence();
+  }, 300);
+}
+
+function _openOneSafeBoom(callback) {
+  if (!d.bombBox) d.bombBox = { obtained: false };
+  d.bombBox.obtained = true;
+  save();
+  window._safeBoomCallback = callback;
+  if (typeof startBombBoxSequence === 'function') startBombBoxSequence();
+}
+
+// --- Cooldown UI ---
+
+function _updateSafeCooldownUI() {
+  const bar   = document.getElementById('safeCooldownBar');
+  const timer = document.getElementById('safeCooldownTimer');
+  if (!bar || !timer) return;
+
+  if (!d.safe || !d.safe.lastOpen) { bar.style.display='none'; return; }
+
+  const now  = Date.now();
+  const diff = SAFE_COOLDOWN_MS - (now - d.safe.lastOpen);
+
+  if (diff <= 0) { bar.style.display='none'; return; }
+
+  bar.style.display = 'block';
+  timer.textContent = formatQuestTime(diff, false) + ' remaining';
+}
+
+// Обновлять cooldown каждую секунду пока вкладка открыта
+setInterval(()=>{
+  const iventTab = document.getElementById('iventTab');
+  if (iventTab && iventTab.style.display !== 'none') {
+    _updateSafeCooldownUI();
+  }
+}, 1000);
+
+// ==========================================
+// END SAFES SYSTEM
+// ==========================================
+
+/* ---- Background Video ---- */
+async function adminSendBgVideo() {
+  if (!_isAdminUser() || !window._firebaseDB) return;
+  const src = document.getElementById('apBgVideo').value;
+  if (!src) { adminStopBgVideo(); return; }
+  const dur = Number(document.getElementById('apBgVideoDur').value) || 60;
+  const onlineOnly = document.getElementById('apBgVideoOnline')?.checked || false;
+  const end = Date.now() + dur * 1000;
+  await window._firebaseRef(window._firebaseDB, 'admin/bgVideo').set({ src, end, onlineOnly, ts: Date.now() });
+  setTimeout(() => window._firebaseRef(window._firebaseDB, 'admin/bgVideo').remove(), (dur + 10) * 1000);
+  showToast(`🎬 Video "${src}" sent!`);
+}
+async function adminStopBgVideo() {
+  if (!window._firebaseDB) return;
+  await window._firebaseRef(window._firebaseDB, 'admin/bgVideo').remove();
+  _adminClearBgVideo();
+}
+function _adminApplyBgVideo(src, durationMs) {
+  _adminClearBgVideo();
+  let vid = document.getElementById('adminBgVideo');
+  if (!vid) {
+    vid = document.createElement('video');
+    vid.id = 'adminBgVideo';
+    vid.style.cssText = 'position:fixed;top:0;left:0;width:100%;height:100%;object-fit:cover;z-index:1;pointer-events:none;opacity:0.92;';
+    vid.autoplay = true;
+    vid.loop = true;
+    vid.muted = true;
+    vid.playsInline = true;
+    document.body.insertBefore(vid, document.body.firstChild);
+  }
+  vid.src = src;
+  vid.play().catch(() => {});
+  window._adminBgVideoEnd = Date.now() + durationMs;
+  clearTimeout(window._adminBgVideoTimeout);
+  window._adminBgVideoTimeout = setTimeout(() => _adminClearBgVideo(), durationMs);
+  showToast('🎬 Background video started!');
+}
+function _adminClearBgVideo() {
+  const vid = document.getElementById('adminBgVideo');
+  if (vid) { vid.pause(); vid.remove(); }
+  clearTimeout(window._adminBgVideoTimeout);
+  window._adminBgVideoEnd = 0;
+}
+
+/* ---- Coin Control ---- */
+async function adminSendCoinControl() {
+  if (!window._firebaseDB) return;
+  const dir   = document.getElementById('apCoinDir').value;
+  const speed = document.getElementById('apCoinSpeed').value;
+  const dur   = Number(document.getElementById('apCoinDur').value) || 60;
+  const end   = Date.now() + dur * 1000;
+  await window._firebaseRef(window._firebaseDB, 'admin/coinControl').set({ dir, speed, end, ts: Date.now() });
+  setTimeout(() => window._firebaseRef(window._firebaseDB, 'admin/coinControl').remove(), (dur + 10) * 1000);
+  showToast('🪙 Coin control sent!');
+}
+async function adminStopCoinControl() {
+  if (!window._firebaseDB) return;
+  await window._firebaseRef(window._firebaseDB, 'admin/coinControl').remove();
+  _adminClearCoinControl();
+  showToast('🪙 Coin control stopped.');
+}
+function _adminClearCoinControl() {
+  const coin = document.getElementById('coin');
+  if (!coin) return;
+  coin.style.animation = '';
+  coin.style.transform = '';
+  if (window._adminCoinControlInterval) { clearInterval(window._adminCoinControlInterval); window._adminCoinControlInterval = null; }
+  if (!document.getElementById('adminCoinStyle')) return;
+  document.getElementById('adminCoinStyle').remove();
+}
+function _adminApplyCoinControl(dir, speed) {
+  const coin = document.getElementById('coin');
+  if (!coin) return;
+  _adminClearCoinControl();
+  const speedMap = { slow: '3s', medium: '1.2s', fast: '0.4s' };
+  const dur = speedMap[speed] || '1.2s';
+  let style = document.getElementById('adminCoinStyle');
+  if (!style) { style = document.createElement('style'); style.id = 'adminCoinStyle'; document.head.appendChild(style); }
+  if (dir === 'cw') {
+    style.textContent = `@keyframes adminCoinCW { from{transform:rotate(0deg)} to{transform:rotate(360deg)} } #coin { animation: adminCoinCW ${dur} linear infinite !important; }`;
+  } else if (dir === 'ccw') {
+    style.textContent = `@keyframes adminCoinCCW { from{transform:rotate(0deg)} to{transform:rotate(-360deg)} } #coin { animation: adminCoinCCW ${dur} linear infinite !important; }`;
+  } else {
+    style.textContent = `@keyframes adminCoinAxis { 0%{transform:rotateY(0deg)} 100%{transform:rotateY(360deg)} } #coin { animation: adminCoinAxis ${dur} linear infinite !important; }`;
+  }
+}
+
 document.addEventListener('firebase-ready', _startFirebaseSync);
 if (window._firebaseReady) _startFirebaseSync();
+
+function _updateLastSeen() {
+  if (!window._firebaseReady || !window._firebaseDB) return;
+  const uid = typeof getMyUid === 'function' ? getMyUid() : localStorage.getItem('_kspt_uid');
+  if (!uid || uid === 'local') return;
+  window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).update({
+    lastSeen: Date.now(),
+    rate: Math.round(getHourlyRate()),
+    tokens: Math.round(d.tokens || 0)
+  });
+}
+document.addEventListener('firebase-ready', _updateLastSeen);
+if (window._firebaseReady) _updateLastSeen();
+setInterval(_updateLastSeen, 10000);
+
+document.querySelectorAll('img').forEach(img => img.setAttribute('draggable', 'false'));

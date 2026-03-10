@@ -61,7 +61,7 @@
 <link rel="stylesheet" href="css/style.css">
 </head>
 
-<body>
+<body oncontextmenu="return false;" ontouchstart="">
 
 <div id="toast" class="toast">Purchase successful</div>
 <div id="raceModeModal">
@@ -367,7 +367,7 @@ window.addEventListener('message', (event) => {
   <!-- КНОПКИ ПЕРЕКЛЮЧЕНИЯ ВКЛАДОК -->
   <div style="display: flex; justify-content: center; margin-bottom: 15px; gap: 10px;">
   <button id="tabPuzzle" onclick="showIventTab('puzzle')" style="background: #2e7d32;">Puzzles</button>
-  <button id="tabIvent" onclick="showIventTab('ivent')" style="background: #444;">Events</button>
+  <button id="tabIvent" onclick="showIventTab('ivent')" style="background: #444;">Quests & Safes</button>
   <button id="tabKeys" onclick="showIventTab('keys')" style="background: #444;">Keys</button>
 </div>
 
@@ -434,6 +434,33 @@ window.addEventListener('message', (event) => {
       </div>
     </div>
 
+<!-- Third Puzzle: Black Hole -->
+    <div class="card" id="thirdPuzzleCard" style="display:none;">
+      <div class="card-title">Black Hole Puzzle</div>
+      <div class="card-sub">Collect all 9 pieces to unlock the Black Hole skin!</div>
+      <div class="puzzle-container">
+        <div class="puzzle-grid">
+          <img src="puzlik.png" id="puzzleFull3" class="puzzle-full-img" style="display:none;" onerror="this.src='dontwhat.png'">
+          <div class="puzzle-cell" id="pz3_1"><img src="puzl1.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz3_2"><img src="puzl2.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz3_3"><img src="puzl3.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz3_4"><img src="puzl4.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz3_5"><img src="puzl5.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz3_6"><img src="puzl6.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz3_7"><img src="puzl7.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz3_8"><img src="puzl8.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz3_9"><img src="puzl9.png" onerror="this.src='dontwhat.png'"></div>
+        </div>
+        <div class="puzzle-controls">
+          <div id="puzzleStatus3" class="card-sub" style="margin-bottom:10px;">Owned: 0/9</div>
+          <button id="btnPlacePiece3" onclick="placePuzzlePieces3()" style="display:none;">Place Available Pieces</button>
+          <div id="puzzleCompletedText3" style="display:none; color:#ff9800; font-weight:bold; margin-top:10px;">
+            🕳️ Black Hole skin unlocked!
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="card capsule-info">
       <img src="capsule.png" class="capsule-img-small">
       <div class="card-title" data-lang-key="mystery_capsule">Mystery Capsule</div>
@@ -443,7 +470,163 @@ window.addEventListener('message', (event) => {
   </div>
 
   <div id="iventTab" style="display:none;">
-    <div id="iventContainer"></div>
+    <!-- Счётчик жетонов -->
+    <div id="znetonBar" style="display:flex; align-items:center; justify-content:center; gap:8px; margin-bottom:14px; background:#1a1a1a; border-radius:12px; padding:10px;">
+      <img src="zneton.png" style="width:28px;height:28px;" onerror="this.src='dontwhat.png'">
+      <span style="font-weight:bold; font-size:18px;" id="znetonCount">0</span>
+      <span style="color:#aaa; font-size:13px;">tokens</span>
+    </div>
+
+    <!-- Таймеры обновления -->
+    <div style="display:flex; gap:8px; margin-bottom:14px;">
+      <div style="flex:1; background:#161616; border-radius:10px; padding:8px; text-align:center;">
+        <div style="font-size:11px; color:#aaa; margin-bottom:2px;">📅 Daily refresh</div>
+        <div id="questDailyTimer" style="font-weight:bold; color:#4fc3f7; font-size:13px;">--:--:--</div>
+      </div>
+      <div style="flex:1; background:#161616; border-radius:10px; padding:8px; text-align:center;">
+        <div style="font-size:11px; color:#aaa; margin-bottom:2px;">📆 Weekly refresh</div>
+        <div id="questWeeklyTimer" style="font-weight:bold; color:#ce93d8; font-size:13px;">--d --:--:--</div>
+      </div>
+    </div>
+
+    <!-- Ежедневные квесты -->
+    <div style="font-weight:bold; margin-bottom:8px; color:#4fc3f7;">📅 Daily Quests <span style="color:#ffd54f; font-size:12px;">(+1 <img src='zneton.png' style='width:14px;height:14px;vertical-align:middle;' onerror='this.src=\"kspt.png\"'> each)</span></div>
+    <div id="dailyQuestsContainer"></div>
+
+    <!-- Еженедельные квесты -->
+    <div style="font-weight:bold; margin:14px 0 8px; color:#ce93d8;">📆 Weekly Quest <span style="color:#ffd54f; font-size:12px;">(+5 <img src='zneton.png' style='width:14px;height:14px;vertical-align:middle;' onerror='this.src=\"kspt.png\"'> each)</span></div>
+    <div id="weeklyQuestsContainer"></div>
+
+    <!-- SAFES SECTION -->
+    <div style="font-weight:bold; margin:20px 0 6px; color:#ffd54f; font-size:15px;">🔒 Safes</div>
+
+    <!-- Cooldown bar -->
+    <div id="safeCooldownBar" style="display:none; background:#1a1a1a; border-radius:10px; padding:8px 12px; margin-bottom:10px; text-align:center; border:1px solid #333;">
+      <div style="font-size:11px; color:#aaa; margin-bottom:2px;">⏳ Safe cooldown</div>
+      <div id="safeCooldownTimer" style="font-weight:bold; color:#ff7043; font-size:14px;">35:00:00</div>
+    </div>
+
+    <!-- Safe cards — большие плитки -->
+    <div style="display:flex; flex-direction:column; gap:12px; margin-bottom:14px;">
+
+      <!-- Noob Safe -->
+      <div onclick="openSafePurchaseModal('noob')" style="
+        background: linear-gradient(135deg,#1a1a1a 0%,#2a2218 100%);
+        border: 1px solid #5a4a1a;
+        border-radius: 16px;
+        padding: 18px 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;">
+        <!-- glow strip -->
+        <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:#ffd54f;border-radius:4px 0 0 4px;"></div>
+        <img src="snoob.png" style="width:64px;height:64px;object-fit:contain;" onerror="this.src='kspt.png'">
+        <div style="flex:1;">
+          <div style="font-weight:bold; font-size:16px; color:#ffd54f;">Noob Safe</div>
+          <div style="font-size:12px; color:#aaa; margin-top:2px;">2–5 rewards inside</div>
+          <div style="font-size:11px; color:#888; margin-top:4px;">Tickets · Keys · KSPT · EK</div>
+        </div>
+        <div style="text-align:center; background:#2a2000; border-radius:10px; padding:8px 12px; border:1px solid #5a4a1a;">
+          <img src="zneton.png" style="width:22px;height:22px;display:block;margin:0 auto 2px;" onerror="this.src='kspt.png'">
+          <span style="font-weight:bold; color:#ffd54f; font-size:16px;">10</span>
+        </div>
+      </div>
+
+      <!-- Iron Safe -->
+      <div onclick="openSafePurchaseModal('iron')" style="
+        background: linear-gradient(135deg,#1a1a1a 0%,#1e2228 100%);
+        border: 1px solid #3a4a5a;
+        border-radius: 16px;
+        padding: 18px 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:#78a8d8;border-radius:4px 0 0 4px;"></div>
+        <img src="sdef.png" style="width:64px;height:64px;object-fit:contain;" onerror="this.src='kspt.png'">
+        <div style="flex:1;">
+          <div style="font-weight:bold; font-size:16px; color:#90caf9;">Iron Safe</div>
+          <div style="font-size:12px; color:#aaa; margin-top:2px;">2–5 rewards inside</div>
+          <div style="font-size:11px; color:#888; margin-top:4px;">Keys · EK · KSPT · Puzzle</div>
+        </div>
+        <div style="text-align:center; background:#0a1828; border-radius:10px; padding:8px 12px; border:1px solid #3a4a5a;">
+          <img src="zneton.png" style="width:22px;height:22px;display:block;margin:0 auto 2px;" onerror="this.src='kspt.png'">
+          <span style="font-weight:bold; color:#90caf9; font-size:16px;">20</span>
+        </div>
+      </div>
+
+      <!-- Elite Safe -->
+      <div onclick="openSafePurchaseModal('elite')" style="
+        background: linear-gradient(135deg,#1a1a1a 0%,#221828 100%);
+        border: 1px solid #6a3a8a;
+        border-radius: 16px;
+        padding: 18px 16px;
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;">
+        <div style="position:absolute;left:0;top:0;bottom:0;width:4px;background:#ce93d8;border-radius:4px 0 0 4px;"></div>
+        <img src="selit.png" style="width:64px;height:64px;object-fit:contain;" onerror="this.src='kspt.png'">
+        <div style="flex:1;">
+          <div style="font-weight:bold; font-size:16px; color:#ce93d8;">Elite Safe</div>
+          <div style="font-size:12px; color:#aaa; margin-top:2px;">2–5 rewards inside</div>
+          <div style="font-size:11px; color:#888; margin-top:4px;">BOOM Boxes · Black Key · Skins</div>
+        </div>
+        <div style="text-align:center; background:#180a28; border-radius:10px; padding:8px 12px; border:1px solid #6a3a8a;">
+          <img src="zneton.png" style="width:22px;height:22px;display:block;margin:0 auto 2px;" onerror="this.src='kspt.png'">
+          <span style="font-weight:bold; color:#ce93d8; font-size:16px;">45</span>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Safe code input -->
+    <div style="background:#161616; border:1px solid #333; border-radius:14px; padding:14px; text-align:center; margin-bottom:8px;">
+      <div style="font-size:13px; color:#aaa; margin-bottom:8px;">🔑 Have a safe code?</div>
+      <input id="safeCodeInput" maxlength="5" placeholder="5-digit code"
+        style="width:100%; box-sizing:border-box; background:#222; border:1px solid #555; border-radius:8px; color:#fff; font-size:20px; letter-spacing:8px; text-align:center; padding:10px; margin-bottom:8px;">
+      <button onclick="checkSafeCode()" style="width:100%; background:linear-gradient(90deg,#1b5e20,#2e7d32); color:#fff; border:none; border-radius:8px; padding:11px; font-size:14px; cursor:pointer; font-weight:bold;">🔓 Unlock</button>
+    </div>
+  </div>
+
+  <!-- SAFE PURCHASE MODAL -->
+  <div id="safePurchaseModal" style="display:none; position:fixed; inset:0; z-index:9999; background:rgba(0,0,0,0.85); align-items:center; justify-content:center; flex-direction:column;">
+    <div style="background:#1a1a1a; border-radius:16px; padding:24px; max-width:320px; width:90%; text-align:center;">
+      <img id="safeModalImg" src="snoob.png" style="width:90px;height:90px;object-fit:contain; margin-bottom:12px;" onerror="this.src='kspt.png'">
+      <div id="safeModalName" style="font-weight:bold; font-size:18px; margin-bottom:6px;"></div>
+      <div id="safeModalCost" style="color:#ffd54f; margin-bottom:16px;"></div>
+      <button onclick="confirmSafePurchase()" style="width:100%; background:#2e7d32; color:#fff; border:none; border-radius:8px; padding:12px; font-size:15px; cursor:pointer; margin-bottom:8px;">Buy & Open</button>
+      <button onclick="closeSafePurchaseModal()" style="width:100%; background:#333; color:#fff; border:none; border-radius:8px; padding:10px; font-size:14px; cursor:pointer;">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Счётчик наград сейфа — вне модала, поверх всего -->
+  <div id="safeRewardsCounter" style="display:none; position:fixed; top:24px; left:50%; transform:translateX(-50%); z-index:10002;">
+    <div style="
+      background:#c0392b;
+      color:#fff;
+      font-weight:bold;
+      font-size:15px;
+      padding:8px 20px;
+      clip-path: polygon(8px 0%, calc(100% - 8px) 0%, 100% 8px, 100% calc(100% - 8px), calc(100% - 8px) 100%, 8px 100%, 0% calc(100% - 8px), 0% 8px);
+      white-space:nowrap;
+      letter-spacing:1px;">
+      <span id="safeRewardsLeft">0</span> reward(s) left
+    </div>
+  </div>
+
+  <!-- SAFE OPENING MODAL -->
+  <div id="safeOpenModal" style="display:none; position:fixed; inset:0; z-index:10000; background:rgba(0,0,0,0.92); align-items:center; justify-content:center; flex-direction:column;">
+    <div id="safeOpenHint" style="font-size:20px; font-weight:bold; margin-bottom:24px; color:#ffd54f;">Tap to open! (0/5)</div>
+    <img id="safeOpenImg" src="snoob.png" style="width:160px;height:160px;object-fit:contain; cursor:pointer; transition:transform 0.08s;"
+      onerror="this.src='kspt.png'">
   </div>
 
   <div id="keysTab" style="display:none;">
@@ -795,6 +978,27 @@ window.addEventListener('message', (event) => {
   <div class="card-sub">💣 Bomb Box Exclusive</div>
   <button id="bg-btn-waterbomb" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
 </div>
+
+<div class="settings-section">
+  <div class="bg-preview" style="background-image: url('dirt.png');"></div>
+  <div class="card-title">Dirt World</div>
+  <div class="card-sub">🔒 Noob Safe Exclusive</div>
+  <button id="bg-btn-dirt" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
+</div>
+
+<div class="settings-section">
+  <div class="bg-preview" style="background-image: url('bank.png');"></div>
+  <div class="card-title">Financial City</div>
+  <div class="card-sub">🔒 Iron Safe Exclusive</div>
+  <button id="bg-btn-bank" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
+</div>
+
+<div class="settings-section">
+  <div class="bg-preview" style="background-image: url('elit.png');"></div>
+  <div class="card-title" style="color:#ce93d8;">Elit</div>
+  <div class="card-sub">🔒 Elite Safe Exclusive</div>
+  <button id="bg-btn-elit" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
+</div>
       
       <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
   </div>
@@ -803,13 +1007,13 @@ window.addEventListener('message', (event) => {
   <div id="leaderboardModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.85); overflow-y:auto;">
     <div style="max-width:480px; margin:0 auto; padding:16px;">
       <!-- Header -->
-      <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px; padding-top:12px;">
+      <div style="display:flex; align-items:center; gap:12px; margin-bottom:18px; padding-top:12px; position:relative;">
         <img src="records.png" style="width:32px; height:32px;">
         <div style="flex:1;">
           <div style="font-size:20px; font-weight:bold; color:#ffd700;">🏆 Leaderboard</div>
           <div style="font-size:12px; color:#888;">Top players by offline income</div>
         </div>
-        <button onclick="closeLeaderboard()" style="background:#222; border:1px solid #444; color:#fff; border-radius:50%; width:34px; height:34px; font-size:18px; cursor:pointer; flex-shrink:0;">×</button>
+        <button onclick="closeLeaderboard()" style="background:#222; border:1px solid #444; color:#fff; border-radius:50%; width:34px; height:34px; font-size:18px; cursor:pointer; flex-shrink:0; line-height:1; display:flex; align-items:center; justify-content:center;">×</button>
       </div>
 
       <!-- My rank card -->
@@ -1083,6 +1287,34 @@ window.addEventListener('message', (event) => {
     <div class="card-title">System Failure</div>
     <div class="card-sub">Glitch Box Exclusive (+35 KSPT/h)</div>
     <button id="skin-failed" onclick="applySkin('failed')" data-lang-key="locked_glitch">LOCKED</button>
+  </div>
+
+<div class="card" id="skinCardGoldenSafe" style="display:none">
+    <img id="skin-img-goldensafe" src="sgold.png" class="card-img">
+    <div class="card-title" style="color:#ffd54f;">Golden Safe</div>
+    <div class="card-sub">Elite Safe Exclusive (+100 KSPT/h)</div>
+    <button id="skin-goldensafe" onclick="applySkin('goldensafe')">Equip</button>
+  </div>
+
+<div class="card" id="skinCardBlackHole" style="display:none">
+    <img id="skin-img-bhole" src="bhole.png" class="card-img" onerror="this.src='dontwhat.png'">
+    <div class="card-title" style="color:#9b59b6;">Black Hole</div>
+    <div class="card-sub">Black Hole Puzzle Reward (+100 KSPT/h)</div>
+    <button id="skin-bhole" onclick="applySkin('bhole')">Equip</button>
+  </div>
+
+  <div class="card" id="skinCardToilet" style="display:none">
+    <img id="skin-img-toilet" src="toilet.png" class="card-img" onerror="this.src='dontwhat.png'">
+    <div class="card-title">Toilet Tower</div>
+    <div class="card-sub">Secret Exclusive</div>
+    <button id="skin-toilet" onclick="applySkin('toilet')">Equip</button>
+  </div>
+
+  <div class="card" id="skinCardCapsuleMeme" style="display:none">
+    <img id="skin-img-capsulememe" src="capsule.png" class="card-img">
+    <div class="card-title">CapsuleMeme</div>
+    <div class="card-sub">Secret Exclusive</div>
+    <button id="skin-capsulememe" onclick="applySkin('capsulememe')">Equip</button>
   </div>
 
   <div class="card">
@@ -1587,18 +1819,60 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="ligting">Lighting</option>
           <option value="fire">Fire (tap boost)</option>
           <option value="ogon">Ogon (overdrive)</option>
+          <option value="waterbomb">💣 Bomb In The Water</option>
+          <option value="dirt">🟫 Dirt</option>
+          <option value="bank">🏦 Bank</option>
+          <option value="elit">💎 Elite</option>
           <optgroup label="─── Admin Only ───">
             <option value="king">👑 King Street</option>
             <option value="castle">🏰 Big Castle</option>
             <option value="admin">🛡 Admin Abuse</option>
             <option value="meme">😂 Meme World</option>
             <option value="hole">🕳 Black Hole</option>
+            <option value="alone">🌑 Alone</option>
+            <option value="scary">🔪 Scary Place</option>
           </optgroup>
         </select>
       </div>
       <div class="ap-row" style="gap:8px;">
         <button class="ap-btn ap-btn-amber" style="flex:1;" onclick="adminStartEvent()">▶ Start Event</button>
         <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminStopEvent()">■ Stop</button>
+      </div>
+    </div>
+
+<!-- Background Video -->
+    <div class="ap-card">
+      <h3>🎬 Background Video for All</h3>
+      <p style="color:#7986cb;font-size:11px;margin:0 0 8px;">Replaces background with looping video (360×640).</p>
+      <div class="ap-row">
+        <select id="apBgVideo" class="ap-select" style="flex:1;">
+          <option value="">— None (stop) —</option>
+          <option value="rickroll.mp4">🎵 RickRoll</option>
+          <option value="catito.mp4">🐱 Catito Dance</option>
+          <option value="minion.mp4">🍌 Minion Bob</option>
+        </select>
+      </div>
+      <div class="ap-row">
+        <span class="ap-label">Duration</span>
+        <select id="apBgVideoDur" class="ap-select">
+          <option value="3">3 sec</option>
+          <option value="10">10 sec</option>
+          <option value="30">30 sec</option>
+          <option value="60" selected>1 min</option>
+          <option value="300">5 min</option>
+          <option value="600">10 min</option>
+          <option value="1800">30 min</option>
+          <option value="3600">1 hour</option>
+        </select>
+      </div>
+      <div class="ap-row">
+        <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
+          <input type="checkbox" id="apBgVideoOnline" style="width:16px;height:16px;" checked> Online only
+        </label>
+      </div>
+      <div class="ap-row" style="gap:8px;">
+        <button class="ap-btn ap-btn-purple" style="flex:1;" onclick="adminSendBgVideo()">▶ Play for All</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminStopBgVideo()">■ Stop</button>
       </div>
     </div>
 
@@ -1614,12 +1888,22 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="keyBox">Key Box</option>
           <option value="fortuneWheel">Fortune Wheel Spin</option>
           <option value="bombBox">💣 Bomb Box</option>
+          <option value="safeNoob">Noob Safe</option>
+          <option value="safeIron">Iron Safe</option>
+          <option value="safeElite">💎 Elite Safe</option>
+          <optgroup label="─── Keys ───">
+            <option value="keyYellow">🟡 Yellow Key</option>
+            <option value="keyGreen">🟢 Green Key</option>
+            <option value="keyRed">🔴 Red Key</option>
+            <option value="keyBlue">🔵 Blue Key</option>
+            <option value="keyBlack">⚫ Black Key</option>
+          </optgroup>
         </select>
         <button class="ap-btn ap-btn-green" onclick="adminGiveOpeningAll()">🎁 Give All</button>
       </div>
       <div class="ap-row">
         <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="checkbox" id="apOpeningOnline" style="width:16px;height:16px;">
+          <input type="checkbox" id="apOpeningOnline" style="width:16px;height:16px;" checked>
           Online players only
         </label>
       </div>
@@ -1635,13 +1919,14 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="fortuneWheel">Fortune Wheel</option>
           <option value="tickets">Ticket Regen</option>
           <option value="boost">Overdrive Boost</option>
+          <option value="safe">🔒 Safe Purchase</option>
           <option value="all">ALL Cooldowns</option>
         </select>
         <button class="ap-btn ap-btn-blue" onclick="adminSkipCooldownAll()">⏩ Skip</button>
       </div>
       <div class="ap-row">
         <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="checkbox" id="apCooldownOnline" style="width:16px;height:16px;">
+          <input type="checkbox" id="apCooldownOnline" style="width:16px;height:16px;" checked>
           Online players only
         </label>
       </div>
@@ -1657,7 +1942,7 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
       <div class="ap-row">
         <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="checkbox" id="apTicketsOnline" style="width:16px;height:16px;">
+          <input type="checkbox" id="apTicketsOnline" style="width:16px;height:16px;" checked>
           Online players only
         </label>
       </div>
@@ -1701,6 +1986,12 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="corrupted">Corrupted</option>
           <option value="failed">Failed</option>
           <option value="doge">Doge</option>
+          <option value="bhole">Black Hole</option>
+          <option value="goldensafe">Golden Safe</option>
+          <optgroup label="─── Admin Only ───">
+            <option value="capsulememe">💊 Capsule Meme</option>
+            <option value="toilet">🚽 Skibidi Toilet</option>
+          </optgroup>
         </select>
       </div>
       <div class="ap-row">
@@ -1720,7 +2011,7 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
       <div class="ap-row">
         <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="checkbox" id="apTempSkinOnline" style="width:16px;height:16px;">
+          <input type="checkbox" id="apTempSkinOnline" style="width:16px;height:16px;" checked>
           Online players only
         </label>
       </div>
@@ -1743,6 +2034,14 @@ document.addEventListener('DOMContentLoaded', function () {
         <optgroup label="🔒 Admin only">
           <option value="catito">Ai My Catito</option>
           <option value="event">Event Song</option>
+          <option value="amarrun">AmarRun</option>
+          <option value="brain">Brainrot Song</option>
+          <option value="saliutas">Saliutas</option>
+          <option value="klikobak">Klikobak</option>
+          <option value="rickroll">RickRoll</option>
+          <option value="tiktok">Tiktok Song</option>
+          <option value="batidao">No Batidao</option>
+          <option value="eind">Eind!</option>
         </optgroup>
       </select>
       <div class="ap-row">
@@ -1761,7 +2060,7 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
       <div class="ap-row">
         <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="checkbox" id="apMusicOnline" style="width:16px;height:16px;"> Online only
+          <input type="checkbox" id="apMusicOnline" style="width:16px;height:16px;" checked> Online only
         </label>
       </div>
       <div class="ap-row" style="gap:8px;">
@@ -1822,6 +2121,20 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="weak">Weak</option><option value="medium" selected>Med</option><option value="strong">Strong</option>
         </select>
       </div>
+      <div class="ap-effect-row ap-row" style="background:#0d0d20;border-radius:8px;padding:7px 10px;margin-bottom:6px;">
+        <input type="checkbox" class="ap-effect-check" style="width:16px;height:16px;margin-right:6px;">
+        <span style="color:#e8eaf6;font-size:13px;flex:1;">🥁 Beat (Screen Shake)</span>
+        <select class="ap-select ap-effect-strength" data-effect="beat" style="max-width:85px;">
+          <option value="weak">Weak</option><option value="medium" selected>Med</option><option value="strong">Strong</option>
+        </select>
+      </div>
+      <div class="ap-effect-row ap-row" style="background:#0d0d20;border-radius:8px;padding:7px 10px;margin-bottom:6px;">
+        <input type="checkbox" class="ap-effect-check" style="width:16px;height:16px;margin-right:6px;">
+        <span style="color:#e8eaf6;font-size:13px;flex:1;">☯️ YingYang (B&W Mode)</span>
+        <select class="ap-select ap-effect-strength" data-effect="yinyang" style="max-width:85px;">
+          <option value="weak">Weak</option><option value="medium" selected>Med</option><option value="strong">Strong</option>
+        </select>
+      </div>
 
       <div class="ap-row" style="margin-top:6px;">
         <span class="ap-label">Duration</span>
@@ -1838,7 +2151,7 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
       <div class="ap-row">
         <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="checkbox" id="apEffectsOnline" style="width:16px;height:16px;"> Online only
+          <input type="checkbox" id="apEffectsOnline" style="width:16px;height:16px;" checked> Online only
         </label>
       </div>
       <div class="ap-row" style="gap:8px;margin-top:6px;">
@@ -1884,12 +2197,52 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
       <div class="ap-row">
         <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
-          <input type="checkbox" id="apChaosOnline" style="width:16px;height:16px;"> Online only
+          <input type="checkbox" id="apChaosOnline" style="width:16px;height:16px;" checked> Online only
         </label>
       </div>
       <div class="ap-row" style="gap:8px;margin-top:4px;">
         <button class="ap-btn ap-btn-amber" style="flex:1;" onclick="adminSendUIChaos()">🌀 Apply</button>
         <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminResetUIForAll()">↺ Reset</button>
+      </div>
+    </div>
+
+  <!-- Coin Control -->
+    <div class="ap-card">
+      <h3>🪙 Coin Control</h3>
+      <p style="color:#7986cb;font-size:11px;margin:0 0 8px;">Move the main coin for all players.</p>
+      <div class="ap-row">
+        <span class="ap-label">Direction</span>
+        <select id="apCoinDir" class="ap-select">
+          <option value="cw">↻ Clockwise</option>
+          <option value="ccw">↺ Counter-clockwise</option>
+          <option value="axis">↕ Axis (flip)</option>
+        </select>
+      </div>
+      <div class="ap-row">
+        <span class="ap-label">Speed</span>
+        <select id="apCoinSpeed" class="ap-select">
+          <option value="slow">🐢 Slow</option>
+          <option value="medium" selected>➡️ Medium</option>
+          <option value="fast">⚡ Fast</option>
+        </select>
+      </div>
+      <div class="ap-row">
+        <span class="ap-label">Duration</span>
+        <select id="apCoinDur" class="ap-select">
+          <option value="1">1 sec</option>
+          <option value="5">5 sec</option>
+          <option value="15">15 sec</option>
+          <option value="30">30 sec</option>
+          <option value="60" selected>1 min</option>
+          <option value="300">5 min</option>
+          <option value="600">10 min</option>
+          <option value="1800">30 min</option>
+          <option value="3600">1 hour</option>
+        </select>
+      </div>
+      <div class="ap-row" style="gap:8px;margin-top:4px;">
+        <button class="ap-btn ap-btn-blue" style="flex:1;" onclick="adminSendCoinControl()">🪙 Apply</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminStopCoinControl()">■ Stop</button>
       </div>
     </div>
 
@@ -1934,6 +2287,46 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
     </div>
 
+<!-- Player Skins -->
+    <div class="ap-card">
+      <h3>🎨 Player Skins</h3>
+      <div class="ap-row" style="gap:6px;">
+        <button class="ap-btn ap-btn-blue ap-btn-sm" style="flex:1;" onclick="adminLoadPlayerSkins()">👁 View Skins</button>
+      </div>
+      <div id="apPlayerSkinsList" style="margin-top:8px;max-height:160px;overflow-y:auto;font-size:12px;color:#9fa8da;"></div>
+      <div class="ap-row" style="margin-top:6px;gap:6px;">
+        <select id="apModSkinId" class="ap-select" style="flex:1;">
+          <option value="what">What</option>
+          <option value="burger">Burger</option>
+          <option value="joost">Joost</option>
+          <option value="dog">Dog</option>
+          <option value="diam">Diamond</option>
+          <option value="tung">Tung</option>
+          <option value="euro">Euro</option>
+          <option value="space">Space</option>
+          <option value="pixe">Pixel</option>
+          <option value="onion">Onion</option>
+          <option value="cookie">Cookie</option>
+          <option value="ruka">Ruka</option>
+          <option value="banditx">Bandit X</option>
+          <option value="goldcoin">Gold Coin</option>
+          <option value="brb">Big Red Button</option>
+          <option value="siulai">Siulai</option>
+          <option value="mystic">Mystic</option>
+          <option value="capsule">Capsule</option>
+          <option value="doge">Doge</option>
+          <option value="corrupted">Corrupted</option>
+          <option value="failed">Failed</option>
+          <option value="goldensafe">Golden Safe</option>
+          <option value="bhole">Black Hole</option>
+          <option value="toilet">Skibidi Toilet</option>
+          <option value="capsulememe">Capsule Meme</option>
+        </select>
+        <button class="ap-btn ap-btn-green ap-btn-sm" onclick="adminModGiveSkin()">+ Give</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminModTakeSkin()">− Take</button>
+      </div>
+    </div>
+
     <!-- Give Opening (personal) -->
     <div class="ap-card">
       <h3>🎁 Give Opening</h3>
@@ -1946,6 +2339,16 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="keyBox">Key Box</option>
           <option value="fortuneWheel">Fortune Wheel Spin</option>
           <option value="bombBox">💣 Bomb Box</option>
+          <option value="safeNoob">Noob Safe</option>
+          <option value="safeIron">Iron Safe</option>
+          <option value="safeElite">💎 Elite Safe</option>
+          <optgroup label="─── Keys ───">
+            <option value="keyYellow">🟡 Yellow Key</option>
+            <option value="keyGreen">🟢 Green Key</option>
+            <option value="keyRed">🔴 Red Key</option>
+            <option value="keyBlue">🔵 Blue Key</option>
+            <option value="keyBlack">⚫ Black Key</option>
+          </optgroup>
         </select>
         <button class="ap-btn ap-btn-amber" onclick="adminGiveOpeningPlayer()">🎁 Give</button>
       </div>

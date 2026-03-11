@@ -1424,6 +1424,7 @@ function getWeightedNoobBoxReward() {
 // ==========================================
 const defaultData = {
   tokens: 0,
+  playtimeMs: 0,
   skin: "default",
   skins: {default: 1},
 
@@ -1493,7 +1494,8 @@ keys: {
     red: 0,
     green: 0,
     yellow: 0,
-    black: 0
+    black: 0,
+    admin: 0
   },
   keyBox: {
     taps: 0
@@ -1730,12 +1732,14 @@ if (d.adminBanned) {
     </div>`;
 }
 if (typeof d.keys.black === 'undefined') d.keys.black = 0;
+if (typeof d.keys.admin === 'undefined') d.keys.admin = 0;
 
 if (!d.puzzles3) d.puzzles3 = [0,0,0,0,0,0,0,0,0];
 if (typeof d.puzzle3Done === 'undefined') d.puzzle3Done = false;
 if (!d.puzzles4) d.puzzles4 = [0,0,0,0,0,0,0,0,0];
 if (typeof d.puzzle4Done === 'undefined') d.puzzle4Done = false;
 if (!d.puzzles5) d.puzzles5 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+if (!d.playtimeMs) d.playtimeMs = 0;
 if (typeof d.puzzle5Done === 'undefined') d.puzzle5Done = false;
 
 if (!d.glitchBox) {
@@ -7923,6 +7927,39 @@ async function adminRemoveFromLeaderboard() {
   showToast(`🗑 Removed ${uid} from leaderboard`);
   setTimeout(() => _adminLoadPlayers(), 1500);
 }
+async function adminRestoreToLeaderboard() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) return;
+  if (!window._firebaseReady) { showToast('Firebase not ready'); return; }
+
+  // Сначала проверяем — может запись уже есть в leaderboard (просто скрыта)
+  const lbSnap = await _db.ref(`leaderboard/${uid}`).once('value').catch(() => null);
+  const lbData = lbSnap ? lbSnap.val() : null;
+
+  // Берём данные из уже загруженного списка игроков
+  const cachedPlayer = _adminPlayers ? _adminPlayers[uid] : null;
+
+  // Собираем лучшее из того что есть
+  const source = lbData || cachedPlayer || {};
+
+  const entry = {
+    uid: uid,
+    name: source.name || ('Player_' + uid.slice(-4)),
+    username: source.username || '',
+    photoUrl: source.photoUrl || '',
+    isTg: source.isTg || false,
+    rate: Math.round(source.rate || 0),
+    tokens: Math.round(source.tokens || 0),
+    updatedAt: Date.now(),
+    lastSeen: source.lastSeen || Date.now(),
+    playtimeMs: source.playtimeMs || 0,
+    restoredByAdmin: true
+  };
+
+  await _db.ref(`leaderboard/${uid}`).set(entry);
+  showToast(`♻️ Restored "${entry.name}" to leaderboard`);
+  setTimeout(() => _adminLoadPlayers(), 1500);
+}
 
 /* ---- MOD: Personal message ---- */
 async function adminSendPersonalMsg() {
@@ -8776,12 +8813,17 @@ function _adminApplyOpening(type) {
     case 'keyGreen':
     case 'keyRed':
     case 'keyBlue':
-    case 'keyBlack': {
+    case 'keyBlack':
+    case 'keyAdmin': {
       if (!d.keys) d.keys = {};
-      const keyMap = { keyYellow:'yellow', keyGreen:'green', keyRed:'red', keyBlue:'blue', keyBlack:'black' };
+      const keyMap = { keyYellow:'yellow', keyGreen:'green', keyRed:'red', keyBlue:'blue', keyBlack:'black', keyAdmin:'admin' };
       const k = keyMap[type];
-      d.keys[k] = (d.keys[k] || 0) + 1;
-      const emoji = { yellow:'🟡', green:'🟢', red:'🔴', blue:'🔵', black:'⚫' };
+      if (k === 'admin') {
+        d.keys.admin = 1; // максимум 1
+      } else {
+        d.keys[k] = (d.keys[k] || 0) + 1;
+      }
+      const emoji = { yellow:'🟡', green:'🟢', red:'🔴', blue:'🔵', black:'⚫', admin:'👑' };
       save(); if (typeof ui === 'function') ui();
       _adminShowOverlay(`${emoji[k]} Admin gave you a ${k} key!`, '#ffd700', 4000);
       break;
@@ -10807,6 +10849,12 @@ function claimIventReward(day) {
 // ===== KEYS SYSTEM =====
 let currentKeyIndex = 0;
 const keyColors = ['blue', 'red', 'green', 'yellow', 'black'];
+
+function getVisibleKeyColors() {
+  const base = ['blue', 'red', 'green', 'yellow', 'black'];
+  if (d.keys && d.keys.admin > 0) base.push('admin');
+  return base;
+}
 let glitchAudioContext = null;
 let glitchAudioBuffer = null;
 
@@ -10818,12 +10866,14 @@ function initKeysTab() {
   // Устанавливаем обработчики только один раз
   if (!keysTabInitialized) {
     document.getElementById('keyPrev')?.addEventListener('click', () => {
-      currentKeyIndex = (currentKeyIndex - 1 + keyColors.length) % keyColors.length;
+      const kc = getVisibleKeyColors();
+      currentKeyIndex = (currentKeyIndex - 1 + kc.length) % kc.length;
       updateKeysUI();
     });
     
     document.getElementById('keyNext')?.addEventListener('click', () => {
-      currentKeyIndex = (currentKeyIndex + 1) % keyColors.length;
+      const kc = getVisibleKeyColors();
+      currentKeyIndex = (currentKeyIndex + 1) % kc.length;
       updateKeysUI();
     });
     
@@ -10853,9 +10903,11 @@ if (keysTabEl) {
     const dx = e.changedTouches[0].clientX - touchStartX;
     if (Math.abs(dx) < 40) return; // фильтр шумов
     if (dx < 0) {
-      currentKeyIndex = (currentKeyIndex + 1) % keyColors.length;
+      const kc = getVisibleKeyColors();
+      currentKeyIndex = (currentKeyIndex + 1) % kc.length;
     } else {
-      currentKeyIndex = (currentKeyIndex - 1 + keyColors.length) % keyColors.length;
+      const kc = getVisibleKeyColors();
+      currentKeyIndex = (currentKeyIndex - 1 + kc.length) % kc.length;
     }
     updateKeysUI();
   }, { passive: true });
@@ -10865,15 +10917,16 @@ if (keysTabEl) {
 function updateKeysUI() {
   // УДАЛЕНО: Тут были prevBtn.onclick и nextBtn.onclick — они вызывали двойной клик!
   
-  const currentKey = keyColors[currentKeyIndex];
-  // Защита от undefined значения
+  const visibleKeys = getVisibleKeyColors();
+  if (currentKeyIndex >= visibleKeys.length) currentKeyIndex = 0;
+  const currentKey = visibleKeys[currentKeyIndex];
   const keyCount = (d.keys && d.keys[currentKey]) ? d.keys[currentKey] : 0;
-  const maxKeys = 4;
+  const maxKeys = currentKey === 'admin' ? 1 : 4;
   
   const keyImg = document.getElementById('currentKeyImg');
   const keyCounter = document.getElementById('keyCounter');
 
-  if (keyImg) keyImg.src = `${currentKey}.png`;
+  if (keyImg) keyImg.src = currentKey === 'admin' ? 'adminkey.png' : `${currentKey}.png`;
   if (keyCounter) keyCounter.textContent = `${keyCount} / ${maxKeys}`;
   
   // Обновляем магазин
@@ -10891,7 +10944,7 @@ function updateKeyShop(keyColor) {
   if (!shopTitle || !shopItems) return;
   
   // Устанавливаем название магазина
-  shopTitle.textContent = `${keyColor.charAt(0).toUpperCase() + keyColor.slice(1)} Shop`;
+  shopTitle.textContent = keyColor === 'admin' ? 'Admin Shop' : `${keyColor.charAt(0).toUpperCase() + keyColor.slice(1)} Shop`;
   
   // Очищаем магазин
   shopItems.innerHTML = '';
@@ -10948,6 +11001,18 @@ function getShopItems(keyColor) {
       { name: '+20h Income', type: 'income', value: 20, desc: 'Get 20h KSPT income' },
       { name: 'Puzzle Piece', type: 'puzzle', value: 1, desc: 'Get random puzzle piece' },
       { name: '+25 EK', type: 'ek', value: 25, desc: 'Get 25 EK coins' }
+    ],
+    admin: [
+      { name: 'Noob Box', type: 'adminNoobBox', value: 1, desc: 'Open Noob Box' },
+      { name: 'Capsule', type: 'adminCapsule', value: 1, desc: 'Open Capsule' },
+      { name: 'Gold Capsule', type: 'adminGoldCapsule', value: 1, desc: 'Open Gold Capsule' },
+      { name: 'Glitch Box', type: 'adminGlitchBox', value: 1, desc: 'Open Glitch Box' },
+      { name: 'Bomb Box', type: 'adminBombBox', value: 1, desc: 'Open Bomb Box' },
+      { name: 'Noob Safe', type: 'adminSafeNoob', value: 1, desc: 'Open Noob Safe' },
+      { name: 'Iron Safe', type: 'adminSafeIron', value: 1, desc: 'Open Iron Safe' },
+      { name: 'Elite Safe', type: 'adminSafeElite', value: 1, desc: 'Open Elite Safe' },
+      { name: 'Key Box', type: 'adminKeyBox', value: 1, desc: 'Open Key Box' },
+      { name: 'Fortune Wheel', type: 'adminWheel', value: 1, desc: '1 free Fortune Wheel spin' }
     ]
   };
   
@@ -11091,6 +11156,60 @@ function applyKeyReward(keyColor, item) {
       if (!d.ek) d.ek = 0;
       d.ek += item.value;
       showToast(`+${item.value} EK coins!`);
+      break;
+
+    case 'adminNoobBox':
+      if (!d.noobBox) d.noobBox = { obtained: false, opened: false, taps: 0 };
+      d.noobBox.obtained = true; d.noobBox.opened = false; d.noobBox.taps = 0;
+      save(); startNoobBoxSequence();
+      break;
+    case 'adminCapsule':
+      d.capsule.lastOpen = 0;
+      save(); openCapsule();
+      break;
+    case 'adminGoldCapsule':
+      if (!d.goldCapsule) d.goldCapsule = { obtained: false, opened: false, taps: 0 };
+      d.goldCapsule.obtained = true; d.goldCapsule.opened = false;
+      save(); startGoldCapsuleSequence();
+      break;
+    case 'adminGlitchBox':
+      d.glitchBox.lastOpen = 0;
+      save(); updateGlitchBoxUI(); showToast('🌀 Glitch Box ready!');
+      break;
+    case 'adminBombBox':
+      if (!d.bombBox) d.bombBox = { obtained: false };
+      d.bombBox.obtained = true;
+      save(); if (typeof startBombBoxSequence === 'function') startBombBoxSequence();
+      break;
+    case 'adminSafeNoob':
+      if (!d.safe) d.safe = {};
+      d.safe.lastOpen = 0;
+      save(); if (typeof _startSafeOpening === 'function') _startSafeOpening('noob');
+      break;
+    case 'adminSafeIron':
+      if (!d.safe) d.safe = {};
+      d.safe.lastOpen = 0;
+      save(); if (typeof _startSafeOpening === 'function') _startSafeOpening('iron');
+      break;
+    case 'adminSafeElite':
+      if (!d.safe) d.safe = {};
+      d.safe.lastOpen = 0;
+      save(); if (typeof _startSafeOpening === 'function') _startSafeOpening('elite');
+      break;
+    case 'adminKeyBox':
+      if (!d.keyBox) d.keyBox = { taps: 0 };
+      d.keyBox.taps = 0;
+      save(); if (typeof startKeyBoxSequence === 'function') startKeyBoxSequence();
+      break;
+    case 'adminWheel':
+      window._freeWheelSpin = true;
+      if (!d.fortuneWheel) d.fortuneWheel = { spinsUsed: 0, lastResetTime: 0 };
+      d.fortuneWheel.spinsUsed = 0; d.fortuneWheel.lastResetTime = 0;
+      save();
+      setTimeout(() => {
+        const modal = document.getElementById('fortuneWheelModal');
+        if (modal) { modal.style.display = 'flex'; }
+      }, 300);
       break;
       
     case 'income':
@@ -11906,7 +12025,8 @@ function pushMyLeaderboardData() {
     rate: Math.round(rate),
     tokens: Math.round(d.tokens || 0),
     updatedAt: Date.now(),
-    lastSeen: Date.now()
+    lastSeen: Date.now(),
+    playtimeMs: Math.round(d.playtimeMs || 0)
   };
   window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).set(entry);
 }
@@ -11929,6 +12049,19 @@ function loadLeaderboard() {
     const upd = document.getElementById('lbUpdated');
     if (upd) upd.textContent = 'Updated: ' + new Date().toLocaleTimeString();
   });
+}
+
+function openPlayerDetail(p) {
+  document.getElementById('pdAvatar').src = p.photoUrl || 'seri.png';
+  document.getElementById('pdAvatar').onerror = function(){ this.src='seri.png'; };
+  document.getElementById('pdName').textContent = p.name || 'Player';
+  document.getElementById('pdUsername').textContent = p.username ? '@' + p.username : '';
+  document.getElementById('pdRate').textContent = formatNumber(p.rate) + ' KSPT/h';
+  document.getElementById('pdTokens').textContent = formatNumber(p.tokens || 0) + ' KSPT';
+  document.getElementById('pdPlaytime').textContent = p.playtimeMs ? _formatPlaytime(p.playtimeMs) : '—';
+  document.getElementById('pdLastSeen').textContent = formatLastSeen(p.lastSeen || p.updatedAt);
+  const modal = document.getElementById('playerDetailModal');
+  modal.style.display = 'flex';
 }
 
 function renderLeaderboard(players) {
@@ -11988,12 +12121,13 @@ function renderLeaderboard(players) {
     const seenStr = formatLastSeen(p.lastSeen || p.updatedAt);
     const isOnline = (Date.now() - (p.lastSeen || p.updatedAt || 0)) < 3 * 60 * 1000;
     const seenColor = isOnline ? '#00e676' : '#666';
+    const playtimeStr = p.playtimeMs ? _formatPlaytime(p.playtimeMs) : null;
 
     const rankColor = rank === 1 ? '#ffd700' : rank === 2 ? '#c0c0c0' : rank === 3 ? '#cd7f32' : '#aaa';
     const border = isMe ? '2px solid #ffd700' : '1px solid #2a2a2a';
     const bg = isMe ? 'linear-gradient(135deg,#1a1a2e,#16213e)' : (rank <= 3 ? 'linear-gradient(135deg,#1c1c1c,#111)' : '#111');
 
-    return `<div style="display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:12px; background:${bg}; border:${border};">
+    return `<div style="display:flex; align-items:center; gap:12px; padding:10px 14px; border-radius:12px; background:${bg}; border:${border};" onclick="openPlayerDetail(${JSON.stringify(p).replace(/\"/g, '&quot;')})" >
       <div style="font-size:${rank <= 3 ? '20px' : '14px'}; font-weight:bold; color:${rankColor}; min-width:28px; text-align:center;">${medal || '#' + rank}</div>
       <img src="${avatarSrc}" onerror="this.src='seri.png'" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid ${rankColor}; flex-shrink:0;">
       <div style="flex:1; min-width:0;">
@@ -12863,7 +12997,7 @@ function closeGlitchReward() {
 }
 
 function expandShop() {
-  const currentKey = keyColors[currentKeyIndex];
+  const currentKey = getVisibleKeyColors()[currentKeyIndex] || getVisibleKeyColors()[0];
   const modal = document.getElementById('shopModal');
   const title = document.getElementById('shopModalTitle');
   const grid = document.getElementById('shopModalGrid');
@@ -12871,7 +13005,7 @@ function expandShop() {
   if (!modal || !title || !grid) return;
   
   // Устанавливаем заголовок
-  title.textContent = `${currentKey.charAt(0).toUpperCase() + currentKey.slice(1)} Shop`;
+  title.textContent = currentKey === 'admin' ? '👑 Admin Shop' : `${currentKey.charAt(0).toUpperCase() + currentKey.slice(1)} Shop`;
   
   // Очищаем сетку
   grid.innerHTML = '';
@@ -14053,14 +14187,39 @@ function _adminApplyCoinControl(dir, speed) {
 document.addEventListener('firebase-ready', _startFirebaseSync);
 if (window._firebaseReady) _startFirebaseSync();
 
+// Playtime tracking
+window._playtimeSessionStart = Date.now();
+window._playtimeLastTick = Date.now();
+
+function _tickPlaytime() {
+  const now = Date.now();
+  const delta = now - (window._playtimeLastTick || now);
+  window._playtimeLastTick = now;
+  // Считаем только если вкладка активна и delta разумная (< 2 минут, защита от suspend)
+  if (delta > 0 && delta < 120000) {
+    d.playtimeMs = (d.playtimeMs || 0) + delta;
+  }
+}
+
+function _formatPlaytime(ms) {
+  if (!ms || ms < 60000) return '< 1 min';
+  const totalMin = Math.floor(ms / 60000);
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  if (h === 0) return m + ' min';
+  return h + 'h ' + m + 'min';
+}
+
 function _updateLastSeen() {
+  _tickPlaytime();
   if (!window._firebaseReady || !window._firebaseDB) return;
   const uid = typeof getMyUid === 'function' ? getMyUid() : localStorage.getItem('_kspt_uid');
   if (!uid || uid === 'local') return;
   window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).update({
     lastSeen: Date.now(),
     rate: Math.round(getHourlyRate()),
-    tokens: Math.round(d.tokens || 0)
+    tokens: Math.round(d.tokens || 0),
+    playtimeMs: Math.round(d.playtimeMs || 0)
   });
 }
 document.addEventListener('firebase-ready', _updateLastSeen);

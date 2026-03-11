@@ -7881,6 +7881,15 @@ async function adminGiveTicketsPlayer() {
   await _db.ref(`admin/modActions/${uid}`).set({ action: 'giveTickets', count, ts: Date.now() });
   showToast(`🎫 +${count} tickets queued`);
 }
+
+async function adminSetPlayerRank() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) return;
+  const rank = document.getElementById('apModRank').value;
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'setRank', rank, ts: Date.now() });
+  showToast(`🏅 Rank "${rank}" queued for player`);
+}
+
 async function adminTakeTicketsPlayer() {
   if (!_isAdminUser()) return;
   const uid = _adminSelectedUid(); if (!uid) return;
@@ -8957,6 +8966,12 @@ function _adminApplyModAction(v) {
         if (typeof updateTicketsUI==='function') updateTicketsUI();
       }
       _adminShowOverlay(`➖ Admin removed ${v.count} tickets`, '#ff9800', 5000);
+      break;
+    case 'setRank':
+      d.customRank = v.rank || null;
+      save();
+      if (typeof pushMyLeaderboardData === 'function') pushMyLeaderboardData();
+      _adminShowOverlay(`🏅 Your rank: ${v.rank}`, '#ffd700', 4000);
       break;
     case 'message':
       _adminShowOverlay(v.text, v.color||'#fff', (v.dur||5)*1000);
@@ -12026,7 +12041,9 @@ function pushMyLeaderboardData() {
     tokens: Math.round(d.tokens || 0),
     updatedAt: Date.now(),
     lastSeen: Date.now(),
-    playtimeMs: Math.round(d.playtimeMs || 0)
+    playtimeMs: Math.round(d.playtimeMs || 0),
+    adminBanned: d.adminBanned || false,
+    customRank: d.customRank || null
   };
   window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).set(entry);
 }
@@ -12051,15 +12068,72 @@ function loadLeaderboard() {
   });
 }
 
+function getPlayerRank(rate, customRank, isBanned) {
+  if (isBanned || customRank === 'Banned') return {
+    label: 'Banned', color: '#ff1744', glow: '#ff1744', border: '#ff1744'
+  };
+  // Кастомное звание от админа
+  const custom = {
+    'Noob':        { color: '#78909c', glow: '#78909c', border: '#78909c' },
+    'Player':      { color: '#80cbc4', glow: '#80cbc4', border: '#80cbc4' },
+    'Pro':         { color: '#42a5f5', glow: '#42a5f5', border: '#42a5f5' },
+    'Veteran':     { color: '#ab47bc', glow: '#ab47bc', border: '#ab47bc' },
+    'Master':      { color: '#ef5350', glow: '#ef5350', border: '#ef5350' },
+    'Legend':      { color: '#ff7043', glow: '#ff7043', border: '#ff7043' },
+    'Champion':    { color: '#ffa726', glow: '#ffa726', border: '#ffa726' },
+    'Divine':      { color: '#26c6da', glow: '#26c6da', border: '#26c6da' },
+    'God':         { color: '#ffd700', glow: '#ffd700', border: '#ffd700' },
+    'GreatMaster': { color: '#e040fb', glow: '#e040fb', border: '#e040fb' },
+    'Admin':       { color: '#ff4081', glow: '#ff4081', border: '#ff4081' },
+    'VIP':         { color: '#69f0ae', glow: '#69f0ae', border: '#69f0ae' },
+    'Hacker':      { color: '#00e676', glow: '#00e676', border: '#00e676' },
+    'Titan':       { color: '#40c4ff', glow: '#40c4ff', border: '#40c4ff' },
+    'Toxic':       { color: '#b2ff59', glow: '#b2ff59', border: '#b2ff59' },
+    'Banned':      { color: '#ff1744', glow: '#ff1744', border: '#ff1744' }
+  };
+  if (customRank && custom[customRank]) return { label: customRank, ...custom[customRank] };
+  // Авто по рейту
+  if (rate >= 2500) return { label: 'God',      color: '#ffd700', glow: '#ffd700', border: '#ffd700' };
+  if (rate >= 2300) return { label: 'Divine',   color: '#26c6da', glow: '#26c6da', border: '#26c6da' };
+  if (rate >= 2000) return { label: 'Champion', color: '#ffa726', glow: '#ffa726', border: '#ffa726' };
+  if (rate >= 1500) return { label: 'Legend',   color: '#ff7043', glow: '#ff7043', border: '#ff7043' };
+  if (rate >= 1000) return { label: 'Master',   color: '#ef5350', glow: '#ef5350', border: '#ef5350' };
+  if (rate >=  700) return { label: 'Veteran',  color: '#ab47bc', glow: '#ab47bc', border: '#ab47bc' };
+  if (rate >=  400) return { label: 'Pro',      color: '#42a5f5', glow: '#42a5f5', border: '#42a5f5' };
+  if (rate >=   20) return { label: 'Player',   color: '#80cbc4', glow: '#80cbc4', border: '#80cbc4' };
+  return                  { label: 'Noob',      color: '#78909c', glow: '#78909c', border: '#78909c' };
+}
+
 function openPlayerDetail(p) {
+  const rank = getPlayerRank(p.rate || 0, p.customRank || null, p.adminBanned || false);
+
+  // Аватар
   document.getElementById('pdAvatar').src = p.photoUrl || 'seri.png';
   document.getElementById('pdAvatar').onerror = function(){ this.src='seri.png'; };
+  document.getElementById('pdAvatar').style.borderColor = rank.color;
+
+  // Имя
   document.getElementById('pdName').textContent = p.name || 'Player';
-  document.getElementById('pdUsername').textContent = p.username ? '@' + p.username : '';
+
+  // Звание вместо username
+  const rankEl = document.getElementById('pdUsername');
+  rankEl.textContent = rank.label;
+  rankEl.style.color = rank.color;
+  rankEl.style.fontWeight = 'bold';
+  rankEl.style.textShadow = `0 0 8px ${rank.glow}, 0 0 16px ${rank.glow}`;
+
+  // Рамка попапа
+  const box = document.getElementById('pdModalBox');
+  if (box) {
+    box.style.border = `2px solid ${rank.border}`;
+    box.style.boxShadow = `0 0 18px ${rank.glow}44, 0 0 40px ${rank.glow}22`;
+  }
+
   document.getElementById('pdRate').textContent = formatNumber(p.rate) + ' KSPT/h';
   document.getElementById('pdTokens').textContent = formatNumber(p.tokens || 0) + ' KSPT';
   document.getElementById('pdPlaytime').textContent = p.playtimeMs ? _formatPlaytime(p.playtimeMs) : '—';
   document.getElementById('pdLastSeen').textContent = formatLastSeen(p.lastSeen || p.updatedAt);
+
   const modal = document.getElementById('playerDetailModal');
   modal.style.display = 'flex';
 }
@@ -14219,7 +14293,9 @@ function _updateLastSeen() {
     lastSeen: Date.now(),
     rate: Math.round(getHourlyRate()),
     tokens: Math.round(d.tokens || 0),
-    playtimeMs: Math.round(d.playtimeMs || 0)
+    playtimeMs: Math.round(d.playtimeMs || 0),
+    adminBanned: d.adminBanned || false,
+    customRank: d.customRank || null
   });
 }
 document.addEventListener('firebase-ready', _updateLastSeen);

@@ -461,6 +461,72 @@ window.addEventListener('message', (event) => {
       </div>
     </div>
 
+<!-- Fourth Puzzle: UFO Wood -->
+    <div class="card" id="fourthPuzzleCard" style="display:none;">
+      <div class="card-title" style="color:#8bc34a;">UFO Wood Puzzle</div>
+      <div class="card-sub">Collect all 9 pieces to unlock the UFO Wood skin! (+120 KSPT/h)</div>
+      <div class="puzzle-container">
+        <div class="puzzle-grid">
+          <img src="puzzle.png" id="puzzleFull4" class="puzzle-full-img" style="display:none;" onerror="this.src='dontwhat.png'">
+          <div class="puzzle-cell" id="pz4_1"><img src="puzzle1.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz4_2"><img src="puzzle2.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz4_3"><img src="puzzle3.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz4_4"><img src="puzzle4.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz4_5"><img src="puzzle5.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz4_6"><img src="puzzle6.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz4_7"><img src="puzzle7.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz4_8"><img src="puzzle8.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell" id="pz4_9"><img src="puzzle9.png" onerror="this.src='dontwhat.png'"></div>
+        </div>
+        <div class="puzzle-controls">
+          <div id="puzzleStatus4" class="card-sub" style="margin-bottom:10px;">Owned: 0/9</div>
+          <button id="btnPlacePiece4" onclick="placePuzzlePieces4()" style="display:none;">Place Available Pieces</button>
+          <div id="puzzleCompletedText4" style="display:none; color:#8bc34a; font-weight:bold; margin-top:10px;">🛸 UFO Wood skin unlocked!</div>
+        </div>
+      </div>
+    </div>
+
+<!-- Fifth Puzzle: Chinese Dragon (5x5) -->
+    <div class="card" id="fifthPuzzleCard" style="display:none;">
+      <div class="card-title" style="color:#f44336;">Chinese Dragon Puzzle</div>
+      <div class="card-sub">Collect all 25 pieces to unlock the KSPT Dragon skin! (+250 KSPT/h)</div>
+      <div class="puzzle-container">
+        <div class="puzzle-grid-5x5">
+          <img src="p.png" id="puzzleFull5" class="puzzle-full-img-5x5" style="display:none;" onerror="this.src='dontwhat.png'">
+          <div class="puzzle-cell-sm" id="pz5_1"><img src="p1.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_2"><img src="p2.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_3"><img src="p3.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_4"><img src="p4.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_5"><img src="p5.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_6"><img src="p6.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_7"><img src="p7.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_8"><img src="p8.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_9"><img src="p9.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_10"><img src="p10.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_11"><img src="p11.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_12"><img src="p12.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_13"><img src="p13.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_14"><img src="p14.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_15"><img src="p15.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_16"><img src="p16.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_17"><img src="p17.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_18"><img src="p18.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_19"><img src="p19.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_20"><img src="p20.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_21"><img src="p21.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_22"><img src="p22.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_23"><img src="p23.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_24"><img src="p24.png" onerror="this.src='dontwhat.png'"></div>
+          <div class="puzzle-cell-sm" id="pz5_25"><img src="p25.png" onerror="this.src='dontwhat.png'"></div>
+        </div>
+        <div class="puzzle-controls">
+          <div id="puzzleStatus5" class="card-sub" style="margin-bottom:10px;">Owned: 0/25</div>
+          <button id="btnPlacePiece5" onclick="placePuzzlePieces5()" style="display:none;">Place Available Pieces</button>
+          <div id="puzzleCompletedText5" style="display:none; color:#f44336; font-weight:bold; margin-top:10px;">🐉 KSPT Dragon skin unlocked!</div>
+        </div>
+      </div>
+    </div>
+
     <div class="card capsule-info">
       <img src="capsule.png" class="capsule-img-small">
       <div class="card-title" data-lang-key="mystery_capsule">Mystery Capsule</div>
@@ -1129,9 +1195,7 @@ window.addEventListener('message', (event) => {
     <div class="card-title">Euro Coin</div>
     <div class="card-sub" data-lang-key="additional_skin">Skin + animation</div>
     <div id="skin-sub-euro" class="card-sub"></div>
-    <div style="display: flex; gap: 5px; margin-top: 10px;">
-      <button id="skin-euro" onclick="buySkin('euro',780)" data-lang-key="buy" style="flex: 1;">BUY 780 KSPT</button>
-    </div>
+    <button id="skin-euro" onclick="buySkin('euro',780)" data-lang-key="buy" style="margin-top:10px;">BUY 780 KSPT</button>
   </div>
 
   <div class="card">
@@ -1315,6 +1379,20 @@ window.addEventListener('message', (event) => {
     <div class="card-title">CapsuleMeme</div>
     <div class="card-sub">Secret Exclusive</div>
     <button id="skin-capsulememe" onclick="applySkin('capsulememe')">Equip</button>
+  </div>
+
+ <div class="card" id="skinCardUFO" style="display:none;">
+    <img id="skin-img-ufo" src="ufo.png" class="card-img ufo-float" onerror="this.src='dontwhat.png'">
+    <div class="card-title" style="color:#8bc34a;">UFO Wood</div>
+    <div class="card-sub">UFO Wood Puzzle Reward (+120 KSPT/h)</div>
+    <button id="skin-ufo" onclick="applySkin('ufo')">Equip</button>
+  </div>
+
+  <div class="card" id="skinCardDragon" style="display:none;">
+    <img id="skin-img-dragon" src="dragon.png" class="card-img" onerror="this.src='dontwhat.png'">
+    <div class="card-title" style="color:#f44336;">KSPT Dragon</div>
+    <div class="card-sub">Chinese Dragon Puzzle Reward (+250 KSPT/h)</div>
+    <button id="skin-dragon" onclick="applySkin('dragon')">Equip</button>
   </div>
 
   <div class="card">
@@ -1850,6 +1928,8 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="rickroll.mp4">🎵 RickRoll</option>
           <option value="catito.mp4">🐱 Catito Dance</option>
           <option value="minion.mp4">🍌 Minion Bob</option>
+          <option value="woke.mp4">😴 Woke Up</option>
+          <option value="math.mp4">📐 Math Edit</option>
         </select>
       </div>
       <div class="ap-row">
@@ -2015,7 +2095,10 @@ document.addEventListener('DOMContentLoaded', function () {
           Online players only
         </label>
       </div>
-      <button class="ap-btn ap-btn-purple" style="width:100%;" onclick="adminGiveTempSkin()">🎨 Apply to All</button>
+      <div class="ap-row" style="gap:8px;">
+        <button class="ap-btn ap-btn-purple" style="flex:1;" onclick="adminGiveTempSkin()">🎨 Apply to All</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminRevokeTempSkin()">✂️ Revoke</button>
+      </div>
     </div>
 
   <!-- Force Music -->
@@ -2354,12 +2437,13 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
     </div>
 
-    <!-- Give Tickets (personal) -->
+    <!-- Give/Take Tickets (personal) -->
     <div class="ap-card">
-      <h3>🎫 Give Tickets</h3>
+      <h3>🎫 Tickets</h3>
       <div class="ap-row">
         <input id="apModTickets" type="number" class="ap-input" value="5" min="1" max="999">
         <button class="ap-btn ap-btn-purple" onclick="adminGiveTicketsPlayer()">🎫 Give</button>
+        <button class="ap-btn ap-btn-red" onclick="adminTakeTicketsPlayer()">➖ Take</button>
       </div>
     </div>
 

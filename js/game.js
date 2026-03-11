@@ -1461,6 +1461,10 @@ const defaultData = {
   puzzle2Done: false,
   puzzles3: [0,0,0,0,0,0,0,0,0],
   puzzle3Done: false,
+  puzzles4: [0,0,0,0,0,0,0,0,0],
+  puzzle4Done: false,
+  puzzles5: [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0],
+  puzzle5Done: false,
   puzzleDoneTime: 0,
   unbanUsed: false,
   capsule: { lastOpen: 0, firstOpen: true },
@@ -1729,6 +1733,10 @@ if (typeof d.keys.black === 'undefined') d.keys.black = 0;
 
 if (!d.puzzles3) d.puzzles3 = [0,0,0,0,0,0,0,0,0];
 if (typeof d.puzzle3Done === 'undefined') d.puzzle3Done = false;
+if (!d.puzzles4) d.puzzles4 = [0,0,0,0,0,0,0,0,0];
+if (typeof d.puzzle4Done === 'undefined') d.puzzle4Done = false;
+if (!d.puzzles5) d.puzzles5 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0];
+if (typeof d.puzzle5Done === 'undefined') d.puzzle5Done = false;
 
 if (!d.glitchBox) {
   d.glitchBox = defaultData.glitchBox;
@@ -1871,7 +1879,9 @@ const SKIN_INCOME = {
   doge: 50,
   bhole: 100,
   toilet: 0,
-  capsulememe: 0
+  capsulememe: 0,
+  ufo: 120,
+  dragon: 250
   };
 
 // Card data - UPDATED WITH EXACT VALUES
@@ -2202,6 +2212,8 @@ updateBoostTimers();
   updatePuzzleUI();
   updateSecondPuzzleUI();
   updateThirdPuzzleUI();
+  if (typeof updateFourthPuzzleUI === 'function') updateFourthPuzzleUI();
+  if (typeof updateFifthPuzzleUI === 'function') updateFifthPuzzleUI();
   updateSkinPreviews();
   
   if (!document.getElementById("market")?.classList.contains("active")) {
@@ -2291,12 +2303,21 @@ function getSkinImage(skinId, euroVar = 1, artemVar = 0) {
     'doge': 'doge.png',
     'bhole': 'bhole.png',
     'toilet': 'toilet.png',
-    'capsulememe': 'capsule.png'
+    'capsulememe': 'capsule.png',
+    'ufo': 'ufo.png',
+    'dragon': 'dragon.png'
   };
   return skinImages[skinId] || 'kspt.png';
 }
 
 function updateSkinImage() {
+if (d.skin === 'dragon') {
+    if (!document.getElementById('dragonFireCanvas') && typeof _dragonStart === 'function') {
+      setTimeout(_dragonStart, 200);
+    }
+  } else {
+    if (typeof _dragonStop === 'function') _dragonStop();
+  }
   const coin = document.getElementById("coin");
   if (!coin) return;
 
@@ -2391,6 +2412,7 @@ function updateSkinImage() {
     coin.dataset.cookStage = "0";
     coin.dataset.cyberStage = "0";
   }
+  coin.style.animation = (currentSkinId === 'ufo') ? 'ufo-float 2.8s ease-in-out infinite' : '';
 }
 
 function applySkin(skinId, variant = null) {
@@ -2426,6 +2448,8 @@ function applySkin(skinId, variant = null) {
       return;
     }
     if (skinId === 'bhole' && !d.puzzle3Done) { showToast(t('locked')); return; }
+    if (skinId === 'ufo' && !d.puzzle4Done) { showToast(t('locked')); return; }
+    if (skinId === 'dragon' && !d.puzzle5Done) { showToast(t('locked')); return; }
     if ((skinId === 'toilet' || skinId === 'capsulememe') && !(d.secretSkins && d.secretSkins[skinId])) {
       showToast(t('locked')); return;
     }
@@ -2501,6 +2525,22 @@ if (window.skinAnimationTimer) {
     showToast('xfone.png background unlocked!');
   }
   
+  // Dragon fire particles
+  if (typeof _dragonStop === 'function') _dragonStop();
+  if (skinId === 'dragon' && typeof _dragonStart === 'function') {
+    setTimeout(_dragonStart, 100);
+  }
+
+  // UFO float animation on coin
+  const _coinEl = document.getElementById('coin');
+  if (_coinEl) {
+    if (skinId === 'ufo') {
+      _coinEl.style.animation = 'ufo-float 2.8s ease-in-out infinite';
+    } else {
+      _coinEl.style.animation = '';
+    }
+  }
+
   save();
   ui();
 }
@@ -2696,6 +2736,18 @@ function handleTapSkinAnimation() {
       coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
       coin.src = coin.dataset.toggle === "1" ? "knopka1.png" : "knopka.png";
       break;
+    case "ufo":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "ufo1.png" : "ufo.png";
+      break;
+    case "dragon": {
+      const wasStage = coin.dataset.dragonStage || "0";
+      coin.dataset.dragonStage = wasStage === "0" ? "1" : "0";
+      coin.src = coin.dataset.dragonStage === "1" ? "dragon1.png" : "dragon.png";
+      // Обновляем интенсивность частиц
+      if (typeof _dragonUpdateParticles === 'function') _dragonUpdateParticles(coin.dataset.dragonStage === "1");
+      break;
+    }
     default:
       break;
   }  
@@ -2860,7 +2912,9 @@ function updateSkinButtons() {
     "skinCardGoldenSafe": 'goldensafe',
     "skinCardBlackHole": 'bhole',
     "skinCardToilet": 'toilet',
-    "skinCardCapsuleMeme": 'capsulememe'
+    "skinCardCapsuleMeme": 'capsulememe',
+    "skinCardUFO": 'ufo',
+    "skinCardDragon": 'dragon'
   };
   
   for (const [cardId, skinKey] of Object.entries(secretSkins)) {
@@ -2871,7 +2925,7 @@ function updateSkinButtons() {
     }
   }
   
-  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android",  "brb", "doge", "corrupted", "failed", "goldensafe", "bhole", "toilet", "capsulememe"];
+  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android",  "brb", "doge", "corrupted", "failed", "goldensafe", "bhole", "toilet", "capsulememe", "ufo", "dragon"];
   
   skins.forEach(s => {
     const button = document.getElementById("skin-" + s);
@@ -4181,6 +4235,118 @@ function checkThirdPuzzleCompletion() {
   updateThirdPuzzleUI();
 }
 
+function checkFourthPuzzleCompletion() {
+  if (d.puzzle4Done) return;
+  let all = true;
+  for (let i = 0; i < 9; i++) { if (d.puzzles4[i] !== 1) { all = false; break; } }
+  if (!all) return;
+  d.puzzle4Done = true;
+  if (!d.skins) d.skins = {};
+  d.skins['ufo'] = 1;
+  showToast('🛸 UFO Wood skin unlocked!');
+  save();
+  updateSkinButtons();
+  updateSkinPreviews();
+  updateFourthPuzzleUI();
+}
+
+function updateFourthPuzzleUI() {
+  const card = document.getElementById('fourthPuzzleCard');
+  if (!card) return;
+  if (!d.puzzle3Done) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  let owned = 0;
+  for (let i = 0; i < 9; i++) {
+    const cell = document.getElementById('pz4_' + (i + 1));
+    if (cell) {
+      if (d.puzzles4[i] === 1) { cell.classList.add('filled'); owned++; }
+      else cell.classList.remove('filled');
+    }
+  }
+  const statusEl = document.getElementById('puzzleStatus4');
+  if (statusEl) statusEl.textContent = d.puzzle4Done ? 'Complete!' : `Owned: ${owned}/9`;
+  const fullImg = document.getElementById('puzzleFull4');
+  const doneText = document.getElementById('puzzleCompletedText4');
+  const placeBtn = document.getElementById('btnPlacePiece4');
+  if (d.puzzle4Done) {
+    if (fullImg) fullImg.style.display = 'block';
+    if (doneText) doneText.style.display = 'block';
+    if (placeBtn) placeBtn.style.display = 'none';
+  } else {
+    if (fullImg) fullImg.style.display = 'none';
+    if (doneText) doneText.style.display = 'none';
+    if (placeBtn) placeBtn.style.display = owned > 0 ? 'inline-block' : 'none';
+  }
+}
+
+function placePuzzlePieces4() {
+  let placed = false;
+  for (let i = 0; i < 9; i++) {
+    if (d.puzzles4[i] === 1) {
+      const cell = document.getElementById('pz4_' + (i + 1));
+      if (cell) cell.classList.add('filled');
+      placed = true;
+    }
+  }
+  if (placed) { showToast('Puzzle pieces placed!'); save(); checkFourthPuzzleCompletion(); updateFourthPuzzleUI(); ui(); }
+}
+
+function checkFifthPuzzleCompletion() {
+  if (d.puzzle5Done) return;
+  let all = true;
+  for (let i = 0; i < 25; i++) { if (d.puzzles5[i] !== 1) { all = false; break; } }
+  if (!all) return;
+  d.puzzle5Done = true;
+  if (!d.skins) d.skins = {};
+  d.skins['dragon'] = 1;
+  showToast('🐉 KSPT Dragon skin unlocked!');
+  save();
+  updateSkinButtons();
+  updateSkinPreviews();
+  updateFifthPuzzleUI();
+}
+
+function updateFifthPuzzleUI() {
+  const card = document.getElementById('fifthPuzzleCard');
+  if (!card) return;
+  if (!d.puzzle4Done) { card.style.display = 'none'; return; }
+  card.style.display = 'block';
+  let owned = 0;
+  for (let i = 0; i < 25; i++) {
+    const cell = document.getElementById('pz5_' + (i + 1));
+    if (cell) {
+      if (d.puzzles5[i] === 1) { cell.classList.add('filled'); owned++; }
+      else cell.classList.remove('filled');
+    }
+  }
+  const statusEl = document.getElementById('puzzleStatus5');
+  if (statusEl) statusEl.textContent = d.puzzle5Done ? 'Complete!' : `Owned: ${owned}/25`;
+  const fullImg = document.getElementById('puzzleFull5');
+  const doneText = document.getElementById('puzzleCompletedText5');
+  const placeBtn = document.getElementById('btnPlacePiece5');
+  if (d.puzzle5Done) {
+    if (fullImg) fullImg.style.display = 'block';
+    if (doneText) doneText.style.display = 'block';
+    if (placeBtn) placeBtn.style.display = 'none';
+  } else {
+    if (fullImg) fullImg.style.display = 'none';
+    if (doneText) doneText.style.display = 'none';
+    if (placeBtn) placeBtn.style.display = owned > 0 ? 'inline-block' : 'none';
+  }
+}
+
+function placePuzzlePieces5() {
+  let placed = false;
+  for (let i = 0; i < 25; i++) {
+    if (d.puzzles5[i] === 1) {
+      const cell = document.getElementById('pz5_' + (i + 1));
+      if (cell) cell.classList.add('filled');
+      placed = true;
+    }
+  }
+  if (placed) { showToast('Puzzle pieces placed!'); save(); checkFifthPuzzleCompletion(); updateFifthPuzzleUI(); ui(); }
+}
+
 function updateThirdPuzzleUI() {
   const card = document.getElementById('thirdPuzzleCard');
   if (!card) return;
@@ -4227,6 +4393,115 @@ function placePuzzlePieces3() {
   }
   if (placed) { showToast('Puzzle pieces placed!'); save(); checkThirdPuzzleCompletion(); updateThirdPuzzleUI(); ui(); }
 }
+
+// Dragon fire particles system
+(function() {
+  let _dragonCanvas = null;
+  let _dragonCtx = null;
+  let _dragonParticles = [];
+  let _dragonRaf = null;
+  let _dragonActive = false;
+  let _dragonHighIntensity = false;
+  let _dragonHeld = false;
+
+  function _dragonCreateParticle(intense) {
+    const container = document.getElementById('coin3dContainer');
+    if (!container) return null;
+    const w = container.offsetWidth || 220;
+    const h = container.offsetHeight || 220;
+    const cx = w / 2;
+    const cy = h / 2;
+    const angle = Math.random() * Math.PI * 2;
+    const radius = 30 + Math.random() * 50;
+    return {
+      x: cx + Math.cos(angle) * radius * (0.6 + Math.random() * 0.4),
+      y: cy + Math.sin(angle) * radius * (0.6 + Math.random() * 0.4),
+      vx: (Math.random() - 0.5) * (intense ? 3 : 1.5),
+      vy: -(1.5 + Math.random() * (intense ? 4 : 2.5)),
+      life: 1,
+      decay: 0.018 + Math.random() * 0.02,
+      size: (intense ? 8 : 5) + Math.random() * (intense ? 8 : 5),
+      hue: 10 + Math.random() * 40
+    };
+  }
+
+  function _dragonLoop() {
+    if (!_dragonActive || !_dragonCanvas || !_dragonCtx) return;
+    const coin = document.getElementById('coin');
+    if (!coin || coin.dataset.currentSkin !== 'dragon') { _dragonStop(); return; }
+
+    const intense = _dragonHighIntensity || _dragonHeld;
+    const spawnCount = intense ? 6 : 3;
+    for (let i = 0; i < spawnCount; i++) {
+      const p = _dragonCreateParticle(intense);
+      if (p) _dragonParticles.push(p);
+    }
+
+    _dragonCtx.clearRect(0, 0, _dragonCanvas.width, _dragonCanvas.height);
+    _dragonParticles = _dragonParticles.filter(p => p.life > 0);
+    for (const p of _dragonParticles) {
+      p.x += p.vx * (intense ? 1.4 : 1);
+      p.y += p.vy * (intense ? 1.4 : 1);
+      p.life -= p.decay;
+      p.size *= 0.97;
+      const alpha = Math.max(0, p.life);
+      const grad = _dragonCtx.createRadialGradient(p.x, p.y, 0, p.x, p.y, p.size);
+      grad.addColorStop(0, `hsla(${p.hue}, 100%, 80%, ${alpha})`);
+      grad.addColorStop(0.5, `hsla(${p.hue + 20}, 100%, 50%, ${alpha * 0.7})`);
+      grad.addColorStop(1, `hsla(${p.hue + 40}, 100%, 30%, 0)`);
+      _dragonCtx.fillStyle = grad;
+      _dragonCtx.beginPath();
+      _dragonCtx.arc(p.x, p.y, p.size, 0, Math.PI * 2);
+      _dragonCtx.fill();
+    }
+    _dragonRaf = requestAnimationFrame(_dragonLoop);
+  }
+
+  function _dragonStart() {
+    const container = document.getElementById('coin3dContainer');
+    const coin = document.getElementById('coin');
+    if (!container || !coin) return;
+    _dragonStop();
+    _dragonCanvas = document.createElement('canvas');
+    _dragonCanvas.id = 'dragonFireCanvas';
+    _dragonCanvas.width = container.offsetWidth || 220;
+    _dragonCanvas.height = container.offsetHeight || 220;
+    _dragonCanvas.style.cssText = 'position:absolute;top:0;left:0;width:100%;height:100%;pointer-events:none;z-index:9999;';
+    // Вставляем ПОСЛЕ coin-3d чтобы быть поверх 3D stacking context
+    const coin3d = document.getElementById('coin3d');
+    if (coin3d && coin3d.nextSibling) {
+      container.insertBefore(_dragonCanvas, coin3d.nextSibling);
+    } else {
+      container.appendChild(_dragonCanvas);
+    }
+    _dragonCtx = _dragonCanvas.getContext('2d');
+    _dragonActive = true;
+    _dragonRaf = requestAnimationFrame(_dragonLoop);
+
+    // Hold detection
+    coin.addEventListener('mousedown', _dragonHoldStart);
+    coin.addEventListener('touchstart', _dragonHoldStart, {passive:true});
+    coin.addEventListener('mouseup', _dragonHoldEnd);
+    coin.addEventListener('touchend', _dragonHoldEnd);
+  }
+
+  function _dragonStop() {
+    _dragonActive = false;
+    if (_dragonRaf) { cancelAnimationFrame(_dragonRaf); _dragonRaf = null; }
+    const old = document.getElementById('dragonFireCanvas');
+    if (old) old.remove();
+    _dragonCanvas = null; _dragonCtx = null; _dragonParticles = [];
+  }
+
+  function _dragonHoldStart() { _dragonHeld = true; }
+  function _dragonHoldEnd() { _dragonHeld = false; }
+
+  window._dragonStart = _dragonStart;
+  window._dragonStop = _dragonStop;
+  window._dragonUpdateParticles = function(highIntensity) {
+    _dragonHighIntensity = !!highIntensity;
+  };
+})();
 
 function updateCapsuleUI() {
   const btn = document.getElementById("btnOpenCapsule");
@@ -7512,6 +7787,13 @@ async function adminGiveTicketsAll() {
 }
 
 /* ---- GLOBAL: Temp Skin for All ---- */
+async function adminRevokeTempSkin() {
+  if (!_isAdminUser()) return;
+  // Ставим end в прошлое — клиенты поймут что скин истёк и откатятся
+  await _db.ref('admin/tempSkin').set({ skinId: '__revoke__', end: Date.now() - 1, ts: Date.now() });
+  showToast('✂️ Temp skin revoked for all');
+}
+
 async function adminGiveTempSkin() {
   if (!_isAdminUser()) return;
   const skinId = document.getElementById('apTempSkinId').value;
@@ -7594,6 +7876,13 @@ async function adminGiveTicketsPlayer() {
   const count = Number(document.getElementById('apModTickets').value) || 1;
   await _db.ref(`admin/modActions/${uid}`).set({ action: 'giveTickets', count, ts: Date.now() });
   showToast(`🎫 +${count} tickets queued`);
+}
+async function adminTakeTicketsPlayer() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) return;
+  const count = Number(document.getElementById('apModTickets').value) || 1;
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'takeTickets', count, ts: Date.now() });
+  showToast(`➖ -${count} tickets queued`);
 }
 
 /* ---- MOD: View / Give / Take player skins ---- */
@@ -7723,6 +8012,21 @@ function _startAdminListener() {
   _db.ref('admin/tempSkin').on('value', snap => {
     const v = snap.val();
     if (!v) return;
+    // Принудительный отзыв
+    if (v.skinId === '__revoke__' || v.end <= Date.now()) {
+      if (window._adminTempSkin) {
+        const prev = window._adminTempSkin.skinId;
+        if (d.skins && d.skins[prev] === '_temp') delete d.skins[prev];
+        d.skin = d._adminTempSkinOrigSkin || 'default';
+        delete d._adminTempSkinOrigSkin;
+        window._adminTempSkin = null;
+        clearTimeout(window._adminTempSkinTimeout);
+        save();
+        if (typeof ui === 'function') ui();
+        showToast('🎨 Temp skin removed');
+      }
+      return;
+    }
     if (v.onlineOnly && !_wasOnline(v.ts)) return;
     if (v.end > Date.now()) {
       // Сначала откатываем предыдущий temp скин если был
@@ -7851,10 +8155,15 @@ function _startAdminListener() {
     const v = snap.val();
     if (!v) { _adminResetUIChaos(); return; }
     if (v.onlineOnly && !_wasOnline(v.ts)) return;
-    if (v.end > Date.now()) {
-      window._adminChaosEndTs = v.end;
-      _adminApplyUIChaos(Number(v.rotate)||0, Number(v.scale)||1, v.end - Date.now());
-      _adminGlobalStatusUpdate();
+    const msLeft = v.end - Date.now();
+    if (msLeft > 500) {
+      // Применяем только если это новая команда (другой ts или ещё не применяли)
+      if (window._adminChaosAppliedTs !== v.ts) {
+        window._adminChaosAppliedTs = v.ts;
+        window._adminChaosEndTs = v.end;
+        _adminApplyUIChaos(Number(v.rotate)||0, Number(v.scale)||1, msLeft);
+        _adminGlobalStatusUpdate();
+      }
     } else {
       window._adminChaosEndTs = 0;
       _adminResetUIChaos();
@@ -8060,7 +8369,7 @@ async function adminSendUIChaos() {
   const onlineOnly = document.getElementById('apChaosOnline')?.checked || false;
   const end = Date.now() + dur * 1000;
   await _db.ref('admin/uiChaos').set({ rotate, scale, end, onlineOnly, ts: Date.now() });
-  setTimeout(() => _db.ref('admin/uiChaos').remove(), (dur + 10) * 1000);
+  // НЕ удаляем запись из Firebase — каждый клиент сам следит за end через timeout
   showToast('🌀 UI Chaos sent!');
   _adminUpdateActiveBar();
 }
@@ -8593,11 +8902,19 @@ function _adminApplyModAction(v) {
       break;
     case 'giveTickets':
       if (typeof gameTickets !== 'undefined') {
-        gameTickets.current = gameTickets.current + (v.count||1); // admin override — no cap
+        gameTickets.current = gameTickets.current + (v.count||1);
         if (typeof saveTickets==='function') saveTickets();
         if (typeof updateTicketsUI==='function') updateTicketsUI();
       }
       _adminShowOverlay(`🎫 Admin gave you ${v.count} tickets!`, '#fff', 5000);
+      break;
+    case 'takeTickets':
+      if (typeof gameTickets !== 'undefined') {
+        gameTickets.current = Math.max(0, gameTickets.current - (v.count||1));
+        if (typeof saveTickets==='function') saveTickets();
+        if (typeof updateTicketsUI==='function') updateTicketsUI();
+      }
+      _adminShowOverlay(`➖ Admin removed ${v.count} tickets`, '#ff9800', 5000);
       break;
     case 'message':
       _adminShowOverlay(v.text, v.color||'#fff', (v.dur||5)*1000);
@@ -8774,10 +9091,16 @@ function _explodeBomb() {
         for (let i = 0; i < 9; i++) if (d.puzzles2[i] === 0) missing2.push(i);
         const missing3 = [];
         for (let i = 0; i < 9; i++) if (d.puzzles3[i] === 0) missing3.push(i);
+        const missing4 = [];
+        for (let i = 0; i < 9; i++) if (d.puzzles4[i] === 0) missing4.push(i);
+        const missing5 = [];
+        for (let i = 0; i < 25; i++) if (d.puzzles5[i] === 0) missing5.push(i);
         const allMissing = [
           ...(!d.puzzleDone ? missing1.map(i => ({p:1,i})) : []),
           ...(!d.puzzle2Done ? missing2.map(i => ({p:2,i})) : []),
-          ...(!d.puzzle3Done ? missing3.map(i => ({p:3,i})) : [])
+          ...(!d.puzzle3Done ? missing3.map(i => ({p:3,i})) : []),
+          ...(!d.puzzle4Done ? missing4.map(i => ({p:4,i})) : []),
+          ...(!d.puzzle5Done ? missing5.map(i => ({p:5,i})) : [])
         ];
         if (allMissing.length > 0) {
           const pick = allMissing[Math.floor(Math.random() * allMissing.length)];
@@ -8789,15 +9112,25 @@ function _explodeBomb() {
             d.puzzles2[pick.i] = 1;
             rewardText = `Puzzle Piece ${pick.i+11} obtained!`;
             rewardImg = `pazl${pick.i+11}.png`;
-          } else {
+          } else if (pick.p === 3) {
             d.puzzles3[pick.i] = 1;
             rewardText = `Puzzle Piece ${pick.i+20} obtained!`;
             rewardImg = `puzl${pick.i+1}.png`;
             if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI();
+          } else if (pick.p === 4) {
+            d.puzzles4[pick.i] = 1;
+            rewardText = `UFO Piece ${pick.i+1} obtained!`;
+            rewardImg = `puzzle${pick.i+1}.png`;
+            if (typeof updateFourthPuzzleUI === 'function') updateFourthPuzzleUI();
+          } else {
+            d.puzzles5[pick.i] = 1;
+            rewardText = `Dragon Piece ${pick.i+1} obtained!`;
+            rewardImg = `p${pick.i+1}.png`;
+            if (typeof updateFifthPuzzleUI === 'function') updateFifthPuzzleUI();
           }
         } else {
-          d.tokens += 10;
-          rewardText = '+10 KSPT (All puzzles owned)!';
+          d.tokens += 30;
+          rewardText = '+30 KSPT (All puzzles owned)!';
           rewardImg = 'kspt.png';
         }
         break;
@@ -8837,7 +9170,9 @@ function _explodeBomb() {
     if (typeof ui === 'function') ui();
     if (typeof updatePuzzleUI === 'function') updatePuzzleUI();
     if (typeof updateSecondPuzzleUI === 'function') updateSecondPuzzleUI();
-    if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI(); 
+    if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI();
+    if (typeof updateFourthPuzzleUI === 'function') updateFourthPuzzleUI();
+    if (typeof updateFifthPuzzleUI === 'function') updateFifthPuzzleUI();
 
     // Close modal
     if (modal) modal.classList.remove('active');
@@ -9030,7 +9365,7 @@ function openNoobBox() {
             rewardText = "+50 KSPT (All puzzle pieces owned)!";
             rewardImg = "kspt.png";
           }
-        } else {
+        } else if (!d.puzzle3Done) {
           const missing3 = [];
           for (let i = 0; i < 9; i++) if (d.puzzles3[i] === 0) missing3.push(i);
           if (missing3.length > 0) {
@@ -9042,6 +9377,34 @@ function openNoobBox() {
           } else {
             d.tokens += 100;
             rewardText = "+100 KSPT (All puzzle pieces owned)!";
+            rewardImg = "kspt.png";
+          }
+        } else if (!d.puzzle4Done) {
+          const missing4 = [];
+          for (let i = 0; i < 9; i++) if (d.puzzles4[i] === 0) missing4.push(i);
+          if (missing4.length > 0) {
+            const idx = missing4[Math.floor(Math.random() * missing4.length)];
+            d.puzzles4[idx] = 1;
+            rewardText = `UFO Piece ${idx+1} obtained!`;
+            rewardImg = `puzzle${idx+1}.png`;
+            if (typeof updateFourthPuzzleUI === 'function') updateFourthPuzzleUI();
+          } else {
+            d.tokens += 100;
+            rewardText = "+100 KSPT (All UFO pieces owned)!";
+            rewardImg = "kspt.png";
+          }
+        } else {
+          const missing5 = [];
+          for (let i = 0; i < 25; i++) if (d.puzzles5[i] === 0) missing5.push(i);
+          if (missing5.length > 0) {
+            const idx = missing5[Math.floor(Math.random() * missing5.length)];
+            d.puzzles5[idx] = 1;
+            rewardText = `Dragon Piece ${idx+1} obtained!`;
+            rewardImg = `p${idx+1}.png`;
+            if (typeof updateFifthPuzzleUI === 'function') updateFifthPuzzleUI();
+          } else {
+            d.tokens += 100;
+            rewardText = "+100 KSPT (All Dragon pieces owned)!";
             rewardImg = "kspt.png";
           }
         }
@@ -9243,7 +9606,7 @@ function openCapsule() {
       rewardText = "+100 KSPT (All second puzzle pieces owned)!";
       rewardImg = "kspt.png";
     }
-  } else {
+  } else if (!d.puzzle3Done) {
     const missing3 = [];
     for (let i = 0; i < 9; i++) if (d.puzzles3[i] === 0) missing3.push(i);
     if (missing3.length > 0) {
@@ -9256,6 +9619,36 @@ function openCapsule() {
     } else {
       d.tokens += 100;
       rewardText = "+100 KSPT (All puzzle pieces owned)!";
+      rewardImg = "kspt.png";
+    }
+  } else if (!d.puzzle4Done) {
+    const missing4 = [];
+    for (let i = 0; i < 9; i++) if (d.puzzles4[i] === 0) missing4.push(i);
+    if (missing4.length > 0) {
+      const idx = missing4[Math.floor(Math.random() * missing4.length)];
+      d.puzzles4[idx] = 1;
+      rewardText = `UFO Piece ${idx+1} obtained!`;
+      rewardImg = `puzzle${idx+1}.png`;
+      showReward(rewardText, rewardImg);
+      if (typeof updateFourthPuzzleUI === 'function') updateFourthPuzzleUI();
+    } else {
+      d.tokens += 100;
+      rewardText = "+100 KSPT (All UFO pieces owned)!";
+      rewardImg = "kspt.png";
+    }
+  } else {
+    const missing5 = [];
+    for (let i = 0; i < 25; i++) if (d.puzzles5[i] === 0) missing5.push(i);
+    if (missing5.length > 0) {
+      const idx = missing5[Math.floor(Math.random() * missing5.length)];
+      d.puzzles5[idx] = 1;
+      rewardText = `Dragon Piece ${idx+1} obtained!`;
+      rewardImg = `p${idx+1}.png`;
+      showReward(rewardText, rewardImg);
+      if (typeof updateFifthPuzzleUI === 'function') updateFifthPuzzleUI();
+    } else {
+      d.tokens += 100;
+      rewardText = "+100 KSPT (All Dragon pieces owned)!";
       rewardImg = "kspt.png";
     }
   }
@@ -9496,7 +9889,7 @@ function openGoldCapsule() {
             rewardText = "+150 KSPT (All second puzzle pieces owned)!";
             rewardImg = "kspt.png";
           }
-        } else {
+        } else if (!d.puzzle3Done) {
           const missing3 = [];
           for (let i = 0; i < 9; i++) if (d.puzzles3[i] === 0) missing3.push(i);
           if (missing3.length > 0) {
@@ -9508,6 +9901,34 @@ function openGoldCapsule() {
           } else {
             d.tokens += 200;
             rewardText = "+200 KSPT (All puzzle pieces owned)!";
+            rewardImg = "kspt.png";
+          }
+        } else if (!d.puzzle4Done) {
+          const missing4 = [];
+          for (let i = 0; i < 9; i++) if (d.puzzles4[i] === 0) missing4.push(i);
+          if (missing4.length > 0) {
+            const idx = missing4[Math.floor(Math.random() * missing4.length)];
+            d.puzzles4[idx] = 1;
+            rewardText = `UFO Piece ${idx+1} obtained!`;
+            rewardImg = `puzzle${idx+1}.png`;
+            if (typeof updateFourthPuzzleUI === 'function') updateFourthPuzzleUI();
+          } else {
+            d.tokens += 200;
+            rewardText = "+200 KSPT (All UFO pieces owned)!";
+            rewardImg = "kspt.png";
+          }
+        } else {
+          const missing5 = [];
+          for (let i = 0; i < 25; i++) if (d.puzzles5[i] === 0) missing5.push(i);
+          if (missing5.length > 0) {
+            const idx = missing5[Math.floor(Math.random() * missing5.length)];
+            d.puzzles5[idx] = 1;
+            rewardText = `Dragon Piece ${idx+1} obtained!`;
+            rewardImg = `p${idx+1}.png`;
+            if (typeof updateFifthPuzzleUI === 'function') updateFifthPuzzleUI();
+          } else {
+            d.tokens += 200;
+            rewardText = "+200 KSPT (All Dragon pieces owned)!";
             rewardImg = "kspt.png";
           }
         }
@@ -10750,27 +11171,67 @@ function giveRandomPuzzlePiece() {
     d.tokens += 50;
     showToast(`+50 KSPT (${t('puzzle_next_wait')})`);
 
-  } else {
+  } else if (!d.puzzle2Done) {
     // --- Второй пазл ---
     const missing = [];
     for (let i = 0; i < 9; i++) {
       if (d.puzzles2[i] === 0) missing.push(i);
     }
-    
     if (missing.length > 0) {
       const idx = missing[Math.floor(Math.random() * missing.length)];
       d.puzzles2[idx] = 1;
       showToast(`Puzzle piece ${idx + 11} obtained!`);
     } else {
-      // Все вторые собраны — убираем 100 кспт и пишем текст
       showToast(t('all_puzzles_owned'));
     }
+  } else if (!d.puzzle3Done) {
+    // --- Третий пазл ---
+    const missing = [];
+    for (let i = 0; i < 9; i++) {
+      if (d.puzzles3[i] === 0) missing.push(i);
+    }
+    if (missing.length > 0) {
+      const idx = missing[Math.floor(Math.random() * missing.length)];
+      d.puzzles3[idx] = 1;
+      showToast(`Puzzle piece ${idx + 20} obtained!`);
+    } else {
+      showToast(t('all_puzzles_owned'));
+    }
+  } else if (!d.puzzle4Done) {
+    // --- Четвёртый пазл ---
+    const missing = [];
+    for (let i = 0; i < 9; i++) {
+      if (d.puzzles4[i] === 0) missing.push(i);
+    }
+    if (missing.length > 0) {
+      const idx = missing[Math.floor(Math.random() * missing.length)];
+      d.puzzles4[idx] = 1;
+      showToast(`UFO Piece ${idx + 1} obtained!`);
+    } else {
+      showToast(t('all_puzzles_owned'));
+    }
+  } else if (!d.puzzle5Done) {
+    // --- Пятый пазл ---
+    const missing = [];
+    for (let i = 0; i < 25; i++) {
+      if (d.puzzles5[i] === 0) missing.push(i);
+    }
+    if (missing.length > 0) {
+      const idx = missing[Math.floor(Math.random() * missing.length)];
+      d.puzzles5[idx] = 1;
+      showToast(`Dragon Piece ${idx + 1} obtained!`);
+    } else {
+      showToast(t('all_puzzles_owned'));
+    }
+  } else {
+    showToast(t('all_puzzles_owned'));
   }
-  
+
   updatePuzzleUI();
-  // Добавляем проверку на существование функции, чтобы не было ошибок
   if (typeof updateSecondPuzzleUI === 'function') updateSecondPuzzleUI();
-  if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI(); 
+  if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI();
+  if (typeof updateFourthPuzzleUI === 'function') updateFourthPuzzleUI();
+  if (typeof updateFifthPuzzleUI === 'function') updateFifthPuzzleUI();
 }
 
 // Активировать tap boost
@@ -13148,7 +13609,26 @@ function _safeGivePuzzle() {
     if(missing3.length>0){
       const idx=missing3[Math.floor(Math.random()*missing3.length)];
       d.puzzles3[idx]=1;
+      if(typeof updateThirdPuzzleUI==='function') updateThirdPuzzleUI();
       return `puzl${idx+1}.png`;
+    } else { d.tokens+=5; return 'kspt.png'; }
+  } else if (!d.puzzle4Done) {
+    const missing4=[];
+    for(let i=0;i<9;i++) if(d.puzzles4[i]===0) missing4.push(i);
+    if(missing4.length>0){
+      const idx=missing4[Math.floor(Math.random()*missing4.length)];
+      d.puzzles4[idx]=1;
+      if(typeof updateFourthPuzzleUI==='function') updateFourthPuzzleUI();
+      return `puzzle${idx+1}.png`;
+    } else { d.tokens+=5; return 'kspt.png'; }
+  } else if (!d.puzzle5Done) {
+    const missing5=[];
+    for(let i=0;i<25;i++) if(d.puzzles5[i]===0) missing5.push(i);
+    if(missing5.length>0){
+      const idx=missing5[Math.floor(Math.random()*missing5.length)];
+      d.puzzles5[idx]=1;
+      if(typeof updateFifthPuzzleUI==='function') updateFifthPuzzleUI();
+      return `p${idx+1}.png`;
     } else { d.tokens+=5; return 'kspt.png'; }
   } else { d.tokens+=5; return 'kspt.png'; }
 }
@@ -13493,12 +13973,38 @@ function _adminApplyBgVideo(src, durationMs) {
   clearTimeout(window._adminBgVideoTimeout);
   window._adminBgVideoTimeout = setTimeout(() => _adminClearBgVideo(), durationMs);
   showToast('🎬 Background video started!');
+
+  // Таймер в левом нижнем углу
+  let timerEl = document.getElementById('bgVideoTimer');
+  if (!timerEl) {
+    timerEl = document.createElement('div');
+    timerEl.id = 'bgVideoTimer';
+    timerEl.style.cssText = 'position:fixed;bottom:90px;left:12px;z-index:9999;background:rgba(0,0,0,0.65);color:#fff;font-size:12px;padding:5px 10px;border-radius:10px;pointer-events:none;';
+    document.body.appendChild(timerEl);
+  }
+  clearInterval(window._adminBgVideoTimerInterval);
+  window._adminBgVideoTimerInterval = setInterval(() => {
+    const left = window._adminBgVideoEnd - Date.now();
+    if (left <= 0) {
+      clearInterval(window._adminBgVideoTimerInterval);
+      const el = document.getElementById('bgVideoTimer');
+      if (el) el.remove();
+      return;
+    }
+    const s = Math.ceil(left / 1000);
+    const m = Math.floor(s / 60);
+    const ss = s % 60;
+    timerEl.textContent = `🎬 ${m > 0 ? m + 'm ' : ''}${ss}s`;
+  }, 500);
 }
 function _adminClearBgVideo() {
   const vid = document.getElementById('adminBgVideo');
   if (vid) { vid.pause(); vid.remove(); }
   clearTimeout(window._adminBgVideoTimeout);
+  clearInterval(window._adminBgVideoTimerInterval);
   window._adminBgVideoEnd = 0;
+  const timerEl = document.getElementById('bgVideoTimer');
+  if (timerEl) timerEl.remove();
 }
 
 /* ---- Coin Control ---- */
@@ -13565,3 +14071,10 @@ document.querySelectorAll('img').forEach(img => img.setAttribute('draggable', 'f
 
 // Блокируем контекстное меню на Android при удержании спрайтов
 document.addEventListener('contextmenu', e => e.preventDefault());
+
+// Гарантированно блокируем системную панель Android на всех img
+document.addEventListener('touchstart', e => {
+  if (e.target.tagName === 'IMG') {
+    e.preventDefault();
+  }
+}, { passive: false });

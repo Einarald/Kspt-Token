@@ -448,6 +448,67 @@ input{
 
 @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
 
+/* 5x5 puzzle grid for Chinese Dragon */
+.puzzle-grid-5x5 {
+  display: grid;
+  grid-template-columns: repeat(5, 52px);
+  grid-template-rows: repeat(5, 52px);
+  gap: 2px;
+  background: #333;
+  padding: 2px;
+  border-radius: 4px;
+  position: relative;
+}
+
+.puzzle-cell-sm {
+  width: 52px;
+  height: 52px;
+  background: #111;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.puzzle-cell-sm img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: none;
+}
+
+.puzzle-cell-sm.filled img {
+  display: block;
+}
+
+.puzzle-full-img-5x5 {
+  width: 266px;
+  height: 266px;
+  object-fit: cover;
+  display: none;
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  z-index: 5;
+  animation: fadeIn 1s forwards;
+}
+
+/* UFO float animation */
+@keyframes ufo-float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-8px); }
+}
+
+.ufo-float {
+  animation: ufo-float 2.8s ease-in-out infinite;
+}
+
+.puzzle-controls {
+    margin-top: 15px;
+    width: 100%;
+    text-align: center;
+}
+
 .puzzle-controls {
     margin-top: 15px;
     width: 100%;

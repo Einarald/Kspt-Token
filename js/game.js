@@ -14071,10 +14071,3 @@ document.querySelectorAll('img').forEach(img => img.setAttribute('draggable', 'f
 
 // Блокируем контекстное меню на Android при удержании спрайтов
 document.addEventListener('contextmenu', e => e.preventDefault());
-
-// Гарантированно блокируем системную панель Android на всех img
-document.addEventListener('touchstart', e => {
-  if (e.target.tagName === 'IMG') {
-    e.preventDefault();
-  }
-}, { passive: false });

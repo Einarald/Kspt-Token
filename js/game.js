@@ -12088,6 +12088,7 @@ function getPlayerRank(rate, customRank, isBanned) {
     'VIP':         { color: '#69f0ae', glow: '#69f0ae', border: '#69f0ae' },
     'Hacker':      { color: '#00e676', glow: '#00e676', border: '#00e676' },
     'Titan':       { color: '#40c4ff', glow: '#40c4ff', border: '#40c4ff' },
+    'Creator':     { color: '#ffec6e', glow: '#de2f2f', border: '#ffec6e' },
     'Toxic':       { color: '#b2ff59', glow: '#b2ff59', border: '#b2ff59' },
     'Banned':      { color: '#ff1744', glow: '#ff1744', border: '#ff1744' }
   };

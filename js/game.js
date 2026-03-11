@@ -7886,8 +7886,11 @@ async function adminSetPlayerRank() {
   if (!_isAdminUser()) return;
   const uid = _adminSelectedUid(); if (!uid) return;
   const rank = document.getElementById('apModRank').value;
+  // Сохраняем в постоянное место — работает даже если игрок офлайн
+  await _db.ref(`admin/playerRanks/${uid}`).set({ rank: rank || null, ts: Date.now() });
+  // Также через modActions если онлайн — применится сразу
   await _db.ref(`admin/modActions/${uid}`).set({ action: 'setRank', rank, ts: Date.now() });
-  showToast(`🏅 Rank "${rank}" queued for player`);
+  showToast(`🏅 Rank "${rank || 'Auto'}" set for player`);
 }
 
 async function adminTakeTicketsPlayer() {
@@ -14290,13 +14293,22 @@ function _updateLastSeen() {
   if (!window._firebaseReady || !window._firebaseDB) return;
   const uid = typeof getMyUid === 'function' ? getMyUid() : localStorage.getItem('_kspt_uid');
   if (!uid || uid === 'local') return;
-  window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).update({
-    lastSeen: Date.now(),
-    rate: Math.round(getHourlyRate()),
-    tokens: Math.round(d.tokens || 0),
-    playtimeMs: Math.round(d.playtimeMs || 0),
-    adminBanned: d.adminBanned || false,
-    customRank: d.customRank || null
+  // Подтягиваем звание из Firebase при каждом тике (на случай если оффлайн был)
+  const _rankUid = uid;
+  window._firebaseRef(window._firebaseDB, `admin/playerRanks/${_rankUid}`).once('value').then(snap => {
+    const rankData = snap ? snap.val() : null;
+    if (rankData && rankData.rank !== undefined) {
+      d.customRank = rankData.rank || null;
+      save();
+    }
+    window._firebaseRef(window._firebaseDB, 'leaderboard/' + _rankUid).update({
+      lastSeen: Date.now(),
+      rate: Math.round(getHourlyRate()),
+      tokens: Math.round(d.tokens || 0),
+      playtimeMs: Math.round(d.playtimeMs || 0),
+      adminBanned: d.adminBanned || false,
+      customRank: d.customRank || null
+    });
   });
 }
 document.addEventListener('firebase-ready', _updateLastSeen);

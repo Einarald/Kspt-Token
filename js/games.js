@@ -250,8 +250,10 @@ function consumeTicketForCurrentGame() {
     const g = typeof currentGame !== 'undefined' ? currentGame : 'unknown';
     d.questTicketsInGame[g] = (d.questTicketsInGame[g] || 0) + 1;
     if (typeof checkQuestProgress === 'function') {
-      checkQuestProgress('ticket_spend');
-      checkQuestProgress('ticket_ingame');
+      checkQuestProgress('ticket_8');
+checkQuestProgress('ticket_game');
+checkQuestProgress('w_tickets');
+checkQuestProgress('w_tgame');
     }
   }
 

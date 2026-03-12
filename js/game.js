@@ -3635,7 +3635,7 @@ function renderLimitedTab() {
         <div class="card-sub">Level ${journeyLevel + 1}/6</div>
         <div class="card-sub">+${journeyData[journeyLevel].income} KSPT/h</div>
         ${journeyAvailable ? 
-          `<button class="card-item-button" onclick="buyJourneyLevel(${journeyLevel})">Upgrade ${journeyData[journeyLevel].price} KSPT</button>` :
+          `<button class="card-item-button" onclick="buyJourneyLevel(${l.journey.level})">Upgrade ${journeyData[journeyLevel].price} KSPT</button>` :
           '<button class="card-item-button active" disabled>Max Level</button>'
         }
       </div>

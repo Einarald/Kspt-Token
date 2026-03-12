@@ -6391,8 +6391,16 @@ function buyToken() {
   }
   
   d.tokens -= amountKSPT;
-  d.questCryptoBought = (d.questCryptoBought || 0) + amountKSPT;
-  checkQuestProgress('buy_crypto');
+  // Проверяем что покупаем именно тот токен который требует квест
+  const _questCryptoId = d.quests && d.quests._cryptoQuestId;
+  const _buyingName = selectedToken === 'ksptToken' ? 'KSP Token'
+    : selectedToken === 'banxToken' ? 'BANX'
+    : selectedToken === 'jvmToken' ? 'JVM'
+    : (d.market && d.market.personalToken && d.market.personalToken.ticker) ? d.market.personalToken.ticker : '';
+  if (!_questCryptoId || _buyingName === _questCryptoId) {
+    d.questCryptoBought = (d.questCryptoBought || 0) + amountKSPT;
+    checkQuestProgress('buy_crypto');
+  }
   let tokensBought = amountKSPT / tokenData.price;
   tokenData.owned += tokensBought;
   tokenData.lastBuyTime = now;
@@ -6883,6 +6891,7 @@ if (d.tapBoostEnd > now) {
     d.energy -= cost;
     let earned = 0.01 * m + tapBoostBonus;
     d.questTapEarned = (d.questTapEarned || 0) + earned;
+    d.wQuestTapEarned = (d.wQuestTapEarned || 0) + earned;
     earned *= _adminGetEventMulti();
     d.tokens += earned;
     d.totalTaps = (d.totalTaps || 0) + 1;
@@ -9602,6 +9611,7 @@ function openCapsule() {
       // Select reward based on weighted probability
       const reward = getWeightedRandomReward();
       d.questCapsuleOpened = (d.questCapsuleOpened || 0) + 1;
+      d.wQuestCapsuleOpened = (d.wQuestCapsuleOpened || 0) + 1;
       checkQuestProgress('capsule');
       let rewardText = "";
       let rewardImg = reward.img || "kspt.png";
@@ -10470,7 +10480,8 @@ function initGame() {
             ui();
         }
         d.questOnlineSecs = (d.questOnlineSecs || 0) + 1;
-        if (d.questOnlineSecs % 10 === 0) checkQuestProgress('online_time');
+        d.wQuestOnlineSecs = (d.wQuestOnlineSecs || 0) + 1;
+        if (d.questOnlineSecs % 10 === 0) { checkQuestProgress('online_20'); checkQuestProgress('w_online'); }
     }, 1000);
 }
 
@@ -12855,6 +12866,7 @@ function applyGlitchReward(reward) {
       if (!d.ek) d.ek = 0;
       d.ek += reward.value;
       d.questEkEarned = (d.questEkEarned || 0) + reward.value;
+      d.wQuestEkEarned = (d.wQuestEkEarned || 0) + reward.value;
       checkQuestProgress('earn_ek');
       break;
       
@@ -13215,6 +13227,7 @@ function getEffectiveHourlyRate() {
 // ===============================
 
 function startGame(gameName) {
+  window._currentGameId = gameName; // отслеживаем для квестов
   const gameContainer = document.getElementById('gameContainer');
   const frameContainer = document.getElementById('gameFrameContainer');
 
@@ -13321,7 +13334,18 @@ window.addEventListener('message', function(ev) {
       if (!gameTickets.nextRefill) gameTickets.nextRefill = Date.now() + REFILL_INTERVAL_MS;
       saveTickets();
       updateTicketsUI();
-
+      // Quest tracking
+      d.questTicketsSpent = (d.questTicketsSpent || 0) + 1;
+      d.wQuestTicketsSpent = (d.wQuestTicketsSpent || 0) + 1;
+      const _gid = window._currentGameId || '';
+      if (_gid) {
+        if (!d.questTicketsInGame) d.questTicketsInGame = {};
+        if (!d.wQuestTicketsInGame) d.wQuestTicketsInGame = {};
+        d.questTicketsInGame[_gid] = (d.questTicketsInGame[_gid] || 0) + 1;
+        d.wQuestTicketsInGame[_gid] = (d.wQuestTicketsInGame[_gid] || 0) + 1;
+      }
+      checkQuestProgress('ticket_8'); checkQuestProgress('ticket_game');
+      checkQuestProgress('w_tickets'); checkQuestProgress('w_tgame');
       try { ev.source.postMessage({ type: 'kspt_restart_confirmed' }, '*'); } catch(e){}
       return;
     }
@@ -13340,7 +13364,18 @@ window.addEventListener('message', function(ev) {
       if (!gameTickets.nextRefill) gameTickets.nextRefill = Date.now() + REFILL_INTERVAL_MS;
       saveTickets();
       updateTicketsUI();
-
+      // Quest tracking
+      d.questTicketsSpent = (d.questTicketsSpent || 0) + 1;
+      d.wQuestTicketsSpent = (d.wQuestTicketsSpent || 0) + 1;
+      const _gid2 = window._currentGameId || '';
+      if (_gid2) {
+        if (!d.questTicketsInGame) d.questTicketsInGame = {};
+        if (!d.wQuestTicketsInGame) d.wQuestTicketsInGame = {};
+        d.questTicketsInGame[_gid2] = (d.questTicketsInGame[_gid2] || 0) + 1;
+        d.wQuestTicketsInGame[_gid2] = (d.wQuestTicketsInGame[_gid2] || 0) + 1;
+      }
+      checkQuestProgress('ticket_8'); checkQuestProgress('ticket_game');
+      checkQuestProgress('w_tickets'); checkQuestProgress('w_tgame');
       try { ev.source.postMessage({ type: 'kspt_play_confirmed' }, '*'); } catch(e){}
       // clear gameOver flag — iframe will set it again when it reaches Game Over next time
       gameOverActive = false;
@@ -13469,7 +13504,7 @@ function getDailyQuestTemplates() {
     { id: 'ticket_8',    title: 'Spend 8 tickets',                                           icon: 'ticket.png',          target: 8,     check: d => (d.questTicketsSpent||0) },
     { id: 'ticket_game', title: `Spend 5 tickets in ${QUEST_GAME_NAMES[gi]}`,                icon: QUEST_GAME_ICONS[gi],   target: 5,     gameId: QUEST_GAME_IDS[gi], check: d => ((d.questTicketsInGame||{})[QUEST_GAME_IDS[gi]]||0) },
     { id: 'earn_ek',     title: 'Earn 3 EK',                                                 icon: 'ek.png',           target: 3,     check: d => (d.questEkEarned||0) },
-    { id: 'buy_crypto',  title: `Buy ${pool[ci].name} for 1000 KSPT`,                        icon: pool[ci].icon,          target: 1000,  check: d => (d.questCryptoBought||0) },
+    { id: 'buy_crypto',  title: `Buy ${pool[ci].name} for 1000 KSPT`, icon: pool[ci].icon, target: 1000, cryptoId: pool[ci].name, check: d => (d.questCryptoBought||0) },
     { id: 'online_20',   title: 'Stay online for 20 minutes',                               icon: 'dzoi.png',         target: 1200,  check: d => (d.questOnlineSecs||0) },
   ];
 }
@@ -13481,16 +13516,16 @@ function getWeeklyQuestTemplates() {
   const exVol    = 5000 + Math.floor(Math.random() * 10001);
   const ekTarget = 10  + Math.floor(Math.random() * 16);
   const dqTarget = 8   + Math.floor(Math.random() * 5);
-  const tapK     = 100 + Math.floor(Math.random() * 101); // 100–200 KSPT
+  const tapK     = 100 + Math.floor(Math.random() * 101);
   return [
-   { id: 'w_online',   title: 'Stay online for 90 minutes',                                icon: 'dzoi.png',         target: 5400,      check: d => (d.questOnlineSecs||0) },
-    { id: 'w_capsule',  title: 'Open 5 capsules',                                           icon: 'capsule.png',          target: 5,         check: d => (d.questCapsuleOpened||0) },
-    { id: 'w_tickets',  title: `Spend ${ticketW} tickets`,                                  icon: 'ticket.png',          target: ticketW,   check: d => (d.questTicketsSpent||0) },
-    { id: 'w_exchange', title: `Make ${exVol} KSPT in exchange trades`,                     icon: 'bir.png',             target: exVol,     check: d => (d.questExchangeVolume||0) },
-    { id: 'w_ek',       title: `Earn ${ekTarget} EK`,                                       icon: 'ek.png',           target: ekTarget,  check: d => (d.questEkEarned||0) },
-    { id: 'w_dq',       title: `Complete ${dqTarget} daily quests`,                         icon: 'kspt.png',             target: dqTarget,  check: d => (d.questDailyDone||0) },
-    { id: 'w_tap',      title: `Earn ${tapK} KSPT from tapping`,                            icon: 'kspt.png',             target: tapK,        check: d => (d.questTapEarned||0) },
-    { id: 'w_tgame',    title: `Spend ${ticketG} tickets in ${QUEST_GAME_NAMES[gi]}`,       icon: QUEST_GAME_ICONS[gi],   target: ticketG,   gameId: QUEST_GAME_IDS[gi], check: d => ((d.questTicketsInGame||{})[QUEST_GAME_IDS[gi]]||0) },
+    { id: 'w_online',   title: 'Stay online for 90 minutes',                              icon: 'dzoi.png',           target: 5400,    check: d => (d.wQuestOnlineSecs||0) },
+    { id: 'w_capsule',  title: 'Open 5 capsules',                                         icon: 'capsule.png',        target: 5,       check: d => (d.wQuestCapsuleOpened||0) },
+    { id: 'w_tickets',  title: `Spend ${ticketW} tickets`,                                icon: 'ticket.png',         target: ticketW, check: d => (d.wQuestTicketsSpent||0) },
+    { id: 'w_exchange', title: `Make ${exVol} KSPT in exchange trades`,                   icon: 'bir.png',            target: exVol,   check: d => (d.questExchangeVolume||0) },
+    { id: 'w_ek',       title: `Earn ${ekTarget} EK`,                                     icon: 'ek.png',             target: ekTarget,check: d => (d.wQuestEkEarned||0) },
+    { id: 'w_dq',       title: `Complete ${dqTarget} daily quests`,                       icon: 'kspt.png',           target: dqTarget,check: d => (d.questDailyDone||0) },
+    { id: 'w_tap',      title: `Earn ${tapK} KSPT from tapping`,                          icon: 'kspt.png',           target: tapK,    check: d => (d.wQuestTapEarned||0) },
+    { id: 'w_tgame',    title: `Spend ${ticketG} tickets in ${QUEST_GAME_NAMES[gi]}`,     icon: QUEST_GAME_ICONS[gi], target: ticketG, gameId: QUEST_GAME_IDS[gi], check: d => ((d.wQuestTicketsInGame||{})[QUEST_GAME_IDS[gi]]||0) },
   ];
 }
 
@@ -13511,6 +13546,8 @@ function generateQuests() {
   if (ticketDaily && ticketDaily.gameId) d.quests._ticketGameId = ticketDaily.gameId;
   const ticketWeekly = weekly.find(q => q.id === 'w_tgame');
   if (ticketWeekly && ticketWeekly.gameId) d.quests._weeklyGameId = ticketWeekly.gameId;
+  const cryptoDaily = daily.find(q => q.id === 'buy_crypto');
+  if (cryptoDaily && cryptoDaily.cryptoId) d.quests._cryptoQuestId = cryptoDaily.cryptoId;
 
   // Убираем функцию check перед сохранением (она не сериализуется)
   const strip = q => ({ id: q.id, title: q.title, icon: q.icon, target: q.target, claimed: false });
@@ -13543,6 +13580,12 @@ function initQuestsData() {
     d.quests.weeklyExpire = now + 7 * 24 * 3600 * 1000;
     d.questDailyDone = 0;
     d.questExchangeVolume = 0;
+    d.wQuestOnlineSecs = 0;
+    d.wQuestCapsuleOpened = 0;
+    d.wQuestTicketsSpent = 0;
+    d.wQuestEkEarned = 0;
+    d.wQuestTapEarned = 0;
+    d.wQuestTicketsInGame = {};
   }
 
   if (!d.quests.znetons) d.quests.znetons = 0;
@@ -13573,14 +13616,14 @@ function getQuestCheck(id) {
     'earn_ek':     d => (d.questEkEarned||0),
     'buy_crypto':  d => (d.questCryptoBought||0),
     'online_20':   d => (d.questOnlineSecs||0),
-    'w_online':    d => (d.questOnlineSecs||0),
-    'w_capsule':   d => (d.questCapsuleOpened||0),
-    'w_tickets':   d => (d.questTicketsSpent||0),
+    'w_online':    d => (d.wQuestOnlineSecs||0),
+    'w_capsule':   d => (d.wQuestCapsuleOpened||0),
+    'w_tickets':   d => (d.wQuestTicketsSpent||0),
     'w_exchange':  d => (d.questExchangeVolume||0),
-    'w_ek':        d => (d.questEkEarned||0),
+    'w_ek':        d => (d.wQuestEkEarned||0),
     'w_dq':        d => (d.questDailyDone||0),
-    'w_tap':       d => (d.questTapEarned||0),
-    'w_tgame':     d => ((d.questTicketsInGame||{})[d.quests._weeklyGameId]||0),
+    'w_tap':       d => (d.wQuestTapEarned||0),
+    'w_tgame':     d => ((d.wQuestTicketsInGame||{})[d.quests._weeklyGameId]||0),
   };
   return checks[id] || (() => 0);
 }

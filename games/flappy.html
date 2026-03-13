@@ -1,0 +1,766 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover" />
+<title>Flappy Bird - KSPT</title>
+<style>
+/* ===== SAFE AREA FIX (iPhone notch + home bar) ===== */
+html, body {
+  padding-bottom: env(safe-area-inset-bottom, 0);
+  padding-top: env(safe-area-inset-top, 0);
+  box-sizing: border-box;
+}
+
+.kspt-safe-bottom {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 12px);
+}
+
+.game-buttons {
+  padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 10px);
+}
+
+:root { --accent: #00bcd4; --accent-2: #00e676; --bg:#111; --panel:#0b0b0b; }
+*{box-sizing:border-box}
+body{margin:0;padding:0;background:#000;color:#fff;font-family:Arial, sans-serif;overflow:hidden;touch-action:none;}
+.game-container{display:flex;flex-direction:column;align-items:center;height:100vh;padding:10px;background:linear-gradient(135deg,var(--panel) 0%, #1a1a1a 100%);}
+.game-header{display:flex;justify-content:space-between;width:100%;margin-bottom:10px;padding:10px;background:rgba(0,0,0,0.45);border-radius:10px;border:1px solid var(--accent);}
+.game-title{color:var(--accent-2);font-weight:bold;font-size:18px}
+.game-stats{display:flex;gap:15px;font-size:14px}
+/* Убрал жесткий фон, так как рисуем красивое небо на самом canvas */
+canvas{ border:2px solid var(--accent); border-radius:10px; display:block; cursor:pointer; background: #4ec0ca; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+
+.game-buttons{display:flex;gap:10px;margin-top:20px;width:100%;justify-content:center}
+.game-buttons button{padding:12px 22px;background:linear-gradient(135deg,#00e5ff,#00bcd4);color:#000;border:none;border-radius:12px;cursor:pointer;font-weight:bold;font-size:15px;letter-spacing:0.5px;box-shadow:0 0 10px rgba(0,188,212,0.6), inset 0 0 6px rgba(255,255,255,0.3);transition:transform .12s ease,box-shadow .12s ease,filter .12s ease;}
+.game-buttons button:hover{filter:brightness(1.12)}
+.game-buttons button:active{transform:scale(.95);box-shadow:0 0 4px rgba(0,188,212,0.4), inset 0 0 10px rgba(0,0,0,0.3)}
+.game-over{display:none;position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);background:rgba(0,0,0,.9);padding:30px;border-radius:15px;border:2px solid var(--accent-2);text-align:center;z-index:100;width:80%;max-width:320px; box-shadow: 0 10px 30px rgba(0,0,0,0.8);}
+.game-over h2{color:#ff4081;margin-top:0; font-size: 28px;}
+.earned{color:var(--accent-2);font-weight:bold;font-size:24px;margin:15px 0}
+</style>
+</head>
+<body>
+<div class="game-container">
+    <div class="game-header">
+        <div class="game-title">🐦 Flappy Bird — KSPT</div>
+        <div class="game-stats">
+            <div>Score: <span id="score">0</span></div>
+            <div>Speed: <span id="speed">1.0x</span></div>
+        </div>
+    </div>
+
+    <canvas id="gameCanvas" width="360" height="360"></canvas>
+
+    <div class="game-buttons">
+        <button id="pauseBtn">Pause</button>
+        <button id="restartBtn">Restart (-1)</button>
+        <button id="exitBtn">Exit</button>
+    </div>
+</div>
+
+<div class="game-over" id="gameOverScreen">
+    <h2>Game Over!</h2>
+    <div>Final Score: <span id="finalScore">0</span></div>
+    <div class="earned">+<span id="earnedKSPT">0.00</span> KSPT</div>
+    <div class="earned">+<span id="earnedEK">0</span> EK</div>
+    <button id="playAgainBtn" style="background:#00e676;margin-bottom:10px">Play Again</button>
+    <button id="exitToMenuBtn" style="background:#ff4081">Exit to Menu</button>
+</div>
+
+<script>
+/* ===== helper: проверка билетов (localStorage) ===== */
+function getLocalTicketCount() {
+  try {
+    const raw = localStorage.getItem('kspt_tickets');
+    if (!raw) return null;
+    const data = JSON.parse(raw);
+    if (data && typeof data.current === 'number') return data.current;
+    if (data && data.current != null) return Number(data.current) || 0;
+  } catch (e) { return null; }
+  return null;
+}
+
+function ensureHasTicketOrWarn() {
+  const c = getLocalTicketCount();
+  if (c === null) return true; 
+  if (c <= 0) {
+    try { (window.parent || window.top).postMessage({ type: 'kspt_no_tickets' }, '*'); } catch(e){}
+    try { showToast && showToast("Not enough tickets!"); } catch(e){ alert("Not enough tickets!"); }
+    return false;
+  }
+  return true;
+}
+
+/* ========== GAME CONFIG ========== */
+function isSameOrigin(win) {
+  try { void win.location.href; return true; } catch (e) { return false; }
+}
+
+window.__kspt_hourly = window.__kspt_hourly || 0;
+
+window.addEventListener('message', (ev) => {
+  const msg = ev.data;
+  if (!msg || typeof msg !== 'object') return;
+
+  if (msg.type === 'kspt_init' || msg.type === 'kspt_hourly_update') {
+    window.__kspt_hourly = Number(msg.hourly) || 0;
+  }
+
+  if (msg.type === 'kspt_no_tickets') {
+      gameRunning = false;
+      gamePaused = true;
+      const gos = document.getElementById('gameOverScreen');
+      if (gos) gos.style.display = 'block';
+      alert("Not enough tickets!");
+  }
+
+  if (msg.type === 'kspt_parent_set_game_over' && msg.blockButtons) {
+    document.getElementById('pauseBtn')?.setAttribute('disabled','true');
+    document.getElementById('restartBtn')?.setAttribute('disabled','true');
+    document.getElementById('exitBtn')?.setAttribute('disabled','true');
+  }
+});
+
+function safeGetOfflinePercent(percent) {
+  try {
+    if (typeof HOST !== 'undefined' && HOST !== window && typeof HOST.getOfflinePercent === 'function') {
+      return Number(HOST.getOfflinePercent(percent)) || 0;
+    }
+  } catch (e) {}
+
+  if (typeof window.__kspt_hourly === 'number') {
+    return Math.round((window.__kspt_hourly * (percent/100)) * 100) / 100;
+  }
+
+  try {
+    const raw = localStorage.getItem('kspt_data') || localStorage.getItem('d') || null;
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed.offlineHourly === 'number') {
+        return Math.round((parsed.offlineHourly * (percent/100)) * 100) / 100;
+      }
+    }
+  } catch(e) {}
+  return 0;
+}
+
+function safeAwardGameReward(amount, x = 0, y = 0) {
+  try {
+    if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.awardGameReward === 'function') {
+      window.top.awardGameReward(Number(amount) || 0, x || 0, y || 0); return;
+    }
+  } catch (e) {}
+  try {
+    (window.parent || window.top).postMessage({ type: 'kspt_award_reward', reward: Number(amount) || 0, x: x || 0, y: y || 0 }, '*'); return;
+  } catch (e) {}
+}
+
+function safeAwardGameEK(amount, x = 0, y = 0) {
+  try {
+    if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.awardGameEK === 'function') {
+      window.top.awardGameEK(Number(amount) || 0, x, y); return;
+    }
+  } catch(e) {}
+  try {
+    (window.parent || window.top).postMessage({ type: 'ek_award', amount: Number(amount)||0, x, y }, '*'); return;
+  } catch(e){}
+}
+
+function safeConsumeTicket() {
+  try {
+    if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.consumeTicketForCurrentGame === 'function') {
+      window.top.consumeTicketForCurrentGame(); return;
+    }
+  } catch (e) {}
+  try { (window.parent || window.top).postMessage({ type: 'kspt_consume_ticket' }, '*'); return; } catch (e) {}
+}
+
+function safePlaySound(name) {
+  try {
+    if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.playSound === 'function') {
+      window.top.playSound(name); return;
+    }
+  } catch (e) {}
+  try {
+    if (!window._localAudioCtx) window._localAudioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = window._localAudioCtx;
+    if (ctx.state === 'suspended' && typeof ctx.resume === 'function') ctx.resume().catch(()=>{});
+    const now = ctx.currentTime;
+
+    if (name === 'apple') {
+      const o = ctx.createOscillator();
+      const g = ctx.createGain();
+      
+      o.type = 'sine'; // 'sine' дает мягкий и чистый звук в отличие от резкого 'square'
+      
+      // Делаем перескок нот: с более низкой на высокую (классический эффект монетки)
+      o.frequency.setValueAtTime(988, now); 
+      o.frequency.setValueAtTime(1318, now + 0.08); 
+      
+      // Настраиваем громкость: быстрое появление и плавное, приятное затухание
+      g.gain.setValueAtTime(0.0, now);
+      g.gain.linearRampToValueAtTime(0.25, now + 0.02);
+      g.gain.exponentialRampToValueAtTime(0.001, now + 0.4);
+      
+      o.connect(g); g.connect(ctx.destination);
+      o.start(now); o.stop(now + 0.4);
+      return;
+    }
+  } catch (e) {}
+}
+  
+/* ========== GAME variables ========== */
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+
+const scoreEl = document.getElementById('score');
+const speedEl = document.getElementById('speed');
+const gameOverScreen = document.getElementById('gameOverScreen');
+const finalScoreEl = document.getElementById('finalScore');
+const earnedKSPTEl = document.getElementById('earnedKSPT');
+const earnedEKElem = document.getElementById('earnedEK');
+
+let sessionEK = 0;
+let score = 0;
+let gameRunning = true;
+let gamePaused = false;
+let animationId = null;
+let lastTimestamp = 0;
+let canVibrate = false;
+const floatingTexts = [];
+
+// Flappy Bird Variables
+let bird = { x: 50, y: 150, radius: 10, velocity: 0, gravity: 0.35, jump: -6.5 };
+let pipes = [];
+let pipeWidth = 50;
+let pipeGap = 125;
+let baseSpeed = 2.5;
+let currentSpeedMultiplier = 1.0;
+let frameCount = 0;
+let ekPipesSpawned = 0;
+let countdown = 3;
+let countdownActive = true;
+
+// Parallax Background Variables
+let clouds = [
+    {x: 50, y: 80, scale: 0.6},
+    {x: 200, y: 120, scale: 0.8},
+    {x: 350, y: 60, scale: 0.5},
+    {x: 500, y: 100, scale: 0.7}
+];
+let cityOffset = 0;
+
+/* helpers */
+function spawnFloatingText(text, canvasX, canvasY, color = '#00e676') {
+    floatingTexts.push({text, x: canvasX, y: canvasY, alpha:1, rise:0, color});
+}
+
+function safeVibrate(pattern){
+    if (canVibrate && navigator.vibrate) navigator.vibrate(pattern);
+}
+
+function togglePause() {
+    if (!gameRunning) return;
+    gamePaused = !gamePaused;
+    document.getElementById('pauseBtn').textContent = gamePaused ? 'Resume' : 'Pause';
+}
+
+function spawnPipe() {
+    let minPipeHeight = 30;
+    let maxPipeHeight = canvas.height - pipeGap - minPipeHeight;
+    let topHeight = Math.floor(Math.random() * (maxPipeHeight - minPipeHeight + 1) + minPipeHeight);
+    
+    // Проверяем условия для спавна EK трубы
+    let spawnEK = false;
+    if (score > 5 && ekPipesSpawned < 2) {
+        if (Math.random() < 0.017) { // шанс 1.7%
+            spawnEK = true;
+            ekPipesSpawned++; // увеличиваем счетчик созданных красных труб
+        }
+    }
+    
+    pipes.push({
+        x: canvas.width,
+        top: topHeight,
+        bottom: topHeight + pipeGap,
+        passed: false,
+        isEK: spawnEK 
+    });
+}
+
+/* single step logic */
+function step(dt){
+    let timeScale = dt / 16.66; 
+    if(timeScale > 3) timeScale = 3;
+
+    frameCount += timeScale;
+
+    // Bird physics
+    bird.velocity += bird.gravity * timeScale;
+    bird.y += bird.velocity * timeScale;
+
+    // Floor & Ceiling collision
+    if (bird.y + bird.radius >= canvas.height || bird.y - bird.radius <= 0) {
+        gameOver(); 
+        return;
+    }
+
+    let actualSpeed = baseSpeed * currentSpeedMultiplier * timeScale;
+    
+    // Background parallax animations
+    clouds.forEach(c => {
+        c.x -= actualSpeed * 0.2;
+        if (c.x < -100) c.x = canvas.width + 100;
+    });
+    cityOffset = (cityOffset + actualSpeed * 0.4) % 100;
+
+    // Spawn pipes (distance based)
+    if (pipes.length === 0 || canvas.width - pipes[pipes.length - 1].x >= 184) {
+        spawnPipe();
+    }
+
+    // Pipes logic
+    for (let i = 0; i < pipes.length; i++) {
+        let p = pipes[i];
+        p.x -= actualSpeed;
+
+        // Collision Check (упрощенный квадрат)
+        let birdLeft = bird.x - bird.radius + 2;
+        let birdRight = bird.x + bird.radius - 2;
+        let birdTop = bird.y - bird.radius + 2;
+        let birdBottom = bird.y + bird.radius - 2;
+
+        if (birdRight > p.x && birdLeft < p.x + pipeWidth) {
+            if (birdTop < p.top || birdBottom > p.bottom) {
+                gameOver();
+                return;
+            }
+        }
+
+        // Passed pipe successfully
+        if (p.x + pipeWidth < birdLeft && !p.passed) {
+            p.passed = true;
+            score++;
+            
+            currentSpeedMultiplier += 0.02; 
+            updateUI();
+
+            const reward = safeGetOfflinePercent(0.7) || 0; 
+            window.__kspt_earnedKSPT = window.__kspt_earnedKSPT || 0;
+            window.__kspt_earnedKSPT += reward;
+
+            spawnFloatingText(`+${reward.toFixed(2)}`, bird.x, bird.y - 20, '#00e676');
+            
+            try {
+                const crect = canvas.getBoundingClientRect();
+                safeAwardGameReward(reward, crect.left + bird.x, crect.top + bird.y);
+            } catch(e){}
+
+            // EK Reward
+            if (p.isEK) {
+              sessionEK++;
+              safeAwardGameEK(1, p.x, bird.y);
+              spawnFloatingText('+1 EK', p.x + (pipeWidth/2), bird.y - 40, '#ff4081');
+            }
+
+            safePlaySound('apple');
+            safeVibrate(20);
+        }
+    }
+
+    // Remove off-screen pipes
+    if (pipes.length > 0 && pipes[0].x + pipeWidth < 0) {
+        pipes.shift();
+    }
+}
+
+/* Helper to draw realistic 3D-ish pipes */
+function drawPipeGraphic(x, y, width, height, isTopPipe, isEK) {
+    let capHeight = 24;
+    let capSpill = 6;
+    let capX = x - capSpill/2;
+    let capWidth = width + capSpill;
+    
+    let capY = isTopPipe ? y + height - capHeight : y;
+    let pipeY = isTopPipe ? y : y + capHeight;
+    let pipeHeight = height - capHeight;
+
+    // Створюємо об'ємні градієнти
+    let bodyGrad = ctx.createLinearGradient(x, 0, x + width, 0);
+    let capGrad = ctx.createLinearGradient(capX, 0, capX + capWidth, 0);
+
+    if (isEK) {
+        bodyGrad.addColorStop(0, '#800000');
+        bodyGrad.addColorStop(0.2, '#ff4040');
+        bodyGrad.addColorStop(0.5, '#ff8080');
+        bodyGrad.addColorStop(0.8, '#d00000');
+        bodyGrad.addColorStop(1, '#600000');
+
+        capGrad.addColorStop(0, '#800000');
+        capGrad.addColorStop(0.2, '#ff4040');
+        capGrad.addColorStop(0.5, '#ff8080');
+        capGrad.addColorStop(0.8, '#d00000');
+        capGrad.addColorStop(1, '#600000');
+    } else {
+        bodyGrad.addColorStop(0, '#558022');
+        bodyGrad.addColorStop(0.2, '#73bf2e');
+        bodyGrad.addColorStop(0.5, '#9ce659');
+        bodyGrad.addColorStop(0.8, '#558022');
+        bodyGrad.addColorStop(1, '#3e6316');
+
+        capGrad.addColorStop(0, '#558022');
+        capGrad.addColorStop(0.2, '#73bf2e');
+        capGrad.addColorStop(0.5, '#9ce659');
+        capGrad.addColorStop(0.8, '#558022');
+        capGrad.addColorStop(1, '#3e6316');
+    }
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#000';
+
+    // Малюємо основу труби
+    if (pipeHeight > 0) {
+        ctx.fillStyle = bodyGrad;
+        ctx.fillRect(x, pipeY, width, pipeHeight);
+        ctx.strokeRect(x, pipeY, width, pipeHeight);
+    }
+
+    // Малюємо шляпку труби
+    ctx.fillStyle = capGrad;
+    ctx.fillRect(capX, capY, capWidth, capHeight);
+    ctx.strokeRect(capX, capY, capWidth, capHeight);
+}
+
+/* draw */
+function draw(){
+    // Sky Gradient
+    let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    skyGrad.addColorStop(0, '#4ec0ca');
+    skyGrad.addColorStop(1, '#b4edf2');
+    ctx.fillStyle = skyGrad; 
+    ctx.fillRect(0,0,canvas.width,canvas.height);
+
+    // Draw Parallax Clouds
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    clouds.forEach(c => {
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, 25 * c.scale, 0, Math.PI*2);
+        ctx.arc(c.x + 20 * c.scale, c.y - 15 * c.scale, 30 * c.scale, 0, Math.PI*2);
+        ctx.arc(c.x + 40 * c.scale, c.y, 25 * c.scale, 0, Math.PI*2);
+        ctx.fill();
+    });
+
+    // Draw Parallax Cityscape at the bottom
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    for(let i = -1; i < 5; i++) {
+        let cx = i * 100 - cityOffset;
+        ctx.fillRect(cx + 10, canvas.height - 60, 30, 60);
+        ctx.fillRect(cx + 45, canvas.height - 80, 40, 80);
+        ctx.beginPath();
+        ctx.moveTo(cx + 90, canvas.height);
+        ctx.lineTo(cx + 110, canvas.height - 50);
+        ctx.lineTo(cx + 130, canvas.height);
+        ctx.fill();
+    }
+
+    // draw pipes
+    pipes.forEach((p) => {
+        // top pipe
+        drawPipeGraphic(p.x, 0, pipeWidth, p.top, true, p.isEK);
+        // bottom pipe
+        drawPipeGraphic(p.x, p.bottom, pipeWidth, canvas.height - p.bottom, false, p.isEK);
+
+        if(p.isEK) {
+            ctx.fillStyle = '#fff'; ctx.font='bold 16px Arial'; ctx.textAlign='center';
+            // Невеличка тінь тексту
+            ctx.shadowColor = '#000'; ctx.shadowBlur = 4;
+            ctx.fillText('EK', p.x + pipeWidth/2, p.top - 35);
+            ctx.fillText('EK', p.x + pipeWidth/2, p.bottom + 50);
+            ctx.shadowBlur = 0; // скидаємо тінь
+        }
+    });
+
+    // Draw Bird Sprite
+    ctx.save();
+    ctx.translate(bird.x, bird.y);
+    
+    // Поворот пташки в залежності від швидкості (носом вверх/вниз)
+    let angle = Math.min(Math.PI / 4, Math.max(-Math.PI / 4, (bird.velocity * 0.12)));
+    ctx.rotate(angle);
+
+    ctx.lineWidth = 2;
+    ctx.strokeStyle = '#000';
+
+    // Тіло пташки (еліпс)
+    ctx.fillStyle = '#f6d02f';
+    ctx.beginPath();
+    ctx.ellipse(0, 0, bird.radius * 1.2, bird.radius * 1.15, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    // Око
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.arc(bird.radius * 0.6, -bird.radius * 0.4, bird.radius * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+    
+    // Зіниця
+    ctx.fillStyle = '#000';
+    ctx.beginPath();
+    ctx.arc(bird.radius * 0.8, -bird.radius * 0.4, bird.radius * 0.2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Клюв
+    ctx.fillStyle = '#f06048';
+    ctx.beginPath();
+    ctx.moveTo(bird.radius * 1.2, 0);
+    ctx.lineTo(bird.radius * 2.2, 0);
+    ctx.lineTo(bird.radius * 1.2, bird.radius * 0.7);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Крило (анімоване, махає)
+    let wingFlap = gameRunning && !gamePaused ? Math.sin(frameCount * 0.4) * 3 : 0;
+    ctx.fillStyle = '#fff';
+    ctx.beginPath();
+    ctx.ellipse(-bird.radius * 0.3, wingFlap + 2, bird.radius * 0.7, bird.radius * 0.4, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.restore();
+
+    // floating texts
+    for (let i=floatingTexts.length-1;i>=0;i--){
+        const f = floatingTexts[i];
+        ctx.globalAlpha = f.alpha;
+        ctx.fillStyle = f.color;
+        ctx.font = 'bold 16px Arial';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#000'; ctx.shadowBlur = 3;
+        ctx.fillText(f.text, f.x, f.y - f.rise);
+        ctx.shadowBlur = 0;
+        f.rise += 0.8;
+        f.alpha -= 0.025;
+        if (f.alpha <= 0) floatingTexts.splice(i,1);
+    }
+    ctx.globalAlpha = 1;
+
+    // Countdown overlay
+    if (countdownActive) {
+        ctx.fillStyle = 'rgba(0,0,0,0.45)';
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = '#fff';
+        ctx.font = 'bold 80px Arial';
+        ctx.textAlign = 'center';
+        ctx.shadowColor = '#00e676';
+        ctx.shadowBlur = 20;
+        ctx.fillText(countdown > 0 ? countdown : 'GO!', canvas.width / 2, canvas.height / 2 + 25);
+        ctx.shadowBlur = 0;
+    }
+}
+
+/* UI */
+function updateUI(){
+    scoreEl.textContent = score;
+    speedEl.textContent = currentSpeedMultiplier.toFixed(1) + 'x';
+}
+
+let __kspt_gameOverHandled = false;
+
+function gameOver() {
+  if (__kspt_gameOverHandled) return;
+  __kspt_gameOverHandled = true;
+
+  gameRunning = false;
+  safeVibrate([50, 50, 50]);
+
+  try { if (animationId) cancelAnimationFrame(animationId); animationId = null; } catch(e){}
+
+  const earned = (window.__kspt_earnedKSPT && Number(window.__kspt_earnedKSPT)) ? Number(window.__kspt_earnedKSPT) : 0;
+  earnedKSPTEl.textContent = earned.toFixed(2);
+  finalScoreEl.textContent = score;
+
+  if (typeof sessionEK !== 'undefined' && earnedEKElem) {
+    earnedEKElem.textContent = sessionEK;
+  }
+
+  document.getElementById('gameOverScreen').style.display = 'block';
+}
+
+/* loop rAF */
+function gameLoop(ts){
+    if (!lastTimestamp) lastTimestamp = ts;
+    const dt = ts - lastTimestamp;
+    lastTimestamp = ts;
+
+    if (!gamePaused && gameRunning) {
+        step(dt);
+    }
+
+    draw();
+    if(gameRunning || countdownActive) {
+        animationId = requestAnimationFrame(gameLoop);
+    }
+}
+
+/* controls */
+function restartGame(){
+    __kspt_gameOverHandled = false;
+    window.__kspt_earnedKSPT = 0;
+    sessionEK = 0;
+
+    bird = { x: 50, y: 150, radius: 10, velocity: 0, gravity: 0.35, jump: -6.5 };
+    pipes = [];
+    currentSpeedMultiplier = 1.0;
+    score = 0;
+    frameCount = 0;
+    cityOffset = 0;
+    ekPipesSpawned = 0
+    
+    lastTimestamp = performance.now();
+    gameRunning = true;
+    gamePaused = false;
+    document.getElementById('gameOverScreen').style.display = 'none';
+    document.getElementById('pauseBtn').textContent = 'Pause';
+    floatingTexts.length = 0;
+    
+    updateUI();
+    if (animationId) cancelAnimationFrame(animationId);
+    lastTimestamp = 0;
+    startCountdown(() => {});
+}
+
+function exitGame() {
+  try {
+    if (typeof HOST !== 'undefined' && HOST && typeof HOST.exitGame === 'function') {
+      HOST.exitGame(); return;
+    }
+  } catch (e) {}
+  try {
+    (window.top || window.parent || window).postMessage({ type: 'kspt_exit_game' }, '*'); return;
+  } catch (e) {}
+}
+
+/* Input Handlers */
+function handleFlap() {
+    canVibrate = true;
+    if(!gameRunning || gamePaused) return;
+    bird.velocity = bird.jump;
+}
+
+canvas.addEventListener('touchstart', (e) => { e.preventDefault(); handleFlap(); }, {passive: false});
+canvas.addEventListener('mousedown', (e) => { e.preventDefault(); handleFlap(); });
+
+document.addEventListener('keydown', (e)=>{
+    if(e.code === 'Space' || e.key === 'ArrowUp' || e.key === 'w') {
+        e.preventDefault();
+        handleFlap();
+    }
+    if(e.key === 'Escape' || e.key === 'p' || e.key === 'P') {
+        togglePause();
+    }
+});
+
+/* events */
+document.getElementById('pauseBtn').addEventListener('click', ()=>{ canVibrate = true; togglePause(); });
+document.getElementById('restartBtn').addEventListener('click', ()=>{ 
+  canVibrate = true;
+  if (!ensureHasTicketOrWarn()) return;
+  try { (window.parent || window.top).postMessage({ type: 'kspt_new_round' }, '*'); } catch(e) {}
+  restartGame();
+});
+
+document.getElementById('exitBtn').addEventListener('click', exitGame);
+document.getElementById('exitToMenuBtn').addEventListener('click', exitGame);
+document.getElementById('playAgainBtn').addEventListener('click', () => {
+    try { (window.parent || window.top).postMessage({ type: 'kspt_new_round' }, '*'); } catch(e){}
+    restartGame();
+});
+
+/* init */
+function startCountdown(onDone) {
+    countdown = 3;
+    countdownActive = true;
+    gameRunning = false;
+    animationId = requestAnimationFrame(gameLoop);
+    const iv = setInterval(() => {
+        countdown--;
+        if (countdown <= 0) {
+            clearInterval(iv);
+            setTimeout(() => {
+                countdownActive = false;
+                gameRunning = true;
+                onDone();
+            }, 600);
+        }
+    }, 1000);
+}
+
+function initGame(){
+    updateUI();
+    lastTimestamp = 0;
+    sessionEK = 0;
+    if (animationId) cancelAnimationFrame(animationId);
+    startCountdown(() => {});
+}
+
+window.addEventListener('load', initGame);
+</script>
+
+<script>
+(function(){
+  const BASE_W = 360;   
+  const BASE_H = 360;   
+
+  function fitGameUI() {
+    const container = document.querySelector('.game-container') || document.body;
+    const header = document.querySelector('.game-header');
+    const headerH = header ? header.getBoundingClientRect().height : 0;
+
+    const availW = window.innerWidth;
+    const availH = window.innerHeight - headerH - 12; 
+
+    const scale = Math.min(availW / BASE_W, availH / (BASE_H + 80)); 
+
+    const canvas = document.getElementById('gameCanvas');
+    if (canvas) {
+      canvas.style.width = Math.round(BASE_W * scale) + 'px';
+      canvas.style.height = Math.round(BASE_H * scale) + 'px';
+      if (!canvas.dataset.kspt_scaled) canvas.dataset.kspt_scaled = '1';
+    }
+
+    const btnRow = document.querySelector('.game-buttons');
+    if (btnRow) {
+      btnRow.style.transformOrigin = 'top center';
+      btnRow.style.transform = `scale(${scale})`;
+      btnRow.style.marginTop = '10px';
+    }
+
+    if (container) {
+      container.style.width = Math.round(BASE_W * scale) + 'px';
+      container.style.margin = '0 auto';
+      container.classList.add('kspt-safe-bottom');
+    }
+  }
+
+  window.addEventListener('message', (ev) => {
+    const d = ev.data || {};
+    if (d && d.type === 'kspt_parent_viewport') setTimeout(fitGameUI, 50);
+  });
+
+  window.addEventListener('resize', fitGameUI);
+  window.addEventListener('orientationchange', () => setTimeout(fitGameUI, 120));
+  window.addEventListener('load', () => setTimeout(fitGameUI, 80));
+
+  document.addEventListener('touchmove', function(e){
+    const el = e.target;
+    if (el.closest && (el.closest('.game-buttons') || el.closest('canvas'))) return;
+    e.preventDefault();
+  }, { passive: false });
+})();
+</script>
+
+</body>
+</html>

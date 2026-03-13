@@ -269,9 +269,20 @@ function getOnlineUid() {
 }
 function getOnlinePlayerMeta() {
   const u = window.__tgUser || window.Telegram?.WebApp?.initDataUnsafe?.user;
+  // Пробуем взять имя из основной игры (localStorage)
+  let fallbackName = 'Player';
+  try {
+    const raw = localStorage.getItem('kspt_data') || localStorage.getItem('d');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && (parsed.name || parsed.username)) {
+        fallbackName = parsed.name || parsed.username;
+      }
+    }
+  } catch(e) {}
   return {
-    name: u ? (u.first_name + (u.last_name ? ' ' + u.last_name : '')) : 'Player',
-    avatar: u?.photo_url || 'seri.png',
+    name: u ? (u.first_name + (u.last_name ? ' ' + u.last_name : '')) : fallbackName,
+    avatar: u?.photo_url || localStorage.getItem('_kspt_nonTg_avatar') || 'seri.png',
     uid: getOnlineUid()
   };
 }
@@ -351,6 +362,7 @@ function getOnlinePlayerMeta() {
         let startCountdown = 3;
         let countdownActive = true;
         let finishLinePassed = false;
+        let midCheckpointPassed = false;
         let lastCheckpointParam = 0;
 
         let steering = 0;
@@ -1124,9 +1136,15 @@ scene.add(car);
                 // Едем назад — не считаем круги
             } else {
                 // Круги — только если ехали вперёд
+                // Середина трассы — обязательный чекпоинт
+                if (param > 0.45 && param < 0.55) {
+                    midCheckpointPassed = true;
+                }
+                // Финишная черта — только если проехали через середину
                 if (param < 0.05 && lastCheckpointParam > 0.92) {
-                    if (!finishLinePassed) {
+                    if (!finishLinePassed && midCheckpointPassed) {
                         finishLinePassed = true;
+                        midCheckpointPassed = false;
                         if (lap < maxLaps) {
                             lap++;
                             document.getElementById('lapDisplay').innerText = `${lap}/${maxLaps}`;
@@ -2062,19 +2080,20 @@ function updateRemotePlayers() {
         0,
         Math.cos(rp.targetRot)
       );
-      rp.targetX += fwd.x * rp.remoteSpeed * 0.1 * dt * 60 * 0.5;
-      rp.targetZ += fwd.z * rp.remoteSpeed * 0.1 * dt * 60 * 0.5;
+      // Полная экстраполяция — предсказываем куда едет машина между обновлениями
+      rp.targetX += fwd.x * rp.remoteSpeed * 0.1 * dt * 60;
+      rp.targetZ += fwd.z * rp.remoteSpeed * 0.1 * dt * 60;
     }
 
-    // Быстрая интерполяция к предсказанной позиции
-    const alpha = 0.35;
+    // Плавная интерполяция — меньше alpha = плавнее, но с небольшой задержкой
+    const alpha = 0.18;
     rp.currentX += (rp.targetX - rp.currentX) * alpha;
     rp.currentZ += (rp.targetZ - rp.currentZ) * alpha;
 
     let dRot = rp.targetRot - rp.currentRot;
     while (dRot > Math.PI) dRot -= Math.PI * 2;
     while (dRot < -Math.PI) dRot += Math.PI * 2;
-    rp.currentRot += dRot * 0.3;
+    rp.currentRot += dRot * 0.15;
 
     rp.mesh.position.x = rp.currentX;
     rp.mesh.position.z = rp.currentZ;

@@ -159,6 +159,9 @@ html, body {
   transition: transform 0.12s ease, box-shadow 0.12s ease;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
 }
 .arrow-btn:active {
   transform: scale(0.95);
@@ -558,8 +561,8 @@ if (ball.y + ball.radius > canvas.height) {
                 // Make sure ball goes to the right
                 ball.x = playerPaddle.x + playerPaddle.width + ball.radius;
                 
-                // Award KSPT for hitting the ball (0.5% от offline income)
-                const reward = safeGetOfflinePercent(0.5);
+                // Award KSPT for hitting the ball (0.8% от offline income)
+                const reward = safeGetOfflinePercent(0.8);
                 earnedKSPT += reward;
                 spawnFloatingText(`+${reward.toFixed(2)}`, canvas.width / 2, canvas.height / 2, '#00e5ff');
                 safeAwardGameReward(reward, ball.x, ball.y);
@@ -616,7 +619,7 @@ if (ball.y + ball.radius > canvas.height) {
                 playerScoreEl.textContent = playerScore;
                 
                 // Award KSPT for scoring
-                const reward = safeGetOfflinePercent(2.5);
+                const reward = safeGetOfflinePercent(5.0);
                 earnedKSPT += reward;
                 spawnFloatingText(`+${reward.toFixed(2)}`, canvas.width / 2, canvas.height / 2, '#00e5ff');
                 safeAwardGameReward(reward, ball.x, ball.y);

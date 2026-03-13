@@ -12248,9 +12248,26 @@ function loadLeaderboard() {
       document.getElementById('lbList').innerHTML = '<div style="text-align:center;color:#555;padding:30px;">No players yet</div>';
       return;
     }
+    const myUid = typeof getMyUid === 'function' ? getMyUid() : null;
     const players = Object.values(data)
-      .filter(p => (p.tokens || 0) >= 0.01)
+      .filter(p => (p.rate || 0) > 0)
       .sort((a, b) => b.rate - a.rate);
+
+    // Если меня нет в списке — добавить принудительно для себя
+    if (myUid && !players.find(p => String(p.uid) === String(myUid))) {
+      players.push({
+        uid: myUid,
+        name: d.name || d.username || 'You',
+        photoUrl: localStorage.getItem('_kspt_nonTg_avatar') || '',
+        rate: Math.round(typeof getHourlyRate === 'function' ? getHourlyRate() : 0),
+        tokens: Math.round(d.tokens || 0),
+        lastSeen: Date.now(),
+        playtimeMs: d.playtimeMs || 0,
+        _selfOnly: true // маркер — не показывать другим
+      });
+      players.sort((a, b) => b.rate - a.rate);
+    }
+
     renderLeaderboard(players);
     const upd = document.getElementById('lbUpdated');
     if (upd) upd.textContent = 'Updated: ' + new Date().toLocaleTimeString();
@@ -13426,6 +13443,8 @@ function startGame(gameName) {
     iframe.src = 'games/snake.html';
   } else if (gameName === 'pong' || gameName === 'pingpong') {
     iframe.src = 'games/pingpong.html';
+  } else if (gameName === 'flappy') {
+    iframe.src = 'games/flappy.html';
   } else {
     console.warn('Unknown game:', gameName);
     return;
@@ -13646,9 +13665,9 @@ function _startFirebaseSync() {
 // QUESTS SYSTEM
 // ==========================================
 
-const QUEST_GAME_NAMES = ['Snake Game', 'Ping-Pong', 'BlocksFast', 'Slither: KSPT Mode', 'Ghost Train', 'KSPT Races'];
-const QUEST_GAME_IDS   = ['snake',      'pingpong',  'blocksfast', 'slither',            'train',       'race'];
-const QUEST_GAME_ICONS = ['snake.png',  'pong.png',  'tetris.png', 'slither.png',        'train.png',   'race.png'];
+const QUEST_GAME_NAMES = ['Snake Game', 'Ping-Pong', 'BlocksFast', 'Slither: KSPT Mode', 'Ghost Train', 'KSPT Races', 'Flappy Bird'];
+const QUEST_GAME_IDS   = ['snake',      'pingpong',  'blocksfast', 'slither',            'train',       'race',       'flappy'];
+const QUEST_GAME_ICONS = ['snake.png',  'pong.png',  'tetris.png', 'slither.png',        'train.png',   'race.png',   'flappy.png'];
 
 function getQuestCryptoPool() {
   const base = [

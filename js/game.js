@@ -8111,14 +8111,10 @@ async function adminRestoreToLeaderboard() {
   const uid = _adminSelectedUid(); if (!uid) return;
   if (!window._firebaseReady) { showToast('Firebase not ready'); return; }
 
-  // Сначала проверяем — может запись уже есть в leaderboard (просто скрыта)
+  // Берём данные из всех доступных источников
   const lbSnap = await _db.ref(`leaderboard/${uid}`).once('value').catch(() => null);
   const lbData = lbSnap ? lbSnap.val() : null;
-
-  // Берём данные из уже загруженного списка игроков
   const cachedPlayer = _adminPlayers ? _adminPlayers[uid] : null;
-
-  // Собираем лучшее из того что есть
   const source = lbData || cachedPlayer || {};
 
   const entry = {
@@ -8130,13 +8126,23 @@ async function adminRestoreToLeaderboard() {
     rate: Math.round(source.rate || 0),
     tokens: Math.round(source.tokens || 0),
     updatedAt: Date.now(),
-    lastSeen: source.lastSeen || Date.now(),
+    lastSeen: Date.now(),
     playtimeMs: source.playtimeMs || 0,
-    restoredByAdmin: true
+    restoredByAdmin: true,
+    adminForceVisible: true  // ← принудительный флаг
   };
 
+  // Записываем в leaderboard
   await _db.ref(`leaderboard/${uid}`).set(entry);
-  showToast(`♻️ Restored "${entry.name}" to leaderboard`);
+
+  // Принудительно убираем возможный бан из modActions и playerRanks
+  await _db.ref(`admin/modActions/${uid}`).remove().catch(()=>{});
+  await _db.ref(`admin/playerRanks/${uid}/banned`).remove().catch(()=>{});
+
+  // Отправляем игроку команду разбана на случай если он онлайн
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'unban', ts: Date.now() });
+
+  showToast(`♻️ Restored "${entry.name}" to leaderboard (forced)`);
   setTimeout(() => _adminLoadPlayers(), 1500);
 }
 
@@ -8986,9 +8992,20 @@ function _adminApplyOpening(type) {
       if (!d.safe) d.safe = {};
       d.safe.lastOpen = 0;
       save(); showToast(`🔒 ${st} Safe from Admin!`);
-      if (typeof _startSafeOpening === 'function') _startSafeOpening(st);
+      // Принудительно показываем вкладку ivent чтобы safeOpenModal был виден
+      const _iventTab = document.getElementById('iventTab');
+      const _mainMenu = document.getElementById('mainMenu');
+      if (_iventTab && _mainMenu) {
+        document.querySelectorAll('.screen').forEach(s => s.style.display = 'none');
+        _iventTab.style.display = 'block';
+        if (typeof initQuestsTab === 'function') initQuestsTab();
+      }
+      setTimeout(() => {
+        if (typeof _startSafeOpening === 'function') _startSafeOpening(st);
+      }, 150);
       break;
     }
+
       case 'keyYellow':
     case 'keyGreen':
     case 'keyRed':
@@ -10689,6 +10706,7 @@ function showIventTab(tab) {
 function loadIventsDirect() {
   // Теперь эта вкладка — Quests & Safes
   initQuestsTab();
+  startQuestTimers();
 }
 
 // Загрузить события из файла
@@ -11193,12 +11211,10 @@ function getShopItems(keyColor) {
     admin: [
       { name: 'Noob Box', type: 'adminNoobBox', value: 1, desc: 'Open Noob Box' },
       { name: 'Capsule', type: 'adminCapsule', value: 1, desc: 'Open Capsule' },
-      { name: 'Gold Capsule', type: 'adminGoldCapsule', value: 1, desc: 'Open Gold Capsule' },
       { name: 'Glitch Box', type: 'adminGlitchBox', value: 1, desc: 'Open Glitch Box' },
       { name: 'Bomb Box', type: 'adminBombBox', value: 1, desc: 'Open Bomb Box' },
       { name: 'Noob Safe', type: 'adminSafeNoob', value: 1, desc: 'Open Noob Safe' },
       { name: 'Iron Safe', type: 'adminSafeIron', value: 1, desc: 'Open Iron Safe' },
-      { name: 'Elite Safe', type: 'adminSafeElite', value: 1, desc: 'Open Elite Safe' },
       { name: 'Key Box', type: 'adminKeyBox', value: 1, desc: 'Open Key Box' },
       { name: 'Fortune Wheel', type: 'adminWheel', value: 1, desc: '1 free Fortune Wheel spin' }
     ]
@@ -12256,6 +12272,7 @@ function getPlayerRank(rate, customRank, isBanned) {
     'Champion':    { color: '#ffa726', glow: '#ffa726', border: '#ffa726' },
     'Divine':      { color: '#26c6da', glow: '#26c6da', border: '#26c6da' },
     'God':         { color: '#ffd700', glow: '#ffd700', border: '#ffd700' },
+    'Secret God':  { color: '#b0bec5', glow: '#eceff1', border: '#78909c' },
     'GreatMaster': { color: '#e040fb', glow: '#e040fb', border: '#e040fb' },
     'Admin':       { color: '#ff4081', glow: '#ff4081', border: '#ff4081' },
     'VIP':         { color: '#69f0ae', glow: '#69f0ae', border: '#69f0ae' },
@@ -12267,7 +12284,8 @@ function getPlayerRank(rate, customRank, isBanned) {
   };
   if (customRank && custom[customRank]) return { label: customRank, ...custom[customRank] };
   // Авто по рейту
-  if (rate >= 2500) return { label: 'God',      color: '#ffd700', glow: '#ffd700', border: '#ffd700' };
+  if (rate >= 3000) return { label: 'Secret God', color: '#b0bec5', glow: '#eceff1', border: '#78909c' };
+  if (rate >= 2500) return { label: 'God',        color: '#ffd700', glow: '#ffd700', border: '#ffd700' };
   if (rate >= 2300) return { label: 'Divine',   color: '#26c6da', glow: '#26c6da', border: '#26c6da' };
   if (rate >= 2000) return { label: 'Champion', color: '#ffa726', glow: '#ffa726', border: '#ffa726' };
   if (rate >= 1500) return { label: 'Legend',   color: '#ff7043', glow: '#ff7043', border: '#ff7043' };
@@ -12279,7 +12297,7 @@ function getPlayerRank(rate, customRank, isBanned) {
 }
 
 function openPlayerDetail(p) {
-  const rank = getPlayerRank(p.rate || 0, p.customRank || null, p.adminBanned || false);
+  const rank = getPlayerRank(p.rate || 0, p.customRank || null, (p.adminBanned && !p.adminForceVisible) || false);
 
   // Аватар
   document.getElementById('pdAvatar').src = p.photoUrl || 'seri.png';
@@ -13754,7 +13772,6 @@ function initQuestsData() {
 function initQuestsTab() {
   initQuestsData();
   renderQuestsTab();
-  startQuestTimers();
 }
 
 function renderQuestsTab() {
@@ -13872,8 +13889,8 @@ function checkQuestProgress(eventId) {
 }
 
 function startQuestTimers() {
+  if (window._questTimerInterval) return; // уже запущен — не пересоздавать
   updateQuestTimers();
-  if (window._questTimerInterval) clearInterval(window._questTimerInterval);
   window._questTimerInterval = setInterval(updateQuestTimers, 1000);
 }
 

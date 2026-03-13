@@ -178,6 +178,12 @@ const translations = {
     'volleyball': 'Volleyball',
     'hockey': 'Hockey',
     'handball': 'Handball',
+    'boxing': 'Boxing',
+    'golf': 'Golf',
+    'checkers': 'Checkers',
+    'jenga': 'Jenga',
+    'card_games': 'Card Games',
+    'domino': 'Domino',
     'chess': 'Chess',
     'billiards': 'Billiards',
     'bowling': 'Bowling',
@@ -611,6 +617,12 @@ const translations = {
     'volleyball': 'Волейбол',
     'hockey': 'Хоккей',
     'handball': 'Гандбол',
+    'boxing': 'Бокс',
+    'golf': 'Гольф',
+    'checkers': 'Шашки',
+    'jenga': 'Дженга',
+    'card_games': 'Карточные игры',
+    'domino': 'Домино',
     'chess': 'Шахматы',
     'billiards': 'Бильярд',
     'bowling': 'Боулинг',
@@ -1161,7 +1173,7 @@ function updateCardTexts() {
   }
   
   // Sport cards
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 7; i++) {
     const key = "s" + i;
     const lvl = d.cards[key];
     const data = CARDS[key].levels;
@@ -1184,7 +1196,7 @@ function updateCardTexts() {
   }
   
   // Game cards
-  for (let i = 1; i <= 3; i++) {
+  for (let i = 1; i <= 7; i++) {
     const key = "g" + i;
     const lvl = d.cards[key];
     const data = CARDS[key].levels;
@@ -1443,8 +1455,8 @@ const defaultData = {
   wonX10: false,
   cards: { 
     c1: -1, c2: -1, c3: -1, c4: -1, c5: -1,
-    s1: -1, s2: -1, s3: -1, s4: -1, s5: -1,
-    g1: -1, g2: -1, g3: -1
+    s1: -1, s2: -1, s3: -1, s4: -1, s5: -1, s6: -1, s7: -1,
+    g1: -1, g2: -1, g3: -1, g4: -1, g5: -1, g6: -1, g7: -1
   },
   energy: 2500,
   maxEnergy: 2500,
@@ -1902,11 +1914,17 @@ const CARDS = {
   s3: { type: 'sport', levels: [{ price: 40, income: 1.1 }, { price: 65, income: 2.7 }, { price: 80, income: 4.7 }, { price: 110, income: 7.5 }, { price: 140, income: 11.6 }, { price: 170, income: 13.7 }] },
   s4: { type: 'sport', levels: [{ price: 110, income: 5.4 }, { price: 140, income: 8.9 }, { price: 160, income: 11.4 }, { price: 205, income: 14.2 }, { price: 235, income: 17.9 }, { price: 260, income: 19.4 }] },
   s5: { type: 'sport', levels: [{ price: 15, income: 0.8 }, { price: 25, income: 1.7 }, { price: 35, income: 3.1 }, { price: 50, income: 4.8 }, { price: 65, income: 6.3 }, { price: 80, income: 8.1 }] },
+  s6: { type: 'sport', levels: [{ price: 14810, income: 25 }, { price: 17200, income: 37 }, { price: 21480, income: 54 }, { price: 22000, income: 71 }, { price: 24995, income: 104 }, { price: 31005, income: 138 }] },
+  s7: { type: 'sport', levels: [{ price: 51220, income: 100 }, { price: 66600, income: 175 }, { price: 77800, income: 240 }, { price: 121000, income: 310 }, { price: 156050, income: 360 }, { price: 200000, income: 480 }] },
   
   // Game cards - EXACT VALUES
   g1: { type: 'game', levels: [{ price: 240, income: 5.8 }, { price: 255, income: 7.2 }, { price: 275, income: 10.0 }, { price: 335, income: 13.1 }, { price: 360, income: 15.8 }, { price: 405, income: 18.1 }] },
   g2: { type: 'game', levels: [{ price: 70, income: 2.2 }, { price: 85, income: 3.7 }, { price: 110, income: 5.9 }, { price: 125, income: 7.4 }, { price: 140, income: 8.8 }, { price: 165, income: 9.7 }] },
-  g3: { type: 'game', levels: [{ price: 140, income: 5.1 }, { price: 155, income: 7.2 }, { price: 160, income: 8.9 }, { price: 175, income: 11.1 }, { price: 195, income: 14.4 }, { price: 215, income: 17.5 }] }
+  g3: { type: 'game', levels: [{ price: 140, income: 5.1 }, { price: 155, income: 7.2 }, { price: 160, income: 8.9 }, { price: 175, income: 11.1 }, { price: 195, income: 14.4 }, { price: 215, income: 17.5 }] },
+  g4: { type: 'game', levels: [{ price: 1100, income: 4 }, { price: 1480, income: 7 }, { price: 2100, income: 14 }, { price: 3700, income: 21 }, { price: 5400, income: 28 }, { price: 7050, income: 34 }] },
+  g5: { type: 'game', levels: [{ price: 5480, income: 14 }, { price: 7410, income: 21 }, { price: 8900, income: 29 }, { price: 11000, income: 38 }, { price: 14100, income: 51 }, { price: 19250, income: 64 }] },
+  g6: { type: 'game', levels: [{ price: 81000, income: 70 }, { price: 89000, income: 120 }, { price: 94000, income: 140 }, { price: 98000, income: 190 }, { price: 108000, income: 271 }, { price: 136000, income: 315 }] },
+  g7: { type: 'game', levels: [{ price: 110, income: 10 }, { price: 1400, income: 21 }, { price: 3800, income: 34 }, { price: 11500, income: 41 }, { price: 47200, income: 78 }, { price: 111000, income: 133 }] },
 };
 
 // ==========================================
@@ -2101,11 +2119,17 @@ function getHourlyRate() {
   if(d.cards.s3 >= 0) rate += CARDS.s3.levels[d.cards.s3].income;
   if(d.cards.s4 >= 0) rate += CARDS.s4.levels[d.cards.s4].income;
   if(d.cards.s5 >= 0) rate += CARDS.s5.levels[d.cards.s5].income;
+  if(d.cards.s6 >= 0) rate += CARDS.s6.levels[d.cards.s6].income;
+  if(d.cards.s7 >= 0) rate += CARDS.s7.levels[d.cards.s7].income;
   
   // Game cards
   if(d.cards.g1 >= 0) rate += CARDS.g1.levels[d.cards.g1].income;
   if(d.cards.g2 >= 0) rate += CARDS.g2.levels[d.cards.g2].income;
   if(d.cards.g3 >= 0) rate += CARDS.g3.levels[d.cards.g3].income;
+  if(d.cards.g4 >= 0) rate += CARDS.g4.levels[d.cards.g4].income;
+  if(d.cards.g5 >= 0) rate += CARDS.g5.levels[d.cards.g5].income;
+  if(d.cards.g6 >= 0) rate += CARDS.g6.levels[d.cards.g6].income;
+  if(d.cards.g7 >= 0) rate += CARDS.g7.levels[d.cards.g7].income;
 
   rate += SKIN_INCOME.default;
   
@@ -3469,6 +3493,22 @@ function renderCardsTab(tab) {
           <div class="card-sub" id="s5_income">+0.8 KSPT/h</div>
           <button id="btn_s5" onclick="buySportCard(5)" class="card-item-button">Locked</button>
         </div>
+
+        <div class="card-item" id="sport6_container">
+          <img src="box.png" class="card-item-image" onerror="this.src='dontwhat.png'">
+          <div class="card-item-title" data-lang-key="boxing">Boxing</div>
+          <div class="card-lvl" id="s6_lvl">Locked</div>
+          <div class="card-sub" id="s6_income">+25 KSPT/h</div>
+          <button id="btn_s6" onclick="buySportCard(6)" class="card-item-button">Locked</button>
+        </div>
+
+        <div class="card-item" id="sport7_container">
+          <img src="golf.png" class="card-item-image" onerror="this.src='dontwhat.png'">
+          <div class="card-item-title" data-lang-key="golf">Golf</div>
+          <div class="card-lvl" id="s7_lvl">Locked</div>
+          <div class="card-sub" id="s7_income">+100 KSPT/h</div>
+          <button id="btn_s7" onclick="buySportCard(7)" class="card-item-button">Locked</button>
+        </div>
       </div>
     `;
   } else if (tab === 'games') {
@@ -3496,6 +3536,38 @@ function renderCardsTab(tab) {
           <div class="card-lvl" id="g3_lvl">Not Owned</div>
           <div class="card-sub" id="g3_income">+5.1 KSPT/h</div>
           <button id="btn_g3" onclick="buyGameCard(3)" class="card-item-button">Buy 140 KSPT</button>
+        </div>
+
+        <div class="card-item" id="game4_container">
+          <img src="checkers.png" class="card-item-image" onerror="this.src='dontwhat.png'">
+          <div class="card-item-title" data-lang-key="checkers">Checkers</div>
+          <div class="card-lvl" id="g4_lvl">Locked</div>
+          <div class="card-sub" id="g4_income">+4 KSPT/h</div>
+          <button id="btn_g4" onclick="buyGameCard(4)" class="card-item-button">Locked</button>
+        </div>
+
+        <div class="card-item" id="game5_container">
+          <img src="jenga.png" class="card-item-image" onerror="this.src='dontwhat.png'">
+          <div class="card-item-title" data-lang-key="jenga">Jenga</div>
+          <div class="card-lvl" id="g5_lvl">Not Owned</div>
+          <div class="card-sub" id="g5_income">+14 KSPT/h</div>
+          <button id="btn_g5" onclick="buyGameCard(5)" class="card-item-button">Buy 5480 KSPT</button>
+        </div>
+
+        <div class="card-item" id="game6_container">
+          <img src="mcards.png" class="card-item-image" onerror="this.src='dontwhat.png'">
+          <div class="card-item-title" data-lang-key="card_games">Card Games</div>
+          <div class="card-lvl" id="g6_lvl">Locked</div>
+          <div class="card-sub" id="g6_income">+70 KSPT/h</div>
+          <button id="btn_g6" onclick="buyGameCard(6)" class="card-item-button">Locked</button>
+        </div>
+
+        <div class="card-item" id="game7_container">
+          <img src="domino.png" class="card-item-image" onerror="this.src='dontwhat.png'">
+          <div class="card-item-title" data-lang-key="domino">Domino</div>
+          <div class="card-lvl" id="g7_lvl">Locked</div>
+          <div class="card-sub" id="g7_income">+10 KSPT/h</div>
+          <button id="btn_g7" onclick="buyGameCard(7)" class="card-item-button">Locked</button>
         </div>
       </div>
     `;
@@ -3894,7 +3966,7 @@ window.updateCardUI = function updateCardUI() {
   }
   
   // Sport cards
-  for (let i = 1; i <= 5; i++) {
+  for (let i = 1; i <= 7; i++) {
     const key = "s" + i;
     const lvl = d.cards[key];
     const data = CARDS[key].levels;
@@ -3930,7 +4002,7 @@ window.updateCardUI = function updateCardUI() {
   }
   
   // Game cards
-  for (let i = 1; i <= 3; i++) {
+  for (let i = 1; i <= 7; i++) {
     const key = "g" + i;
     const lvl = d.cards[key];
     const data = CARDS[key].levels;
@@ -4047,6 +4119,33 @@ window.updateCardUI = function updateCardUI() {
     }
   }
   
+  // Sport unlock conditions (новые)
+  const s6Div = document.getElementById("sport6_container");
+  if (s6Div) {
+    if (d.cards.s1 >= 5) {
+      s6Div.style.filter = "none";
+      const btn = document.getElementById("btn_s6");
+      if (btn) btn.disabled = false;
+    } else {
+      s6Div.style.filter = "grayscale(1) opacity(0.5)";
+      const btn = document.getElementById("btn_s6");
+      if (btn) { btn.textContent = formatTemplate(t('unlock_condition'), ['Football Level 5']); btn.disabled = true; }
+    }
+  }
+
+  const s7Div = document.getElementById("sport7_container");
+  if (s7Div) {
+    if (d.cards.s6 >= 3) {
+      s7Div.style.filter = "none";
+      const btn = document.getElementById("btn_s7");
+      if (btn) btn.disabled = false;
+    } else {
+      s7Div.style.filter = "grayscale(1) opacity(0.5)";
+      const btn = document.getElementById("btn_s7");
+      if (btn) { btn.textContent = formatTemplate(t('unlock_condition'), ['Boxing Level 3']); btn.disabled = true; }
+    }
+  }
+
   // Game unlock conditions
   const g2Div = document.getElementById("game2_container");
 if (g2Div) {
@@ -4063,6 +4162,45 @@ if (g2Div) {
     }
   }
 }
+
+  const g4Div = document.getElementById("game4_container");
+  if (g4Div) {
+    if (d.cards.g1 >= 5) {
+      g4Div.style.filter = "none";
+      const btn = document.getElementById("btn_g4");
+      if (btn) btn.disabled = false;
+    } else {
+      g4Div.style.filter = "grayscale(1) opacity(0.5)";
+      const btn = document.getElementById("btn_g4");
+      if (btn) { btn.textContent = formatTemplate(t('unlock_condition'), ['Chess Level 5']); btn.disabled = true; }
+    }
+  }
+
+  const g6Div = document.getElementById("game6_container");
+  if (g6Div) {
+    if (d.limitedCards && d.limitedCards.journey.level >= 5) {
+      g6Div.style.filter = "none";
+      const btn = document.getElementById("btn_g6");
+      if (btn) btn.disabled = false;
+    } else {
+      g6Div.style.filter = "grayscale(1) opacity(0.5)";
+      const btn = document.getElementById("btn_g6");
+      if (btn) { btn.textContent = formatTemplate(t('unlock_condition'), ['Journey Max Level']); btn.disabled = true; }
+    }
+  }
+
+  const g7Div = document.getElementById("game7_container");
+  if (g7Div) {
+    if (d.cards.g4 >= 3) {
+      g7Div.style.filter = "none";
+      const btn = document.getElementById("btn_g7");
+      if (btn) btn.disabled = false;
+    } else {
+      g7Div.style.filter = "grayscale(1) opacity(0.5)";
+      const btn = document.getElementById("btn_g7");
+      if (btn) { btn.textContent = formatTemplate(t('unlock_condition'), ['Checkers Level 3']); btn.disabled = true; }
+    }
+  }
 };
 
 function updatePuzzleUI() {
@@ -7159,6 +7297,14 @@ function buySportCard(index) {
     showToast(formatTemplate(t('unlock_condition'), ['Volleyball Level 3']));
     return;
   }
+  if (index === 6 && d.cards.s1 < 5) {
+    showToast(formatTemplate(t('unlock_condition'), ['Football Level 5']));
+    return;
+  }
+  if (index === 7 && d.cards.s6 < 3) {
+    showToast(formatTemplate(t('unlock_condition'), ['Boxing Level 3']));
+    return;
+  }
   
   d.tokens -= cost;
   d.cards[key] = nextLvl;
@@ -7187,6 +7333,18 @@ function buyGameCard(index) {
   // Check unlock conditions
   if (index === 2 && d.cards.g1 < 2) {
     showToast(formatTemplate(t('unlock_condition'), ['Chess Level 2']));
+    return;
+  }
+  if (index === 4 && d.cards.g1 < 5) {
+    showToast(formatTemplate(t('unlock_condition'), ['Chess Level 5']));
+    return;
+  }
+  if (index === 6 && (!d.limitedCards || d.limitedCards.journey.level < 5)) {
+    showToast(formatTemplate(t('unlock_condition'), ['Journey Max Level']));
+    return;
+  }
+  if (index === 7 && d.cards.g4 < 3) {
+    showToast(formatTemplate(t('unlock_condition'), ['Checkers Level 3']));
     return;
   }
   
@@ -8222,7 +8380,8 @@ function _startAdminListener() {
         _adminApplyUIChaos(Number(v.rotate)||0, Number(v.scale)||1, msLeft);
         _adminGlobalStatusUpdate();
       }
-    } else {
+    } else if (v.end === 0) {
+      // Сброс только если явно выслан reset (end=0), не из-за задержки сети
       window._adminChaosEndTs = 0;
       _adminResetUIChaos();
     }

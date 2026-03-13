@@ -246,9 +246,12 @@ function consumeTicketForCurrentGame() {
   // Quest tracking
   if (typeof d !== 'undefined') {
     d.questTicketsSpent = (d.questTicketsSpent || 0) + 1;
+    d.wQuestTicketsSpent = (d.wQuestTicketsSpent || 0) + 1;
     d.questTicketsInGame = d.questTicketsInGame || {};
+    d.wQuestTicketsInGame = d.wQuestTicketsInGame || {};
     const g = typeof currentGame !== 'undefined' ? currentGame : 'unknown';
     d.questTicketsInGame[g] = (d.questTicketsInGame[g] || 0) + 1;
+    d.wQuestTicketsInGame[g] = (d.wQuestTicketsInGame[g] || 0) + 1;
     if (typeof checkQuestProgress === 'function') {
       checkQuestProgress('ticket_8');
 checkQuestProgress('ticket_game');

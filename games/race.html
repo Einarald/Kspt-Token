@@ -811,12 +811,11 @@ let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
                 // полоса для этого стартового слота
 const laneOffsetForSlot = botLaneOffsets[slot % botLaneOffsets.length];
 
-// назначаем базовую полосу машине
+// назначаем индекс полосы: slot%3 → 0=лево, 1=центр, 2=право
 if (!isPlayer) {
-    car.userData.offset = laneOffsetForSlot;
-    car.userData.baseOffset = laneOffsetForSlot;
+    car.userData.laneIndex = slot % 3;
 } else {
-    car.userData.baseOffset = laneOffsetForSlot;
+    car.userData.laneIndex = slot % 3;
 }
 
 car.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), startDir);
@@ -1176,76 +1175,41 @@ scene.add(car);
                 }
                 bot.userData.lastParam = currentParam;
 
-                // === ТОЧНОЕ ЗНАНИЕ О ТРАССЕ ===
+                // === ПОЗИЦИЯ НА ТРАССЕ ===
                 const trackCenter = roadCurve.getPointAt(currentParam);
                 const dirNow = roadCurve.getTangentAt(currentParam).normalize();
                 const rightNow = new THREE.Vector3().crossVectors(dirNow, new THREE.Vector3(0,1,0)).normalize();
                 const toBot = new THREE.Vector3().subVectors(bot.position, trackCenter);
                 toBot.y = 0;
-                const currentSideOffset = rightNow.dot(toBot); // реальное боковое смещение от центра
+                const currentSideOffset = rightNow.dot(toBot);
                 const onGrass = Math.abs(currentSideOffset) > ROAD_HALF;
 
-                /*
-if (idx === 0) {
-    console.log(
-        'offset:', currentSideOffset.toFixed(2),
-        'baseOffset:', (bot.userData.baseOffset || 0).toFixed(2),
-        'onGrass:', onGrass,
-        'rightNow:', rightNow.x.toFixed(2), rightNow.z.toFixed(2)
-    );
-}
-*/
-
-                // === ИНИЦИАЛИЗАЦИЯ ПОЛОСЫ ===
-                if (bot.userData.offsetTarget === undefined) {
-                    bot.userData.offsetTarget = bot.userData.baseOffset || 0;
-                    bot.userData.offsetChangeTimer = 0;
+                // === ЛИЧНОЕ СМЕЩЕНИЕ (задаётся один раз, в метрах от центра) ===
+                // Хранится как фиксированное число — но применяется через rightNow каждый кадр
+                if (bot.userData.personalOffset === undefined) {
+                    // Три группы: левая / центр / правая, по индексу бота
+                    const offsets = [2.0, 0.0, -2.0];
+                    bot.userData.personalOffset = offsets[idx % 3];
+                    bot.userData.nudgeTimer = idx * 80; // разбиваем таймеры чтобы не виляли синхронно
+                    bot.userData.nudge = 0;
                 }
 
-                // На траве — ВСЕГДА немедленно возвращаться на свою базовую полосу
-                if (onGrass) {
-                    bot.userData.offsetTarget = bot.userData.baseOffset || 0;
-                    bot.userData.offsetChangeTimer = 0;
-                } else {
-                    // Небольшое случайное виляние внутри своей полосы раз в ~5 сек
-                    bot.userData.offsetChangeTimer = (bot.userData.offsetChangeTimer || 0) + 1;
-                    if (bot.userData.offsetChangeTimer > 300 + Math.random() * 100) {
-                        bot.userData.offsetChangeTimer = 0;
-                        const base = bot.userData.baseOffset || 0;
-                        bot.userData.offsetTarget = base + (Math.random() * 0.8 - 0.4);
-                        // ЖЁСТКИЙ clamp — никогда не выходить за пределы трассы
-                        bot.userData.offsetTarget = Math.max(-(ROAD_HALF - 0.8), Math.min(ROAD_HALF - 0.8, bot.userData.offsetTarget));
-                    }
+                // Редкое случайное виляние — таймер в миллисекундах, не в кадрах
+                if (bot.userData.nudgeTime === undefined) bot.userData.nudgeTime = performance.now() + 3000 + idx * 500;
+                if (performance.now() > bot.userData.nudgeTime) {
+                    bot.userData.nudgeTime = performance.now() + 4000 + Math.random() * 3000 + idx * 300;
+                    bot.userData.nudge = (Math.random() - 0.5) * 1.2;
                 }
 
-                // Желаемая полоса — всегда внутри трассы
-                if (bot.userData.currentOffset === undefined) {
-                    bot.userData.currentOffset = bot.userData.baseOffset || 0;
-                }
-                const clampedTarget = Math.max(-(ROAD_HALF - 0.8), Math.min(ROAD_HALF - 0.8, bot.userData.offsetTarget));
-                const avoidAge = (performance.now() - (bot.userData._lastAvoidTime || 0));
-const reactFactor = (avoidAge < 1200) ? 0.12 : 0.04; // быстрее реагировать первые ~1.2с после avoid
-bot.userData.currentOffset += (clampedTarget - bot.userData.currentOffset) * reactFactor;
-                bot.userData.currentOffset = Math.max(-(ROAD_HALF - 0.8), Math.min(ROAD_HALF - 0.8, bot.userData.currentOffset));
-                const desiredOffset = bot.userData.currentOffset;
+                // Желаемая позиция = центр трека + личное смещение + вилянье
+                // Всё в метрах, применяется через rightNow — который актуален КАЖДЫЙ кадр
+                const desired = bot.userData.personalOffset + (bot.userData.nudge || 0);
+                const clampedDesired = Math.max(-(ROAD_HALF - 0.8), Math.min(ROAD_HALF - 0.8, desired));
 
-                // === STEERING ===
-                const speedFactor = bot.userData.speed || 0;
-                const lookAhead = (currentParam + 0.03 + speedFactor * 0.005) % 1.0;
-                const targetPoint = roadCurve.getPointAt(lookAhead).clone();
-                const dirAhead = roadCurve.getTangentAt(lookAhead).normalize();
-                const rightAhead = new THREE.Vector3().crossVectors(dirAhead, new THREE.Vector3(0,1,0)).normalize();
-
-                // offsetError считаем в той же системе координат что и targetPoint
-                const toBot2 = new THREE.Vector3().subVectors(bot.position, targetPoint);
-                toBot2.y = 0;
-                const currentSideOffsetAhead = rightAhead.dot(toBot2);
-                const offsetError = desiredOffset - currentSideOffsetAhead;
-
-                const totalOffset = Math.max(-(ROAD_HALF - 0.5), Math.min(ROAD_HALF - 0.5,
-                    desiredOffset + Math.sign(offsetError) * Math.min(1.5, Math.abs(offsetError) * 0.8)
-                ));
-                targetPoint.addScaledVector(rightAhead, totalOffset);
+                // === STEERING: цель = lookahead по треку + боковое смещение ===
+                const lookAhead = (currentParam + 0.015) % 1.0;
+                const lookPt = roadCurve.getPointAt(lookAhead);
+                const targetPoint = lookPt.clone().addScaledVector(rightNow, clampedDesired);
 
                 const botForward = new THREE.Vector3(0,0,1).applyQuaternion(bot.quaternion);
                 const toTarget = new THREE.Vector3().subVectors(targetPoint, bot.position);
@@ -1255,15 +1219,18 @@ bot.userData.currentOffset += (clampedTarget - bot.userData.currentOffset) * rea
                 while (angle > Math.PI) angle -= Math.PI * 2;
                 while (angle < -Math.PI) angle += Math.PI * 2;
 
-                // если бот на траве — резко возвращаем его к дороге
-if (onGrass) {
-    const recovery = -currentSideOffset * 0.25;
-    bot.position.addScaledVector(rightNow, recovery);
-}
+                // На траве — резко возвращаем к центру трека
+                if (onGrass) {
+                    const recovery = (trackCenter.x - bot.position.x) * 0.15;
+                    const recoveryZ = (trackCenter.z - bot.position.z) * 0.15;
+                    bot.position.x += recovery;
+                    bot.position.z += recoveryZ;
+                }
 
-const urgency = onGrass ? 0.25 : 0.08;
-                const turnLimit = Math.min(0.18, urgency + Math.abs(offsetError) * 0.02);
-                bot.rotation.y += Math.max(-turnLimit, Math.min(turnLimit, angle * 0.95));
+                const laneError = clampedDesired - currentSideOffset;
+                const laneUrgency = Math.min(0.12, Math.abs(laneError) * 0.04);
+                const turnLimit = onGrass ? 0.25 : (0.10 + laneUrgency);
+                bot.rotation.y += Math.max(-turnLimit, Math.min(turnLimit, angle * 0.9));
 
                 // === СКОРОСТЬ и ИЗБЕГАНИЕ СОСЕДЕЙ ===
                 let botThrottle = 1.0;
@@ -1272,44 +1239,17 @@ const urgency = onGrass ? 0.25 : 0.08;
                 for (const other of allCars) {
                     if (other === bot) continue;
                     const distToOther = bot.position.distanceTo(other.position);
-                    if (distToOther < 4.0) {
+                    if (distToOther < 4.5) {
                         const toOther = new THREE.Vector3().subVectors(other.position, bot.position).normalize();
                         const ahead = botForward.dot(toOther);
-                        if (ahead > 0.65) {
-                            // Плавное торможение — чем ближе тем сильнее
-                            botThrottle = Math.min(botThrottle, 0.3 + (distToOther / 4.0) * 0.7);
-                            // Уход на ПРОТИВОПОЛОЖНУЮ сторону от соседа, строго в пределах трассы
-                            const toOtherVec = new THREE.Vector3().subVectors(other.position, bot.position);
-                            const sideDot = rightNow.dot(toOtherVec);
-                            // Решаем в какую сторону уходить на основе позиции соседа относительно правого вектора
-// sideDot > 0 => сосед справа, значит уходим влево (-1). И наоборот.
-let avoidDir = (sideDot >= 0) ? -1 : 1;
-
-// Небольшая редкая инверсия (15%) чтобы добавить вариативности
-if (Math.random() < 0.15) avoidDir *= -1;
-
-// Джиттер на основе индекса бота, чтобы не синхронить всех одновременно
-const jitter = (idx % 3) * 0.06 * (Math.random() - 0.5);
-
-// Желаемый сдвиг — умеренный (0.6..1.2)
-const shift = 0.6 + Math.random() * 0.6 + jitter;
-
-// Предпочтительный новый таргет (относительно текущего смещения)
-let newTarget = currentSideOffset + avoidDir * shift;
-
-// Если newTarget слишком далеко от базовой полосы — лучше немного откатиться к baseOffset
-const base = bot.userData.baseOffset || 0;
-const distFromBase = Math.abs(newTarget - base);
-if (distFromBase > 1.8) {
-    // мягко вернуть к базовой полосе вместо экстремального ухода
-    newTarget = base + Math.sign(newTarget - base) * 1.1;
-}
-
-// Жёсткий clamp, как и раньше
-bot.userData.offsetTarget = Math.max(-(ROAD_HALF - 0.8), Math.min(ROAD_HALF - 0.8, newTarget));
-
-// При агрессивном уходе увеличим скорость «реакции» (чтобы сглаживание не было слишком медленным)
-bot.userData._lastAvoidTime = performance.now();
+                        if (ahead > 0.6) {
+                            botThrottle = Math.min(botThrottle, 0.3 + (distToOther / 4.5) * 0.7);
+                            // Уходим в сторону противоположную соседу
+                            const sideDot = rightNow.dot(new THREE.Vector3().subVectors(other.position, bot.position));
+                            const avoidDir = sideDot >= 0 ? -1 : 1;
+                            // Не меняем personalOffset — только временный nudge
+                            bot.userData.nudge = avoidDir * 1.5;
+                            bot.userData.nudgeTimer = 0;
                         }
                     }
                 }
@@ -1956,15 +1896,23 @@ function startOnlineRace(room) {
   botCars.forEach(c => scene.remove(c));
   botCars = [];
   // Создать remote-машины для других
+  const onlineLaneOffsets = [-2.2, 0.0, 2.2, -2.2, 0.0, 2.2];
+  const startDir = roadCurve.getTangentAt(0.02).normalize();
+  const startRight = new THREE.Vector3().crossVectors(startDir, new THREE.Vector3(0,1,0)).normalize();
+  const startBack = startDir.clone().negate();
+  const startBase = roadCurve.getPointAt(0.02);
+  let remoteSlot = 0;
   players.forEach((p, idx) => {
     if (p.uid === myPlayerId) return;
+    const slot = remoteSlot++;
     const color = carColors[(idx + 1) % carColors.length];
-    const startPos = roadCurve.getPointAt(0.01);
-    const dir = roadCurve.getTangentAt(0.01);
-    const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0,1,0)).normalize();
-    const offset = (idx % 3) - 1;
-    const mesh = createCar(color, startPos.clone().add(right.clone().multiplyScalar(offset * 1.4)), false);
-    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), dir);
+    const row = Math.floor(slot / 3);
+    const lateralOffset = onlineLaneOffsets[slot % onlineLaneOffsets.length];
+    const startPos = startBase.clone()
+      .addScaledVector(startRight, lateralOffset)
+      .addScaledVector(startBack, row * 5.5);
+    const mesh = createCar(color, startPos, false);
+    mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0,0,1), startDir);
     scene.add(mesh);
     // Создать HTML метку
     const label = document.createElement('div');
@@ -1983,6 +1931,10 @@ function startOnlineRace(room) {
   function applyRemoteState(uid, data) {
     if (!data || uid === myPlayerId) return;
     if (remotePlayers[uid]) {
+      // Сохраняем текущую позицию как старт нового отрезка интерполяции
+      remotePlayers[uid].prevX = remotePlayers[uid].currentX;
+      remotePlayers[uid].prevZ = remotePlayers[uid].currentZ;
+      remotePlayers[uid].prevRot = remotePlayers[uid].currentRot;
       remotePlayers[uid].targetX = data.x;
       remotePlayers[uid].targetZ = data.z;
       remotePlayers[uid].targetRot = data.rotation;
@@ -2072,28 +2024,24 @@ function updateRemotePlayers() {
   const now = Date.now();
 
   Object.values(remotePlayers).forEach(rp => {
-    // Экстраполяция: предсказываем позицию на основе скорости
-    const dt = Math.min(0.3, (now - (rp.lastUpdateTime || now)) / 1000);
-    if (rp.remoteSpeed && rp.remoteSpeed > 0.01) {
-      const fwd = new THREE.Vector3(
-        Math.sin(rp.targetRot),
-        0,
-        Math.cos(rp.targetRot)
-      );
-      // Полная экстраполяция — предсказываем куда едет машина между обновлениями
-      rp.targetX += fwd.x * rp.remoteSpeed * 0.1 * dt * 60;
-      rp.targetZ += fwd.z * rp.remoteSpeed * 0.1 * dt * 60;
-    }
+    // Временна́я интерполяция: плавно движемся от предыдущей к целевой позиции
+    // за время одного интервала обновления (200мс), без экстраполяции
+    const updateInterval = 200; // мс — совпадает с onlineSendInterval
+    const elapsed = now - (rp.lastUpdateTime || now);
+    // alpha = какую долю пути прошли от предыдущей точки к целевой
+    // clamp в [0,1] чтобы не перескакивать
+    const alpha = Math.min(1.0, elapsed / updateInterval);
 
-    // Плавная интерполяция — меньше alpha = плавнее, но с небольшой задержкой
-    const alpha = 0.18;
-    rp.currentX += (rp.targetX - rp.currentX) * alpha;
-    rp.currentZ += (rp.targetZ - rp.currentZ) * alpha;
+    const fromX = (rp.prevX !== undefined) ? rp.prevX : rp.targetX;
+    const fromZ = (rp.prevZ !== undefined) ? rp.prevZ : rp.targetZ;
+    const fromRot = (rp.prevRot !== undefined) ? rp.prevRot : rp.targetRot;
+    rp.currentX = fromX + (rp.targetX - fromX) * alpha;
+    rp.currentZ = fromZ + (rp.targetZ - fromZ) * alpha;
 
-    let dRot = rp.targetRot - rp.currentRot;
+    let dRot = rp.targetRot - fromRot;
     while (dRot > Math.PI) dRot -= Math.PI * 2;
     while (dRot < -Math.PI) dRot += Math.PI * 2;
-    rp.currentRot += dRot * 0.15;
+    rp.currentRot = fromRot + dRot * alpha;
 
     rp.mesh.position.x = rp.currentX;
     rp.mesh.position.z = rp.currentZ;

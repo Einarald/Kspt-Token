@@ -875,12 +875,41 @@ function setupControls() {
     safeToggleDir(x < rect.width / 2 ? -1 : 1);
   });
   
-  // Свайп / Тап для мобилок
+  // Тап + свайп (Subway Surfers style)
+  let _touchStartX = 0;
+  let _touchStartY = 0;
+  let _touchMoved = false;
+
   canvasEl.addEventListener('touchstart', (e) => {
     e.preventDefault();
-    const rect = canvasEl.getBoundingClientRect();
-    const x = e.touches[0].clientX - rect.left;
-    safeToggleDir(x < rect.width / 2 ? -1 : 1);
+    _touchStartX = e.touches[0].clientX;
+    _touchStartY = e.touches[0].clientY;
+    _touchMoved = false;
+  }, { passive: false });
+
+  canvasEl.addEventListener('touchmove', (e) => {
+    e.preventDefault();
+    if (_touchMoved) return;
+    const dx = e.touches[0].clientX - _touchStartX;
+    const dy = e.touches[0].clientY - _touchStartY;
+    if (Math.abs(dx) > 20 || Math.abs(dy) > 20) {
+      _touchMoved = true;
+      if (Math.abs(dx) >= Math.abs(dy)) {
+        // Горизонтальный свайп
+        safeToggleDir(dx > 0 ? 1 : -1);
+      }
+      // Вертикальный свайп — игнорируем (нет прыжка в этой игре)
+    }
+  }, { passive: false });
+
+  canvasEl.addEventListener('touchend', (e) => {
+    e.preventDefault();
+    if (!_touchMoved) {
+      // Это был тап — реагируем по половине экрана
+      const rect = canvasEl.getBoundingClientRect();
+      const x = _touchStartX - rect.left;
+      safeToggleDir(x < rect.width / 2 ? -1 : 1);
+    }
   }, { passive: false });
 
   // Клавиатура

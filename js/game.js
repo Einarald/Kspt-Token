@@ -14595,7 +14595,7 @@ window.toggleGameRecordsLB = function() {
   arrow.textContent = visible ? '▼ Show' : '▲ Hide';
   if (!visible) {
     loadGameRecordsLB();
-    if (!_grInterval) _grInterval = setInterval(loadGameRecordsLB, 10000);
+    if (!_grInterval) _grInterval = setInterval(loadGameRecordsLB, 3000);
   } else {
     clearInterval(_grInterval); _grInterval = null;
   }

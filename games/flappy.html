@@ -249,6 +249,7 @@ let clouds = [
     {x: 500, y: 100, scale: 0.7}
 ];
 let cityOffset = 0;
+let nightMode = 0;
 
 /* helpers */
 function spawnFloatingText(text, canvasX, canvasY, color = '#00e676') {
@@ -341,8 +342,15 @@ function step(dt){
         if (p.x + pipeWidth < birdLeft && !p.passed) {
             p.passed = true;
             score++;
-            
-            currentSpeedMultiplier += 0.02; 
+            currentSpeedMultiplier += 0.02;
+            // Плавный переход в ночь после 100 очков
+            if (score >= 100) {
+                // Каждые 100 очков чередуем день/ночь
+                const cycle = Math.floor(score / 100);
+                const targetNight = cycle % 2 === 1 ? 1 : 0; // нечётный цикл = ночь, чётный = день
+                if (nightMode < targetNight) nightMode = Math.min(targetNight, nightMode + 0.25);
+                else if (nightMode > targetNight) nightMode = Math.max(targetNight, nightMode - 0.25);
+            }
             updateUI();
 
             const reward = safeGetOfflinePercent(0.67) || 0; 
@@ -433,15 +441,51 @@ function drawPipeGraphic(x, y, width, height, isTopPipe, isEK) {
 
 /* draw */
 function draw(){
-    // Sky Gradient
+    // Sky Gradient — плавный переход день/ночь
     let skyGrad = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    skyGrad.addColorStop(0, '#4ec0ca');
-    skyGrad.addColorStop(1, '#b4edf2');
-    ctx.fillStyle = skyGrad; 
+    // Интерполяция цветов день→ночь
+    function lerpColor(a, b, t) {
+        const ah = parseInt(a.slice(1),16), bh = parseInt(b.slice(1),16);
+        const ar = (ah>>16)&255, ag = (ah>>8)&255, ab = ah&255;
+        const br = (bh>>16)&255, bg = (bh>>8)&255, bb = bh&255;
+        const r = Math.round(ar+(br-ar)*t), g = Math.round(ag+(bg-ag)*t), bv = Math.round(ab+(bb-ab)*t);
+        return `rgb(${r},${g},${bv})`;
+    }
+    skyGrad.addColorStop(0, lerpColor('#4ec0ca', '#0a0a2e', nightMode));
+    skyGrad.addColorStop(1, lerpColor('#b4edf2', '#1a1a4e', nightMode));
+    ctx.fillStyle = skyGrad;
     ctx.fillRect(0,0,canvas.width,canvas.height);
 
-    // Draw Parallax Clouds
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+    // Звёзды ночью
+    if (nightMode > 0.1) {
+        ctx.globalAlpha = nightMode * 0.9;
+        ctx.fillStyle = '#ffffff';
+        // Статичные звёзды (по seed от canvas size)
+        for(let si=0; si<40; si++){
+            const sx = ((si * 137 + 11) % canvas.width);
+            const sy = ((si * 97 + 7) % (canvas.height * 0.6));
+            const ss = 0.8 + (si%3)*0.5;
+            const twinkle = 0.5 + Math.sin(frameCount*0.05 + si)*0.5;
+            ctx.globalAlpha = nightMode * twinkle * 0.8;
+            ctx.beginPath(); ctx.arc(sx, sy, ss, 0, Math.PI*2); ctx.fill();
+        }
+        // Луна
+        ctx.globalAlpha = nightMode * 0.9;
+        ctx.fillStyle = '#fffde7';
+        ctx.shadowColor = '#fff9c4'; ctx.shadowBlur = 12;
+        ctx.beginPath(); ctx.arc(canvas.width - 50, 40, 16, 0, Math.PI*2); ctx.fill();
+        ctx.fillStyle = lerpColor('#4ec0ca', '#0a0a2e', nightMode);
+        ctx.beginPath(); ctx.arc(canvas.width - 44, 36, 13, 0, Math.PI*2); ctx.fill();
+        ctx.shadowBlur = 0;
+        ctx.globalAlpha = 1;
+    }
+
+    // Облака — днём белые, ночью тёмно-синие
+    const cloudAlpha = 0.8 - nightMode * 0.4;
+    const cloudR = Math.round(255 - nightMode * 200);
+    const cloudG = Math.round(255 - nightMode * 200);
+    const cloudB = Math.round(255 - nightMode * 100);
+    ctx.fillStyle = `rgba(${cloudR},${cloudG},${cloudB},${cloudAlpha})`;
     clouds.forEach(c => {
         ctx.beginPath();
         ctx.arc(c.x, c.y, 25 * c.scale, 0, Math.PI*2);
@@ -450,8 +494,12 @@ function draw(){
         ctx.fill();
     });
 
-    // Draw Parallax Cityscape at the bottom
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.15)';
+    // Cityscape — ночью с окошками
+    const buildingAlpha = nightMode > 0.5 ? 0.85 : 0.15;
+    const buildingColor = nightMode > 0.5
+        ? `rgba(15,15,35,${buildingAlpha})`
+        : `rgba(0,0,0,${buildingAlpha})`;
+    ctx.fillStyle = buildingColor;
     for(let i = -1; i < 5; i++) {
         let cx = i * 100 - cityOffset;
         ctx.fillRect(cx + 10, canvas.height - 60, 30, 60);
@@ -461,6 +509,19 @@ function draw(){
         ctx.lineTo(cx + 110, canvas.height - 50);
         ctx.lineTo(cx + 130, canvas.height);
         ctx.fill();
+        // Окошки ночью
+        if (nightMode > 0.3) {
+            ctx.fillStyle = `rgba(255,240,100,${nightMode * 0.7})`;
+            for(let wi=0;wi<3;wi++){
+                for(let wj=0;wj<2;wj++){
+                    if((wi+wj+i)%3 !== 0) {
+                        ctx.fillRect(cx+13+wi*9, canvas.height-55+wj*22, 6, 8);
+                        ctx.fillRect(cx+48+wi*12, canvas.height-75+wj*28, 7, 10);
+                    }
+                }
+            }
+            ctx.fillStyle = buildingColor;
+        }
     }
 
     // draw pipes
@@ -616,6 +677,7 @@ function restartGame(){
     pipes = [];
     currentSpeedMultiplier = 1.0;
     score = 0;
+    nightMode = 0;
     frameCount = 0;
     cityOffset = 0;
     ekPipesSpawned = 0

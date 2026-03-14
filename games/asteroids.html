@@ -460,7 +460,7 @@ function initWave() {
     } else {
         // NORMAL WAVE
         let rows = Math.min(3 + Math.floor(wave/2), 6);
-        let cols = 6;
+        let cols = 5;
         let padding = 35;
         let startX = (GAME_W - (cols-1)*padding) / 2;
         
@@ -755,8 +755,20 @@ function step(dtSec) {
     // Check Wave Clear
     if(enemies.length === 0 && !window._wavePause) {
         window._wavePause = true;
+        // Предупреждение если следующая волна — босс
+        const nextWave = wave + 1;
+        if (nextWave % 5 === 0) {
+            const msg = nextWave === 100 ? '💀 DEATH APPROACHES...' : '⚠️ BOSS INCOMING!';
+            const color = nextWave === 100 ? '#ea80fc' : '#ff4081';
+            window._waveWarningMsg = msg;
+            window._waveWarningColor = color;
+            window._waveWarningAlpha = 1.0;
+        } else {
+            window._waveWarningMsg = null;
+        }
         window._wavePauseTimer = setTimeout(() => {
             window._wavePause = false;
+            window._waveWarningMsg = null;
             wave++;
             updateUI();
             initWave();
@@ -1104,6 +1116,20 @@ function draw() {
         if (f.alpha <= 0) floatingTexts.splice(i,1);
     }
     ctx.globalAlpha = 1;
+
+    // Предупреждение перед боссом
+    if (window._waveWarningMsg && window._waveWarningAlpha > 0) {
+        window._waveWarningAlpha = Math.max(0, window._waveWarningAlpha - 0.008);
+        ctx.globalAlpha = window._waveWarningAlpha;
+        ctx.shadowColor = window._waveWarningColor;
+        ctx.shadowBlur = 20;
+        ctx.fillStyle = window._waveWarningColor;
+        ctx.font = 'bold 22px Arial';
+        ctx.textAlign = 'center';
+        ctx.fillText(window._waveWarningMsg, GAME_W/2, GAME_H/2);
+        ctx.globalAlpha = 1;
+        ctx.shadowBlur = 0;
+    }
 }
 
 /* Loop */
@@ -1253,6 +1279,36 @@ function bindTouchControl(btn, keyName) {
 }
 
 bindTouchControl(btnShoot, 'shoot');
+
+// Управление пальцем по канвасу
+(function(){
+    let canvasTouch = null;
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const t = e.changedTouches[0];
+        canvasTouch = t.identifier;
+        canVibrate = true;
+    }, {passive:false});
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        for(const t of e.changedTouches) {
+            if(t.identifier !== canvasTouch) continue;
+            const rect = canvas.getBoundingClientRect();
+            const scaleX = GAME_W / rect.width;
+            const touchX = (t.clientX - rect.left) * scaleX;
+            // Двигаем корабль к пальцу по X
+            const dx = touchX - player.x;
+            if(Math.abs(dx) > 5) player.x += dx * 0.18;
+            player.x = Math.max(player.w/2, Math.min(GAME_W - player.w/2, player.x));
+        }
+    }, {passive:false});
+    canvas.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        for(const t of e.changedTouches) {
+            if(t.identifier === canvasTouch) canvasTouch = null;
+        }
+    }, {passive:false});
+})();
 
 document.addEventListener('keydown', (e)=>{
     canVibrate = true;

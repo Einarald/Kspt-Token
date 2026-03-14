@@ -184,10 +184,9 @@ function updateTicketsUI() {
 
   if (gameTickets.current < gameTickets.max) {
     // если не запланирован refill — запланировать через 24ч (обычная логика)
-    if (!gameTickets.nextRefill) {
-      gameTickets.nextRefill = now + REFILL_INTERVAL_MS;
-      saveTickets();
-    }
+    if (!gameTickets.nextRefill && gameTickets.current < gameTickets.max) {
+  // не трогаем — таймер должен выставляться только в consumeTicketForCurrentGame
+}
 
     // если время настало — НЕ прибавляем +1, а делаем current = max
     if (now >= gameTickets.nextRefill) {

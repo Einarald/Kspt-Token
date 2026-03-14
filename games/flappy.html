@@ -345,7 +345,7 @@ function step(dt){
             currentSpeedMultiplier += 0.02; 
             updateUI();
 
-            const reward = safeGetOfflinePercent(0.7) || 0; 
+            const reward = safeGetOfflinePercent(0.67) || 0; 
             window.__kspt_earnedKSPT = window.__kspt_earnedKSPT || 0;
             window.__kspt_earnedKSPT += reward;
 

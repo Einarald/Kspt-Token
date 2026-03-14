@@ -2015,8 +2015,8 @@ function processOfflineMarket(minutes) {
     else if(range === 3) change = (Math.random() * 0.25) + 0.15;
     
     let newPrice = d.market.ksptToken.price + (change * sign);
-    if(newPrice < 0.40) newPrice = 0.40;
-    if(newPrice > 3.10) newPrice = 3.10;
+    if(newPrice < 0.30) newPrice = 0.30;
+    if(newPrice > 3.02) newPrice = 3.02;
     
     d.market.ksptToken.price = newPrice;
     d.market.ksptToken.history.push(newPrice);
@@ -2039,7 +2039,7 @@ function processOfflineMarket(minutes) {
       else if(banxRange === 3) banxChange = (Math.random() * 0.0003) + 0.0006;
       
       let newBanxPrice = d.market.banxToken.price + (banxChange * banxSign);
-      if(newBanxPrice < 0.00010) newBanxPrice = 0.00010;
+      if(newBanxPrice < 0.0009) newBanxPrice = 0.0009;
       if(newBanxPrice > 0.01) newBanxPrice = 0.01;
       
       d.market.banxToken.price = newBanxPrice;
@@ -2067,7 +2067,7 @@ function processOfflineMarket(minutes) {
       
       let newJvmPrice = d.market.jvmToken.price + (jvmChange * jvmSign);
       if(newJvmPrice < 2.80) newJvmPrice = 2.80;
-      if(newJvmPrice > 12.10) newJvmPrice = 12.10;
+      if(newJvmPrice > 14.10) newJvmPrice = 14.10;
       
       d.market.jvmToken.price = newJvmPrice;
       d.market.jvmToken.history.push(newJvmPrice);
@@ -3704,10 +3704,10 @@ function renderLimitedTab() {
       <div class="card-item">
         <img src="journey.png" class="card-item-image" onerror="this.src='dontwhat.png'">
         <div class="card-item-title">Journey</div>
-        <div class="card-sub">Level ${journeyLevel + 1}/6</div>
+        <div class="card-sub">${l.journey.level < 0 ? 'Not Owned' : `Level ${journeyLevel + 1}/5`}</div>
         <div class="card-sub">+${journeyData[journeyLevel].income} KSPT/h</div>
         ${journeyAvailable ? 
-          `<button class="card-item-button" onclick="buyJourneyLevel(${l.journey.level})">Upgrade ${journeyData[journeyLevel].price} KSPT</button>` :
+          `<button class="card-item-button" onclick="buyJourneyLevel(${l.journey.level})">${l.journey.level < 0 ? 'Buy' : 'Upgrade'} ${journeyData[l.journey.level < 0 ? 0 : journeyLevel].price} KSPT</button>` :
           '<button class="card-item-button active" disabled>Max Level</button>'
         }
       </div>
@@ -3860,7 +3860,7 @@ function buyJourneyLevel(currentLevel) {
   const nextLevel = currentLevel + 1;
   if (nextLevel >= journeyData.length) return;
   
-  const price = journeyData[nextLevel].price;
+  const price = journeyData[currentLevel >= 0 ? currentLevel : 0].price;
   
   if (d.tokens < price) {
     showToast(t('not_enough_kspt'));
@@ -9341,12 +9341,12 @@ function _explodeBomb() {
         const missing5 = [];
         for (let i = 0; i < 25; i++) if (d.puzzles5[i] === 0) missing5.push(i);
         const allMissing = [
-          ...(!d.puzzleDone ? missing1.map(i => ({p:1,i})) : []),
-          ...(!d.puzzle2Done ? missing2.map(i => ({p:2,i})) : []),
-          ...(!d.puzzle3Done ? missing3.map(i => ({p:3,i})) : []),
-          ...(!d.puzzle4Done ? missing4.map(i => ({p:4,i})) : []),
-          ...(!d.puzzle5Done ? missing5.map(i => ({p:5,i})) : [])
-        ];
+  ...(!d.puzzleDone ? missing1.map(i => ({p:1,i})) : []),
+  ...(d.puzzleDone && !d.puzzle2Done ? missing2.map(i => ({p:2,i})) : []),
+  ...(d.puzzle2Done && !d.puzzle3Done ? missing3.map(i => ({p:3,i})) : []),
+  ...(d.puzzle3Done && !d.puzzle4Done ? missing4.map(i => ({p:4,i})) : []),
+  ...(d.puzzle4Done && !d.puzzle5Done ? missing5.map(i => ({p:5,i})) : [])
+];
         if (allMissing.length > 0) {
           const pick = allMissing[Math.floor(Math.random() * allMissing.length)];
           if (pick.p === 1) {

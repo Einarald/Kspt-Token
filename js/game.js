@@ -2953,7 +2953,7 @@ function updateSkinButtons() {
     }
   }
   
-  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android",  "brb", "doge", "corrupted", "failed", "goldensafe", "bhole", "toilet", "capsulememe", "ufo", "dragon"];
+  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android",  "brb", "doge", "corrupted", "failed", "goldensafe", "bhole", "toilet", "capsulememe", "ufo", "dragon", "crypto_heart"];
   
   skins.forEach(s => {
     const button = document.getElementById("skin-" + s);
@@ -3107,11 +3107,8 @@ function updateSkinButtons() {
                 button.textContent = t('select');
                 button.className = "";
                 button.onclick = () => applySkin('crypto_heart');
-            } else {
-                button.textContent = t('locked');
-                button.className = "owned";
-                button.onclick = null;
             }
+            // если не получен — не трогаем (карточка hidden)
 
         } else if (prices[s] > 0) {
             // Обычная покупка за цену

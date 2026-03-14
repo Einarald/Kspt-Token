@@ -870,10 +870,6 @@ scene.add(car);
             ctx.arc(64, 64, 62, 0, Math.PI * 2);
             ctx.fillStyle = '#333333';
             ctx.fill();
-            // Обводка
-            ctx.strokeStyle = '#00bcd4';
-            ctx.lineWidth = 4;
-            ctx.stroke();
             // Буква K белая
             ctx.fillStyle = '#ffffff'; 
             ctx.font = 'bold 76px Arial';
@@ -2138,6 +2134,7 @@ function startOnlineRace(room) {
       // Сохраняем текущую позицию как старт нового отрезка интерполяции
       remotePlayers[uid].prevX = remotePlayers[uid].currentX;
       remotePlayers[uid].prevZ = remotePlayers[uid].currentZ;
+      remotePlayers[uid].prevY = remotePlayers[uid].currentY || 0;
       remotePlayers[uid].prevRot = remotePlayers[uid].currentRot;
       remotePlayers[uid].targetX = data.x;
       remotePlayers[uid].targetZ = data.z;
@@ -2240,9 +2237,11 @@ function updateRemotePlayers() {
 
     const fromX = (rp.prevX !== undefined) ? rp.prevX : rp.targetX;
     const fromZ = (rp.prevZ !== undefined) ? rp.prevZ : rp.targetZ;
+    const fromY = (rp.prevY !== undefined) ? rp.prevY : (rp.targetY || 0);
     const fromRot = (rp.prevRot !== undefined) ? rp.prevRot : rp.targetRot;
     rp.currentX = fromX + (rp.targetX - fromX) * alpha;
     rp.currentZ = fromZ + (rp.targetZ - fromZ) * alpha;
+    rp.currentY = fromY + ((rp.targetY || 0) - fromY) * alpha;
 
     let dRot = rp.targetRot - fromRot;
     while (dRot > Math.PI) dRot -= Math.PI * 2;
@@ -2251,7 +2250,7 @@ function updateRemotePlayers() {
 
     rp.mesh.position.x = rp.currentX;
     rp.mesh.position.z = rp.currentZ;
-    rp.mesh.position.y = rp.targetY || 0;
+    rp.mesh.position.y = rp.currentY || 0;
     rp.mesh.rotation.y = rp.currentRot;
 
     // Обновить позицию HTML-метки (проекция 3D→2D)

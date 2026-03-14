@@ -9098,7 +9098,7 @@ function _adminApplyModAction(v) {
     case 'ek':
       if (!d) return;
       if (v.mode === 'set') d.ek = v.val;
-      else d.ek = (d.ek || 0) + v.val;
+      else { d.ek = (d.ek || 0) + v.val; d.ekLifetime = (d.ekLifetime || 0) + v.val; }
       save(); if (typeof ui==='function') ui();
       _adminShowOverlay(`👑 Admin: EK ${v.mode==='set'?'set to':'+ '}${v.val}`, '#00e5ff', 5000);
       break;
@@ -11356,6 +11356,7 @@ function applyKeyReward(keyColor, item) {
       // Добавляем EK (нужно добавить систему EK в d)
       if (!d.ek) d.ek = 0;
       d.ek += item.value;
+      d.ekLifetime = (d.ekLifetime || 0) + item.value;
       showToast(`+${item.value} EK coins!`);
       break;
 
@@ -13056,6 +13057,7 @@ function applyGlitchReward(reward) {
     case 'ek':
       if (!d.ek) d.ek = 0;
       d.ek += reward.value;
+      d.ekLifetime = (d.ekLifetime || 0) + reward.value;
       d.questEkEarned = (d.questEkEarned || 0) + reward.value;
       d.wQuestEkEarned = (d.wQuestEkEarned || 0) + reward.value;
       checkQuestProgress('earn_ek');
@@ -13579,6 +13581,19 @@ window.addEventListener('message', function(ev) {
   }
   // ===== end KS messages =====
 
+  if (data.type === 'kspt_game_record' && data.game && data.value > 0) {
+    if (!d.gameRecords) d.gameRecords = {};
+    const cur = d.gameRecords[data.game] || 0;
+    const isBetter = data.game === 'race'
+      ? (cur === 0 || data.value < cur)
+      : (data.value > cur);
+    if (isBetter) {
+      d.gameRecords[data.game] = data.value;
+      save();
+    }
+    return;
+  }
+
   if (data.type === 'ekshop_update') {
   try {
 
@@ -13662,9 +13677,9 @@ function _startFirebaseSync() {
 // QUESTS SYSTEM
 // ==========================================
 
-const QUEST_GAME_NAMES = ['Snake Game', 'Ping-Pong', 'BlocksFast', 'Slither: KSPT Mode', 'Ghost Train', 'KSPT Races', 'Flappy Bird'];
-const QUEST_GAME_IDS   = ['snake',      'pingpong',  'blocksfast', 'slither',            'train',       'race',       'flappy'];
-const QUEST_GAME_ICONS = ['snake.png',  'pong.png',  'tetris.png', 'slither.png',        'train.png',   'race.png',   'flappy.png'];
+const QUEST_GAME_NAMES = ['Snake Game', 'Ping-Pong', 'BlocksFast', 'Slither: KSPT Mode', 'Ghost Train', 'KSPT Races', 'Flappy Bird', 'Space Asteroids'];
+const QUEST_GAME_IDS   = ['snake',      'pingpong',  'blocksfast', 'slither',            'train',       'race',       'flappy',      'asteroids'];
+const QUEST_GAME_ICONS = ['snake.png',  'pong.png',  'tetris.png', 'slither.png',        'train.png',   'race.png',   'flappy.png',  'aster.png'];
 
 function getQuestCryptoPool() {
   const base = [
@@ -13971,7 +13986,7 @@ function getSafeRewards(type) {
   if (type === 'noob') {
     return [
       { w: 30,  id: 'kspt_offline3',  label: `+${Math.floor(rate*3)} KSPT (3h offline)`,  img: 'kspt.png',    apply: () => { d.tokens += Math.floor(rate*3); } },
-      { w: 20,  id: 'ek3',            label: '+3 EK',                                      img: 'ek.png',  apply: () => { d.ek = (d.ek||0)+3; } },
+      { w: 20,  id: 'ek3',            label: '+3 EK',                                      img: 'ek.png',  apply: () => { d.ek = (d.ek||0)+3; d.ekLifetime = (d.ekLifetime||0)+3; } },
       { w: 20,  id: 'tickets6',       label: '+6 Tickets',                                 img: 'ticket.png', apply: () => { if(typeof gameTickets!=='undefined'){gameTickets.current+=6;if(typeof saveTickets==='function')saveTickets();} } },
       { w: 15,  id: 'key_yellow',     label: 'Yellow Key',                                 img: 'yellow.png',  apply: () => { if(!d.keys)d.keys={};d.keys.yellow=(d.keys.yellow||0)+1; } },
       { w: 10,  id: 'capsule2',       label: '2 Capsules',                                 img: 'capsule.png', apply: () => { _queueSafeCapsules(2); } },
@@ -13986,7 +14001,7 @@ function getSafeRewards(type) {
       { w: 20,  id: 'kspt_offline7',  label: `+${Math.floor(rate*7)} KSPT (7h offline)`,  img: 'kspt.png',    apply: () => { d.tokens += Math.floor(rate*7); } },
       { w: 20,  id: 'capsule_noob',   label: 'Capsule + Noob Box',                         img: 'noob1.png', apply: () => { _queueSafeCapsuleAndNoob(); } },
       { w: 20,  id: 'key_yellow',     label: 'Yellow Key',                                 img: 'yellow.png',  apply: () => { if(!d.keys)d.keys={};d.keys.yellow=(d.keys.yellow||0)+1; } },
-      { w: 20,  id: 'ek_rand',        label: `+${ekAmt} EK`,                              img: 'ek.png',  apply: () => { d.ek=(d.ek||0)+ekAmt; } },
+      { w: 20,  id: 'ek_rand',        label: `+${ekAmt} EK`,                              img: 'ek.png',  apply: () => { d.ek=(d.ek||0)+ekAmt; d.ekLifetime=(d.ekLifetime||0)+ekAmt; } },
       { w: 10,  id: 'key_red',        label: 'Red Key',                                    img: 'red.png',     apply: () => { if(!d.keys)d.keys={};d.keys.red=(d.keys.red||0)+1; } },
       { w: 5,   id: 'key_blue',       label: 'Blue Key',                                   img: 'blue.png',    apply: () => { if(!d.keys)d.keys={};d.keys.blue=(d.keys.blue||0)+1; } },
       { w: 3,   id: 'puzzle',         label: 'Puzzle Piece!',                              img: 'puz.png',     apply(r) { r.img = _safeGivePuzzle() || 'puz.png'; } },
@@ -14542,7 +14557,9 @@ function _updateLastSeen() {
       tokens: Math.round(d.tokens || 0),
       playtimeMs: Math.round(d.playtimeMs || 0),
       adminBanned: d.adminBanned || false,
-      customRank: d.customRank || null
+      customRank: d.customRank || null,
+      ekLifetime: Math.round(d.ekLifetime || 0),
+      gameRecords: d.gameRecords || {}
     });
   });
 }
@@ -14551,6 +14568,112 @@ if (window._firebaseReady) _updateLastSeen();
 setInterval(_updateLastSeen, 10000);
 
 document.querySelectorAll('img').forEach(img => img.setAttribute('draggable', 'false'));
+
+// ========== GAME RECORDS LEADERBOARD ==========
+let _grCurrentGame = 'snake';
+let _grCache = null;
+let _grInterval = null;
+
+const GAME_RECORD_LABELS = {
+  snake:     { label: 'Apples eaten',   unit: '',    icon: 'snake.png'   },
+  flappy:    { label: 'Pipes passed',   unit: '',    icon: 'flappy.png'  },
+  pingpong:  { label: 'Best score',     unit: 'pts', icon: 'pong.png'    },
+  blocksfast:{ label: 'Lines cleared',  unit: '',    icon: 'tetris.png'  },
+  slither:   { label: 'Survived',       unit: 's',   icon: 'slither.png' },
+  train:     { label: 'Coins collected',unit: '',    icon: 'train.png'   },
+  race:      { label: 'Best lap time',  unit: 's',   icon: 'race.png'    },
+  asteroids: { label: 'Best score',     unit: 'pts', icon: 'aster.png'   },
+  ek:        { label: 'EK collected',   unit: 'EK',  icon: 'ek.png'      }
+};
+
+window.toggleGameRecordsLB = function() {
+  const body = document.getElementById('gameRecordsBody');
+  const arrow = document.getElementById('gameRecordsArrow');
+  if (!body) return;
+  const visible = body.style.display !== 'none';
+  body.style.display = visible ? 'none' : 'block';
+  arrow.textContent = visible ? '▼ Show' : '▲ Hide';
+  if (!visible) {
+    loadGameRecordsLB();
+    if (!_grInterval) _grInterval = setInterval(loadGameRecordsLB, 10000);
+  } else {
+    clearInterval(_grInterval); _grInterval = null;
+  }
+};
+
+window.selectGameRecord = function(game) {
+  _grCurrentGame = game;
+  document.querySelectorAll('.gr-tab').forEach(b => b.classList.remove('gr-tab-active'));
+  const tab = document.getElementById('grtab-' + game);
+  if (tab) tab.classList.add('gr-tab-active');
+  renderGameRecordsLB();
+};
+
+function loadGameRecordsLB() {
+  if (!window._firebaseReady || !window._firebaseDB) return;
+  window._firebaseRef(window._firebaseDB, 'leaderboard').once('value').then(snap => {
+    _grCache = snap.val();
+    renderGameRecordsLB();
+    const el = document.getElementById('gameRecordsUpdated');
+    if (el) el.textContent = 'Updated: ' + new Date().toLocaleTimeString();
+  });
+}
+
+function renderGameRecordsLB() {
+  const el = document.getElementById('gameRecordsList');
+  if (!el || !_grCache) return;
+  const game = _grCurrentGame;
+  const meta = GAME_RECORD_LABELS[game];
+  if (!meta) return;
+
+  // Собираем записи
+  let entries = [];
+  Object.entries(_grCache).forEach(([uid, data]) => {
+    if (!data || data.adminBanned) return;
+    let value = 0;
+    if (game === 'ek') {
+      value = data.ekLifetime || 0;
+    } else {
+      value = (data.gameRecords && data.gameRecords[game]) || 0;
+    }
+    if (value <= 0) return; // не показываем нули
+    const name = data.name || data.username || uid.slice(0,8);
+    const photoUrl = data.photoUrl || '';
+    entries.push({ name, value, uid, photoUrl });
+  });
+
+  // Сортировка — для race меньше = лучше
+  if (game === 'race') {
+    entries.sort((a, b) => a.value - b.value);
+  } else {
+    entries.sort((a, b) => b.value - a.value);
+  }
+
+  entries = entries.slice(0, 50);
+
+  if (!entries.length) {
+    el.innerHTML = '<div style="color:#555;text-align:center;padding:15px;">No records yet</div>';
+    return;
+  }
+
+  const myUid = typeof getMyUid === 'function' ? getMyUid() : localStorage.getItem('_kspt_uid');
+
+  let html = `<div style="color:#666;font-size:11px;margin-bottom:6px;">${meta.label}</div>`;
+  entries.forEach((e, i) => {
+    const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `<span style="color:#666;font-size:11px;">${i+1}.</span>`;
+    const isMe = e.uid === myUid;
+    const valStr = game === 'race' ? e.value.toFixed(2) + 's' : e.value + (meta.unit ? ' ' + meta.unit : '');
+    const avatar = e.photoUrl || 'seri.png';
+    html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;margin-bottom:3px;background:${isMe ? 'rgba(0,230,118,0.1)' : 'rgba(255,255,255,0.04)'};">
+      <span style="min-width:20px;text-align:center;">${medal}</span>
+      <img src="${avatar}" onerror="this.src='seri.png'" style="width:26px;height:26px;border-radius:50%;object-fit:cover;border:1px solid ${isMe ? '#00e676' : '#333'};flex-shrink:0;">
+      <span style="flex:1;color:${isMe ? '#00e676' : '#fff'};font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${e.name}${isMe ? ' <span style="font-size:10px;">(you)</span>' : ''}</span>
+      <span style="color:#00bcd4;font-weight:bold;white-space:nowrap;">${valStr}</span>
+    </div>`;
+  });
+  el.innerHTML = html;
+}
+// ========== END GAME RECORDS LEADERBOARD ==========
 
 // Блокируем контекстное меню на Android при удержании спрайтов
 document.addEventListener('contextmenu', e => e.preventDefault());

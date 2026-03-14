@@ -785,6 +785,7 @@ function gameOver() {
   finalCollectedEl.textContent = collectedCount;
   earnedKSPTEl.textContent = earnedKSPT.toFixed(2);
   earnedEKElem.textContent = sessionEK;
+  try { (window.parent||window.top).postMessage({ type:'kspt_game_record', game:'train', value: collectedCount }, '*'); } catch(e){}
   gameOverScreen.style.display = 'block';
 }
 

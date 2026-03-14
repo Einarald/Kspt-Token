@@ -657,6 +657,7 @@ function addGameCurrencyReward(amount, type = 'kspt', x = 0, y = 0) {
         // fallback: прямое изменение d.ek
         if (typeof d !== 'undefined') {
           d.ek = (Number(d.ek) || 0) + amount;
+          d.ekLifetime = (Number(d.ekLifetime) || 0) + amount;
           if (typeof ui === 'function') try { ui(); } catch(e){}
           if (typeof save === 'function') try { save(); } catch(e){}
         }

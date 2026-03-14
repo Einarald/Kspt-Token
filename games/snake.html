@@ -571,6 +571,7 @@ function gameOver() {
     earnedEKElem.textContent = sessionEK;
   }
 
+  try { (window.parent||window.top).postMessage({ type:'kspt_game_record', game:'snake', value: score }, '*'); } catch(e){}
   document.getElementById('gameOverScreen').style.display = 'block';
 }
 

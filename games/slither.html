@@ -1550,6 +1550,7 @@ function endGame() {
     gameRunning = false;
     
     const timeSurvived = Math.floor((Date.now() - startTime) / 1000);
+    try { (window.parent||window.top).postMessage({ type:'kspt_game_record', game:'slither', value: timeSurvived }, '*'); } catch(e){}
     
     finalLengthEl.textContent = Math.floor(player.maxLength);
     finalOrbsEl.textContent = player.orbsCollected;

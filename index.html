@@ -278,6 +278,29 @@ window.addEventListener('message', (event) => {
     </div>
   </div>
 
+<!-- GAME RECORDS LEADERBOARD -->
+  <div class="card" id="gameRecordsCard">
+    <div class="card-title" style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="toggleGameRecordsLB()">
+      <img src="records.png" style="width:22px;height:22px;object-fit:contain;">
+      <span style="color:#00e676;">Game Records</span>
+      <span id="gameRecordsArrow" style="color:#aaa;font-size:12px;margin-left:auto;">▼ Show</span>
+    </div>
+    <div id="gameRecordsBody" style="display:none;margin-top:10px;">
+      <div id="gameRecordsTabs" style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px;">
+        <button onclick="selectGameRecord('snake')"     class="gr-tab gr-tab-active" id="grtab-snake">    <img src="snake.png"   style="width:16px;height:16px;vertical-align:middle;"> Snake</button>
+        <button onclick="selectGameRecord('pingpong')"  class="gr-tab" id="grtab-pingpong"><img src="pong.png"    style="width:16px;height:16px;vertical-align:middle;"> Ping Pong</button>
+        <button onclick="selectGameRecord('blocksfast')" class="gr-tab" id="grtab-blocksfast"><img src="tetris.png" style="width:16px;height:16px;vertical-align:middle;"> BlocksFast</button>
+        <button onclick="selectGameRecord('slither')"   class="gr-tab" id="grtab-slither"> <img src="slither.png" style="width:16px;height:16px;vertical-align:middle;"> Slither</button>
+        <button onclick="selectGameRecord('train')"     class="gr-tab" id="grtab-train">   <img src="train.png"   style="width:16px;height:16px;vertical-align:middle;"> Scary Train</button>
+        <button onclick="selectGameRecord('race')"      class="gr-tab" id="grtab-race">    <img src="race.png"    style="width:16px;height:16px;vertical-align:middle;"> Race</button>
+        <button onclick="selectGameRecord('flappy')"    class="gr-tab" id="grtab-flappy">  <img src="flappy.png"  style="width:16px;height:16px;vertical-align:middle;"> Flappy Bird</button>
+        <button onclick="selectGameRecord('asteroids')" class="gr-tab" id="grtab-asteroids"><img src="aster.png"   style="width:16px;height:16px;vertical-align:middle;"> Asteroids</button>
+      </div>
+      <div id="gameRecordsList" style="font-size:13px;color:#ccc;">Loading...</div>
+      <div style="font-size:11px;color:#555;margin-top:6px;text-align:right;" id="gameRecordsUpdated"></div>
+    </div>
+  </div>
+
     <!-- Список игр -->
   <div class="card">
     <div class="card-title" style="color: #00e676;">Available Games</div>
@@ -351,10 +374,19 @@ window.addEventListener('message', (event) => {
   <div class="game-ticket">1 ticket</div>
 </div>
 
+<div class="game-item" onclick="startGame('asteroids')">
+  <img src="aster.png" class="game-icon" alt="Space Asteroids">
+  <div class="game-info">
+    <div class="game-title">Space Asteroids</div>
+    <div class="game-desc">Shoot asteroids, survive waves, earn KSPT!</div>
+  </div>
+  <div class="game-ticket">1 ticket</div>
+</div>
+
   </div>
 
-    <button class="back" onclick="openScreen('main')" data-lang-key="back">Back</button>
-  </div>
+<button class="back" onclick="openScreen('main')" data-lang-key="back">Back</button>
+</div>
 
 <!-- Игровые экраны (будут загружаться через iframe) -->
 <div id="gameContainer" class="screen" style="display:none;">

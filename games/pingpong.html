@@ -720,6 +720,7 @@ if (ball.y + ball.radius > canvas.height) {
   // НЕ ВЫЗЫВАЕМ safeConsumeTicket() — билет уже списан при старте (games.js)
   // safeConsumeTicket();
 
+  try { (window.parent||window.top).postMessage({ type:'kspt_game_record', game:'pingpong', value: playerScore }, '*'); } catch(e){}
   gameOverScreen.style.display = 'block';
 
   if (playerScore > aiScore) {

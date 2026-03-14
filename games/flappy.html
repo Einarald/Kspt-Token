@@ -581,6 +581,7 @@ function gameOver() {
   const earned = (window.__kspt_earnedKSPT && Number(window.__kspt_earnedKSPT)) ? Number(window.__kspt_earnedKSPT) : 0;
   earnedKSPTEl.textContent = earned.toFixed(2);
   finalScoreEl.textContent = score;
+  try { (window.parent||window.top).postMessage({ type:'kspt_game_record', game:'flappy', value: score }, '*'); } catch(e){}
 
   if (typeof sessionEK !== 'undefined' && earnedEKElem) {
     earnedEKElem.textContent = sessionEK;

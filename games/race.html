@@ -394,7 +394,7 @@ let remotePlayers = {};          // { uid: { mesh, labelEl, interpTarget, ... } 
 let onlineSendInterval = null;   // setInterval для отправки ~5/сек
 let roomListener = null;         // firebase listener комнаты
 let roomsListener = null;        // firebase listener списка комнат
-let myPlayerName = 'Player';
+let myPlayerName = 'Player';let _selfLeaving = false; // флаг добровольного выхода
 let roomGameMode = 'classic'; // 'classic' или 'modifiers'
 let myPlayerAvatar = 'seri.png';
 let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
@@ -1685,6 +1685,7 @@ scene.add(car);
 
             // Если финишировал игрок — останавливаем его управление но продолжаем гонку
             if (winnerName === 'You') {
+                try { (window.parent||window.top).postMessage({ type:'kspt_game_record', game:'race', value: Math.round(finishTime * 100) / 100 }, '*'); } catch(e){}
                 // останавливаем только игрока, но гонка продолжается
                 speed = 0;
                 throttle = 0;
@@ -1965,6 +1966,7 @@ function joinRoom(rid) {
 // ----- ПОКИНУТЬ КОМНАТУ -----
 function leaveRoom() {
   if (!myRoomId) return;
+  _selfLeaving = true;
   window._raceDB.ref('race_rooms/' + myRoomId + '/players/' + myPlayerId).remove();
   if (isHost) window._raceDB.ref('race_rooms/' + myRoomId).remove();
   if (roomListener) {
@@ -2025,14 +2027,15 @@ function openWaitingRoom(rid) {
     // Показываем кнопку старта только хосту
     document.getElementById('startRaceOnlineBtn').style.display = isHost ? 'block' : 'none';
     document.getElementById('waitingStatusMsg').style.display = isHost ? 'none' : 'block';
-    // Если kicked — меня нет в players
+    // Если kicked — меня нет в players (но не если я сам вышел)
     const stillIn = players.some(p => p.uid === myPlayerId);
-    if (!stillIn) {
+    if (!stillIn && !_selfLeaving) {
       leaveRoom();
       closeOnlineLobby();
       alert('You have been kicked from the room.');
       safeExitGame();
     }
+    _selfLeaving = false;
     // Стартовать гонку если хост нажал
     if (room.started && !onlineMode) startOnlineRace(room);
   };

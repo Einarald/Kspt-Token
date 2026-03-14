@@ -1323,7 +1323,8 @@ const gridY = Math.floor((clientY - rect.top) / visualCell);
             finalLinesEl.textContent = linesCleared;
             maxComboEl.textContent = `x${maxCombo.toFixed(1)}`;
             earnedKSPTEl.textContent = totalEarnedKSPT.toFixed(2);
-            earnedEKElem.textContent = totalEarnedEK; // Показываем EK
+            earnedEKElem.textContent = totalEarnedEK;
+            try { (window.parent||window.top).postMessage({ type:'kspt_game_record', game:'blocksfast', value: linesCleared }, '*'); } catch(e){}
             
             gameOverScreen.style.display = 'block';
             

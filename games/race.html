@@ -796,6 +796,12 @@ let _rampJump = null; // { startTime, duration, height, good }
         }
 
         const carColors = [0xff4136, 0x2ecc40, 0x0074d9, 0xff851b, 0xb10dc9, 0xffdc00];
+
+function uidToColor(uid) {
+            let hash = 0;
+            for (let i = 0; i < uid.length; i++) hash = uid.charCodeAt(i) + ((hash << 5) - hash);
+            return carColors[Math.abs(hash) % carColors.length];
+        }
                 // смещения полос чуть уже — безопаснее по центру трассы
         const botLaneOffsets = [-2.2, 0.0, 2.2, -2.2, 0.0, 2.2];
 
@@ -824,7 +830,8 @@ let _rampJump = null; // { startTime, duration, height, good }
         .addScaledVector(startBack, row * 5.5);
 
                 const isPlayer = (slot === playerSlot);
-                const car = createCar(carColors[slot], pos, isPlayer);
+                const carColor = (isPlayer && onlineMode) ? uidToColor(myPlayerId) : carColors[slot];
+                const car = createCar(carColor, pos, isPlayer);
                 // полоса для этого стартового слота
 const laneOffsetForSlot = botLaneOffsets[slot % botLaneOffsets.length];
 
@@ -902,8 +909,8 @@ scene.add(car);
         }
 
         function spawnCoins() {
-            for (let i = 0; i < 56; i++) { // Уменьшено кол-во примерно на 30% (было 80)
-                const t = i / 56;
+            for (let i = 0; i < 65; i++) { 
+                const t = i / 65;
                 const p = roadCurve.getPointAt(t);
                 const dir = roadCurve.getTangentAt(t);
                 const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0,1,0)).normalize();
@@ -994,14 +1001,6 @@ scene.add(car);
         function checkModifiers() {
             if (roomGameMode !== 'modifiers' || !raceActive) return;
             const now = performance.now();
-
-            // Если все собраны — респавним заново
-            const allCollected = modifierItems.length > 0 && modifierItems.every(i => i.userData.collected);
-            if (allCollected) {
-                modifierItems.forEach(i => scene.remove(i));
-                modifierItems = [];
-                spawnModifiers();
-            }
 
             modifierItems.forEach(item => {
                 if (item.userData.collected) return;
@@ -1328,6 +1327,11 @@ scene.add(car);
                         if (lap < maxLaps) {
                             lap++;
                             document.getElementById('lapDisplay').innerText = `${lap}/${maxLaps}`;
+                            if (roomGameMode === 'modifiers') {
+                                modifierItems.forEach(i => scene.remove(i));
+                                modifierItems = [];
+                                spawnModifiers();
+                            }
                         } else {
                             endRace("You");
                         }
@@ -1442,10 +1446,10 @@ scene.add(car);
                     // На трассе — разгон
                     bot.userData.speed = Math.min(
                         bot.userData.maxSpeed,
-                        bot.userData.speed + acceleration * 0.9 * botThrottle
+                        bot.userData.speed + acceleration * 0.96 * botThrottle
                     );
                     // Минимальная скорость на трассе
-                    const botMinSpeed = bot.userData.maxSpeed * 0.55;
+                    const botMinSpeed = bot.userData.maxSpeed * 0.65;
                     if (bot.userData.speed < botMinSpeed) bot.userData.speed = botMinSpeed;
                 }
 
@@ -1609,13 +1613,19 @@ scene.add(car);
             }
             ctx.strokeStyle = '#666'; ctx.lineWidth = 3; ctx.stroke();
 
-            // Bots
+            // Боты (офлайн)
             botCars.forEach(b => {
                 ctx.fillStyle = '#' + b.userData.color.toString(16).padStart(6,'0');
                 ctx.beginPath(); ctx.arc(b.position.x, b.position.z, 2, 0, Math.PI*2); ctx.fill();
             });
 
-            // Player
+            // Онлайн-игроки
+            Object.values(remotePlayers).forEach(rp => {
+                ctx.fillStyle = '#00bcd4';
+                ctx.beginPath(); ctx.arc(rp.mesh.position.x, rp.mesh.position.z, 2, 0, Math.PI*2); ctx.fill();
+            });
+
+            // Игрок (всегда белый, поверх всех)
             ctx.fillStyle = '#fff';
             ctx.beginPath(); ctx.arc(playerCar.position.x, playerCar.position.z, 2.5, 0, Math.PI*2); ctx.fill();
 
@@ -2099,7 +2109,7 @@ function startOnlineRace(room) {
   players.forEach((p, idx) => {
     if (p.uid === myPlayerId) return;
     const slot = remoteSlot++;
-    const color = carColors[(idx + 1) % carColors.length];
+    const color = uidToColor(p.uid);
     const row = Math.floor(slot / 3);
     const lateralOffset = onlineLaneOffsets[slot % onlineLaneOffsets.length];
     const startPos = startBase.clone()
@@ -2131,6 +2141,7 @@ function startOnlineRace(room) {
       remotePlayers[uid].prevRot = remotePlayers[uid].currentRot;
       remotePlayers[uid].targetX = data.x;
       remotePlayers[uid].targetZ = data.z;
+      remotePlayers[uid].targetY = data.y || 0;
       remotePlayers[uid].targetRot = data.rotation;
       remotePlayers[uid].remoteSpeed = data.speed || 0;
       remotePlayers[uid].remoteLap = data.lap || 1;
@@ -2155,6 +2166,7 @@ function sendMyState() {
   const state = {
     x: Math.round(playerCar.position.x * 100) / 100,
     z: Math.round(playerCar.position.z * 100) / 100,
+    y: Math.round(playerCar.position.y * 100) / 100,
     rotation: Math.round(playerCar.rotation.y * 1000) / 1000,
     speed: Math.round(speed * 100) / 100,
     lap: lap,
@@ -2239,6 +2251,7 @@ function updateRemotePlayers() {
 
     rp.mesh.position.x = rp.currentX;
     rp.mesh.position.z = rp.currentZ;
+    rp.mesh.position.y = rp.targetY || 0;
     rp.mesh.rotation.y = rp.currentRot;
 
     // Обновить позицию HTML-метки (проекция 3D→2D)

@@ -56,6 +56,11 @@
 .player-slot-name { font-size:13px; font-weight:bold; color:#fff; }
 .player-slot-you { color:var(--accent-2); font-size:11px; }
 .kick-btn { margin-left:auto; background:#ff4081; color:#fff; border:none; border-radius:6px; padding:4px 10px; font-size:12px; cursor:pointer; }
+.mode-selector { display:flex; gap:8px; margin-bottom:12px; }
+.mode-btn { flex:1; padding:10px; border-radius:10px; border:2px solid #333; background:#1a1a1a; color:#aaa; font-size:13px; font-weight:bold; cursor:pointer; transition:all .2s; }
+.mode-btn.active { border-color:var(--accent-2); color:var(--accent-2); background:rgba(0,230,118,0.1); }
+#boostHUD { display:none; position:absolute; top:10px; right:10px; background:rgba(0,0,0,0.7); border-radius:8px; padding:5px 10px; font-size:13px; font-weight:bold; border:1px solid #00e676; color:#00e676; pointer-events:none; z-index:20; }
+#boostHUD.slow { border-color:#ff4081; color:#ff4081; }
 #startRaceOnlineBtn { background:linear-gradient(135deg,#00e676,#00c853); color:#000; border:none; border-radius:12px; padding:14px; width:100%; font-size:16px; font-weight:bold; cursor:pointer; display:none; margin-top:12px; }
 /* Надпись над машинами других игроков (canvas overlay) */
 .remote-label { position:absolute; pointer-events:none; font-size:11px; font-weight:bold; color:#fff; text-align:center; text-shadow:0 0 4px #000,0 0 8px #000; white-space:nowrap; transform:translateX(-50%); }
@@ -81,6 +86,7 @@
             <div class="mini-map" id="miniMap"></div>
             <div class="position-indicator" id="posIndicator">1/6</div>
             <div id="countdownDisplay">3</div>
+<div id="boostHUD">⚡ BOOST 5s</div>
         </div>
 
         <div class="controls-row">
@@ -107,7 +113,13 @@
   <!-- Список комнат -->
   <div id="lobbyMain">
     <input id="roomNameInput" type="text" placeholder="Room name (e.g. Fast Racers)" maxlength="30">
-    <button class="lobby-btn lobby-btn-create" id="createRoomBtn">➕ Create Room</button>
+<div style="color:#aaa;font-size:13px;margin-bottom:6px;">Game mode:</div>
+<div class="mode-selector">
+  <button class="mode-btn active" id="modeClassicBtn" onclick="selectMode('classic')">🏁 Classic</button>
+  <button class="mode-btn" id="modeModBtn" onclick="selectMode('modifiers')">🎲 Modifiers</button>
+</div>
+<div id="modeDesc" style="font-size:12px;color:#666;margin-bottom:10px;">Standard race, no power-ups.</div>
+<button class="lobby-btn lobby-btn-create" id="createRoomBtn">➕ Create Room</button>
     <div style="color:#aaa; font-size:13px; margin:10px 0 6px;">Active rooms:</div>
     <div id="roomList"><div style="color:#555;text-align:center;padding:20px;">Loading...</div></div>
     <button class="lobby-btn lobby-btn-back" id="lobbyBackBtn">← Back</button>
@@ -383,12 +395,17 @@ let onlineSendInterval = null;   // setInterval для отправки ~5/се�
 let roomListener = null;         // firebase listener комнаты
 let roomsListener = null;        // firebase listener списка комнат
 let myPlayerName = 'Player';
+let roomGameMode = 'classic'; // 'classic' или 'modifiers'
 let myPlayerAvatar = 'seri.png';
 let myPlayerUid = 'local_' + Math.random().toString(36).slice(2);
 
         let raceResults = []; 
-        let playerCoins = 0;
-        let totalEarnedKSPT = 0;
+let playerCoins = 0;
+let totalEarnedKSPT = 0;
+let modifierItems = []; // трамплины и бусты на трассе
+let playerSpeedBoost = 1.0; // множитель скорости от буста
+let playerSpeedBoostTimer = 0; // сколько осталось мс
+let _rampJump = null; // { startTime, duration, height, good }
         let totalEK = 0;
         let lastCrashTime = 0;
 
@@ -896,6 +913,168 @@ scene.add(car);
             }
         }
 
+// ========== МОДИФИКАТОРЫ ==========
+        function createRampMesh(pos) {
+            const group = new THREE.Group();
+            // Платформа трамплина
+            const rampGeo = new THREE.BoxGeometry(2.5, 0.25, 3.5);
+            const rampMat = new THREE.MeshStandardMaterial({ color: 0x00bcd4, emissive: 0x004d66, roughness: 0.4, metalness: 0.5 });
+            const ramp = new THREE.Mesh(rampGeo, rampMat);
+            ramp.rotation.x = -0.28; // наклон вперёд
+            ramp.position.y = 0.15;
+            group.add(ramp);
+            // Стрелка сверху
+            const arrowGeo = new THREE.ConeGeometry(0.4, 0.9, 6);
+            const arrowMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0xaaaaaa });
+            const arrow = new THREE.Mesh(arrowGeo, arrowMat);
+            arrow.rotation.x = -Math.PI / 2;
+            arrow.position.set(0, 0.55, -0.3);
+            group.add(arrow);
+            group.position.copy(pos);
+            group.position.y = 0.05;
+            group.userData = { type: 'ramp', collected: false };
+            scene.add(group);
+            return group;
+        }
+
+        function createBoostMesh(pos, isGood) {
+            const group = new THREE.Group();
+            const geo = new THREE.CylinderGeometry(0.55, 0.55, 0.12, 20);
+            const mat = new THREE.MeshStandardMaterial({
+                color: isGood ? 0x00e676 : 0xff4081,
+                emissive: isGood ? 0x004d22 : 0x4d0011,
+                roughness: 0.3, metalness: 0.6,
+                transparent: true, opacity: 0.88
+            });
+            const disc = new THREE.Mesh(geo, mat);
+            group.add(disc);
+            // Иконка ⚡ или 🐢 как простая геометрия — просто маленький конус
+            const iconGeo = new THREE.ConeGeometry(0.18, 0.35, 5);
+            const iconMat = new THREE.MeshStandardMaterial({ color: 0xffffff, emissive: 0x888888 });
+            const icon = new THREE.Mesh(iconGeo, iconMat);
+            icon.position.y = 0.22;
+            icon.rotation.x = isGood ? 0 : Math.PI; // вверх = буст, вниз = замедление
+            group.add(icon);
+            group.position.copy(pos);
+            group.position.y = 0.12;
+            group.userData = { type: isGood ? 'boost' : 'slow', collected: false };
+            scene.add(group);
+            return group;
+        }
+
+        function spawnModifiers() {
+            if (roomGameMode !== 'modifiers') return;
+            const count = roadCurve ? 400 : 0;
+            // 6 трамплинов
+            for (let k = 0; k < 6; k++) {
+                const t = (0.08 + k * 0.155) % 1;
+                const p = roadCurve.getPointAt(t);
+                const dir = roadCurve.getTangentAt(t);
+                const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0,1,0)).normalize();
+                const offset = (Math.random() - 0.5) * 3.0;
+                const pos = p.clone().add(right.clone().multiplyScalar(offset));
+                const mesh = createRampMesh(pos);
+                // Ориентируем трамплин по направлению трассы
+                mesh.quaternion.setFromUnitVectors(new THREE.Vector3(0, 0, 1), dir);
+                modifierItems.push(mesh);
+            }
+            // 8 бустов (5 зелёных, 3 красных)
+            const boostPattern = [true, true, false, true, true, false, true, false];
+            for (let k = 0; k < 8; k++) {
+                const t = (0.05 + k * 0.12) % 1;
+                const p = roadCurve.getPointAt(t);
+                const dir = roadCurve.getTangentAt(t);
+                const right = new THREE.Vector3().crossVectors(dir, new THREE.Vector3(0,1,0)).normalize();
+                const offset = (Math.random() - 0.5) * 2.5;
+                const pos = p.clone().add(right.clone().multiplyScalar(offset));
+                modifierItems.push(createBoostMesh(pos, boostPattern[k]));
+            }
+        }
+
+        function checkModifiers() {
+            if (roomGameMode !== 'modifiers' || !raceActive) return;
+            const now = performance.now();
+
+            // Если все собраны — респавним заново
+            const allCollected = modifierItems.length > 0 && modifierItems.every(i => i.userData.collected);
+            if (allCollected) {
+                modifierItems.forEach(i => scene.remove(i));
+                modifierItems = [];
+                spawnModifiers();
+            }
+
+            modifierItems.forEach(item => {
+                if (item.userData.collected) return;
+                // Бусты крутятся, трамплины — нет
+                if (item.userData.type !== 'ramp') item.rotation.y += 0.05;
+                const dist = playerCar.position.distanceTo(item.position);
+                if (dist < 1.8) {
+                    item.userData.collected = true;
+                    scene.remove(item);
+
+                    if (item.userData.type === 'ramp') {
+                        const good = Math.random() < 0.5;
+                        if (good) {
+                            speed = Math.min(maxSpeed * 1.4, speed + 0.8);
+                            _rampJump = { startTime: performance.now(), duration: 1800, height: 4.5, good: true };
+                            showBoostHUD('🚀 Lucky Ramp!', false);
+                        } else {
+                            speed *= 0.55;
+                            _rampJump = { startTime: performance.now(), duration: 900, height: 1.2, good: false };
+                            showBoostHUD('💨 Bad Ramp...', true);
+                        }
+                    } else if (item.userData.type === 'boost') {
+                        // Зелёный: +20% скорость на 5 сек
+                        playerSpeedBoost = 1.20;
+                        playerSpeedBoostTimer = now + 5000;
+                        showBoostHUD('⚡ SPEED +20% — 5s', false);
+                    } else if (item.userData.type === 'slow') {
+                        // Красный: -30% скорость на 4 сек
+                        playerSpeedBoost = 0.70;
+                        playerSpeedBoostTimer = now + 4000;
+                        showBoostHUD('🐢 SLOW -30% — 4s', true);
+                    }
+                }
+            });
+
+// Прыжок с трамплина — плавная дуга по синусу
+            if (_rampJump) {
+                const elapsed = now - _rampJump.startTime;
+                const t = Math.min(1.0, elapsed / _rampJump.duration);
+                playerCar.position.y = _rampJump.height * Math.sin(t * Math.PI);
+                if (t >= 1.0) {
+                    playerCar.position.y = 0;
+                    _rampJump = null;
+                }
+            }
+
+            // Сброс буста по таймеру + живой HUD
+            if (playerSpeedBoostTimer > 0) {
+                const left = playerSpeedBoostTimer - now;
+                if (left <= 0) {
+                    playerSpeedBoost = 1.0;
+                    playerSpeedBoostTimer = 0;
+                    document.getElementById('boostHUD').style.display = 'none';
+                } else {
+                    const sec = Math.ceil(left / 1000);
+                    const el = document.getElementById('boostHUD');
+                    const label = playerSpeedBoost > 1.0 ? '⚡ SPEED +20%' : '🐢 SLOW -30%';
+                    el.textContent = `${label} — ${sec}s`;
+                }
+            }
+        }
+
+        function showBoostHUD(text, isBad) {
+            const el = document.getElementById('boostHUD');
+            el.textContent = text;
+            el.className = isBad ? 'slow' : '';
+            el.style.display = 'block';
+            clearTimeout(el._hideTimer);
+            el._hideTimer = setTimeout(() => {
+                if (playerSpeedBoostTimer === 0) el.style.display = 'none';
+            }, 1200);
+        }
+
         // ========== УПРАВЛЕНИЕ ==========
         function setupControls() {
             const joystickArea = document.getElementById('joystickArea');
@@ -1095,9 +1274,11 @@ scene.add(car);
                 else steering = 0;
             }
 
-            // Ускорение
-            if (throttle > 0) speed = Math.min(maxSpeed, speed + acceleration);
+            // Ускорение (с учётом буста)
+            const effectiveMax = maxSpeed * playerSpeedBoost;
+            if (throttle > 0) speed = Math.min(effectiveMax, speed + acceleration);
             else speed = Math.max(0, speed - 0.1);
+            if (playerSpeedBoost !== 1.0 && speed > effectiveMax) speed = effectiveMax;
 
             // Поворот
             const speedFactor = Math.min(1.0, speed / 0.8);
@@ -1596,6 +1777,7 @@ scene.add(car);
                 updatePlayer();
                 updateBots();
                 checkCollisions();
+                checkModifiers();
                 if (raceActive) updatePositions();
                 
                 // Сглаженное следование камеры
@@ -1623,6 +1805,7 @@ scene.add(car);
             generateTrack();
             initCars();
             spawnCoins();
+            spawnModifiers();
             setupControls();
             initMinimap();
 
@@ -1717,7 +1900,7 @@ function loadRoomList() {
       card.className = 'room-card';
       card.innerHTML = `<div class="room-card-info">
         <div class="room-card-name">${escHtml(room.name || 'Room')}</div>
-        <div class="room-card-count">${count}/6 players • Host: ${escHtml(room.hostName || '?')}</div>
+        <div class="room-card-count">${count}/6 players • Host: ${escHtml(room.hostName || '?')} • ${room.gameMode === 'modifiers' ? '🎲 Modifiers' : '🏁 Classic'}</div>
       </div>
       <button class="room-join-btn" data-rid="${rid}">Join</button>`;
       card.querySelector('.room-join-btn').addEventListener('click', () => joinRoom(rid));
@@ -1729,6 +1912,15 @@ function loadRoomList() {
 }
 
 function escHtml(s) { return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+window.selectMode = function(mode) {
+  roomGameMode = mode;
+  document.getElementById('modeClassicBtn').classList.toggle('active', mode === 'classic');
+  document.getElementById('modeModBtn').classList.toggle('active', mode === 'modifiers');
+  document.getElementById('modeDesc').textContent = mode === 'classic'
+    ? 'Standard race, no power-ups.'
+    : '🎲 Ramps, speed boosts & slowdowns on the track!';
+}
 
 // ----- СОЗДАТЬ КОМНАТУ -----
 function createRoom() {
@@ -1743,6 +1935,7 @@ function createRoom() {
     hostName: myPlayerName,
     started: false,
     createdAt: Date.now(),
+    gameMode: roomGameMode,
     players: { [myPlayerId]: myEntry }
   };
   window._raceDB.ref('race_rooms/' + rid).set(roomData).then(() => {
@@ -1802,7 +1995,7 @@ function openWaitingRoom(rid) {
       return;
     }
     // Обновить имя
-    document.getElementById('waitingRoomName').textContent = room.name || 'Room';
+    document.getElementById('waitingRoomName').textContent = (room.name || 'Room') + (room.gameMode === 'modifiers' ? ' 🎲' : ' 🏁');
     const players = room.players ? Object.values(room.players) : [];
     document.getElementById('waitingCount').textContent = players.length;
     // Рендер слотов
@@ -1864,6 +2057,7 @@ function hostStartRace() {
 // ----- НАЧАТЬ ОНЛАЙН ГОНКУ (вызывается у всех) -----
 function startOnlineRace(room) {
   onlineMode = true;
+  roomGameMode = room.gameMode || 'classic';
   closeOnlineLobby();
 
   if (!window.__gameInited) {

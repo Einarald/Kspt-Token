@@ -487,7 +487,51 @@ const translations = {
     'lb_week_ago': 'a week ago',
     'lb_weeks_ago': '{0} weeks ago',
     'lb_month_ago': 'a month ago',
-    'lb_long_ago': 'more than a month ago'
+    'lb_long_ago': 'more than a month ago',
+
+    // Profile
+    'profile': 'Profile',
+    'profile_tab_profile': 'Profile',
+    'profile_tab_friends': 'Friends',
+    'profile_bio': 'Bio',
+    'profile_bio_placeholder': 'Tell something about yourself...',
+    'profile_fav_skin': 'Favourite Skin',
+    'profile_fav_game': 'Favourite Game',
+    'profile_copy_id': 'Copy ID',
+    'profile_copied': 'ID copied!',
+    'profile_save': 'Save',
+    'profile_edit': 'Edit Profile',
+    'profile_skins_owned': 'Skins owned',
+    'profile_tokens_created': 'Tokens created',
+    'profile_income': 'Income/h',
+    'profile_playtime': 'Playtime',
+    'profile_member_since': 'Member since',
+    'profile_online': 'Online',
+    'profile_offline': 'Last seen',
+    'friends_add': 'Add Friend',
+    'friends_search': 'Search by nickname...',
+    'friends_enter_id': 'Enter player ID...',
+    'friends_none': 'No friends yet',
+    'friends_send_reaction': 'Send reaction',
+    'friends_remove': 'Remove',
+    'friends_not_found': 'Player not found',
+    'friends_added': 'Friend added!',
+    'friends_already': 'Already in friends',
+    'friends_self': 'That\'s you!',
+    'profile_tickets_spent': 'Tickets spent',
+    'profile_change_name': 'Change Name',
+    'profile_change_avatar': 'Change Avatar',
+    'profile_name_placeholder': 'Your name...',
+    'profile_avatar_url': 'Avatar URL (or leave empty)',
+    'rarity_common': 'Common',
+    'rarity_rare': 'Rare',
+    'rarity_epic_rare': 'Super Rare',
+    'rarity_epic': 'Epic',
+    'rarity_mythic': 'Mythic',
+    'rarity_legendary': 'Legendary',
+    'rarity_ultra': 'Ultra Legendary',
+    'rarity_secret': 'Secret',
+    'profile_reset_avatar': 'Reset avatar',
   },
   ru: {
     // Main UI
@@ -963,7 +1007,51 @@ const translations = {
 
     // Owned/progress
     'owned_progress': 'Получено: {0}/9',
-    'owned_simple': 'Получено'
+    'owned_simple': 'Получено',
+
+   // Profile
+    'profile': 'Профиль',
+    'profile_tab_profile': 'Профиль',
+    'profile_tab_friends': 'Друзья',
+    'profile_bio': 'О себе',
+    'profile_bio_placeholder': 'Расскажи о себе...',
+    'profile_fav_skin': 'Любимый скин',
+    'profile_fav_game': 'Любимая игра',
+    'profile_copy_id': 'Скопировать ID',
+    'profile_copied': 'ID скопирован!',
+    'profile_save': 'Сохранить',
+    'profile_edit': 'Редактировать',
+    'profile_skins_owned': 'Скинов',
+    'profile_tokens_created': 'Токенов создано',
+    'profile_income': 'Доход/ч',
+    'profile_playtime': 'Время в игре',
+    'profile_member_since': 'В игре с',
+    'profile_online': 'В сети',
+    'profile_offline': 'Был в сети',
+    'friends_add': 'Добавить друга',
+    'friends_search': 'Поиск по нику...',
+    'friends_enter_id': 'Введите ID игрока...',
+    'friends_none': 'Нет друзей',
+    'friends_send_reaction': 'Отправить реакцию',
+    'friends_remove': 'Удалить',
+    'friends_not_found': 'Игрок не найден',
+    'friends_added': 'Друг добавлен!',
+    'friends_already': 'Уже в друзьях',
+    'friends_self': 'Это вы!',
+    'profile_tickets_spent': 'Потрачено билетов',
+    'profile_change_name': 'Изменить ник',
+    'profile_change_avatar': 'Изменить аватарку',
+    'profile_name_placeholder': 'Ваш ник...',
+    'profile_avatar_url': 'URL аватарки (или оставь пустым)',
+    'rarity_common': 'Обычный',
+    'rarity_rare': 'Редкий',
+    'rarity_epic_rare': 'Сверхредкий',
+    'rarity_epic': 'Эпический',
+    'rarity_mythic': 'Мифический',
+    'rarity_legendary': 'Легендарный',
+    'rarity_ultra': 'Ультра Легендарный',
+    'rarity_secret': 'Секретный',
+    'profile_reset_avatar': 'Сбросить аватарку',
   }
 };
 
@@ -1437,6 +1525,15 @@ function getWeightedNoobBoxReward() {
 const defaultData = {
   tokens: 0,
   playtimeMs: 0,
+
+profile: {
+    bio: '',
+    favSkin: '',
+    favGame: '',
+    createdAt: Date.now()
+  },
+  friends: {},
+  pendingReactions: [],
   skin: "default",
   skins: {default: 1},
 
@@ -2093,8 +2190,10 @@ function processOfflineMarket(minutes) {
       let changeAmount = d.market.personalToken.price * personalChangePercent;
       let newPersonalPrice = d.market.personalToken.price + (changeAmount * personalSign);
       
-      if(newPersonalPrice < 0.001) newPersonalPrice = 0.001;
-      if(newPersonalPrice > 10) newPersonalPrice = 10;
+      const _ptFloor = d.market.personalToken.initialPrice ? d.market.personalToken.initialPrice * 0.01 : 0.00001;
+      const _ptCeil  = d.market.personalToken.initialPrice ? d.market.personalToken.initialPrice * 100  : 999999;
+      if(newPersonalPrice < _ptFloor) newPersonalPrice = _ptFloor;
+      if(newPersonalPrice > _ptCeil)  newPersonalPrice = _ptCeil;
       
       d.market.personalToken.price = newPersonalPrice;
       d.market.personalToken.history.push(newPersonalPrice);
@@ -2333,7 +2432,12 @@ function getSkinImage(skinId, euroVar = 1, artemVar = 0) {
     'toilet': 'toilet.png',
     'capsulememe': 'capsule.png',
     'ufo': 'ufo.png',
-    'dragon': 'dragon.png'
+    'dragon': 'dragon.png',
+    'tetris': 'tetrisik.png',
+    'joystick': 'dzoi.png',
+    'snake': 'zmej.png',
+    'skin_8bit_coin': 'bit.png',
+    'skin_zombie_train': 'zomb.png'
   };
   return skinImages[skinId] || 'kspt.png';
 }
@@ -6240,6 +6344,7 @@ function confirmTokenCreation() {
       creatorName: d.market.account.name,
       creatorId: creatorId,
       supply: supply,
+      initialPrice: initialPrice,
       owned: 0,
       lastBuyTime: 0,
       lastUserBuyPrice: null,
@@ -6896,6 +7001,9 @@ updateNotificationBadges();
     if (!document.getElementById('cards-content').innerHTML) {
       showCardTab('company');
     }
+  } else if (id === 'profile') {
+    document.getElementById('navProfile')?.classList.add('active');
+    if (typeof openScreen_profile_hook === 'function') openScreen_profile_hook();
   } else {
     hideCustomKeyboard();
     if (marketUpdateInterval) {
@@ -12212,8 +12320,13 @@ function pushMyLeaderboardData() {
   if (!window._firebaseReady) return;
   // Hide players with undefined/empty name
   const _tgU = window.Telegram?.WebApp?.initDataUnsafe?.user;
-  const _checkName = _tgU?.first_name || _tgU?.username || '';
-  if (!_checkName || _checkName === 'undefined') return;
+  const _checkName = _tgU?.first_name || _tgU?.username || localStorage.getItem('_kspt_nonTg_name') || '';
+  if (_tgU && (!_checkName || _checkName === 'undefined')) return;
+  // Для браузерных игроков: убедимся что имя задано перед пушем
+  if (!_tgU && !localStorage.getItem('_kspt_nonTg_name')) {
+    const suffix = uid.replace(/\D/g, '').slice(-2).padStart(2, '0') || '01';
+    localStorage.setItem('_kspt_nonTg_name', 'Player' + suffix);
+  }
   const uid = getMyUid();
   const tgUser = getMyTelegramUser();
   const isTg = !!tgUser;
@@ -12444,7 +12557,7 @@ setInterval(() => {
 // Push immediately on load (after firebase ready)
 setTimeout(() => {
   if (window._firebaseReady) pushMyLeaderboardData();
-}, 3000);
+}, 500);
 
 function toggleNotificationSetting(enabled) {
   if (!d.settings) d.settings = {};
@@ -14847,6 +14960,735 @@ function showTokenDetail(firebaseId) {
     if (el) el.textContent = formatNumber(updated.price, 4) + ' KSPT';
   }, 10000);
 }
+
+// ==========================================
+// PROFILE SYSTEM
+// ==========================================
+
+const PROFILE_REACTIONS = [
+  '👍','🔥','❤️','😂','🎉','👏','😎','🤩','💪','🏆',
+  '⭐','💎','🚀','🎮','🎯','😍','🙏','💰','🌟','👑',
+  '🦄','💥','🎲','🎸','🤑','😈','👾','🍕','🤝','✨',
+  '👎','🤮','💩'
+];
+
+const PROFILE_GAMES = ['snake','pingpong','blocksfast','slither','train','race','flappy','asteroids'];
+const PROFILE_GAME_NAMES = {
+  snake:'Snake', pingpong:'Ping-Pong', blocksfast:'BlocksFast',
+  slither:'Slither', train:'Ghost Train', race:'KSPT Races',
+  flappy:'Flappy Bird', asteroids:'Space Asteroids'
+};
+const PROFILE_GAME_ICONS = {
+  snake:'snake.png', pingpong:'pong.png', blocksfast:'tetris.png',
+  slither:'slither.png', train:'train.png', race:'race.png',
+  flappy:'flappy.png', asteroids:'aster.png'
+};
+
+let _profileCurrentTab = 'profile';
+
+function openScreen_profile_hook() {
+  if (!d.profile) d.profile = { bio:'', favSkin:'', favGame:'', createdAt: Date.now() };
+  if (!d.friends) d.friends = {};
+  if (!d.pendingReactions) d.pendingReactions = [];
+  switchProfileTab('profile');
+  _checkPendingReactions();
+}
+
+function switchProfileTab(tab) {
+  _profileCurrentTab = tab;
+  const profileContent = document.getElementById('profileTabContent');
+  const friendsContent = document.getElementById('friendsTabContent');
+  const profileBtn = document.getElementById('profileTabBtn');
+  const friendsBtn = document.getElementById('friendsTabBtn');
+  if (!profileContent || !friendsContent) return;
+
+  if (tab === 'profile') {
+    profileContent.style.display = 'block';
+    friendsContent.style.display = 'none';
+    profileBtn.style.background = 'linear-gradient(135deg,#00bcd4,#0097a7)';
+    profileBtn.style.color = '#000';
+    profileBtn.style.border = 'none';
+    friendsBtn.style.background = '#1a1a1a';
+    friendsBtn.style.color = '#aaa';
+    friendsBtn.style.border = '1px solid #333';
+    renderProfileTab();
+  } else {
+    profileContent.style.display = 'none';
+    friendsContent.style.display = 'block';
+    friendsBtn.style.background = 'linear-gradient(135deg,#00bcd4,#0097a7)';
+    friendsBtn.style.color = '#000';
+    friendsBtn.style.border = 'none';
+    profileBtn.style.background = '#1a1a1a';
+    profileBtn.style.color = '#aaa';
+    profileBtn.style.border = '1px solid #333';
+    renderFriendsTab();
+  }
+}
+
+function _getMyAvatar() {
+  const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  if (tgUser?.photo_url) return tgUser.photo_url;
+  return localStorage.getItem('_kspt_nonTg_avatar') || 'seri.png';
+}
+
+function _getMyName() {
+  const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  if (tgUser) return tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '');
+  return localStorage.getItem('_kspt_nonTg_name') || d.market?.account?.name || 'Player';
+}
+
+function _getSkinRarity(income, isSecret) {
+  if (isSecret) return { key:'rarity_secret', border:'2px solid transparent', gradient:'linear-gradient(135deg,#fff,#888,#fff)', shadow:'' };
+  if (income <= 10)  return { key:'rarity_common',    border:'2px solid #555',    gradient:null, shadow:'' };
+  if (income <= 30)  return { key:'rarity_rare',      border:'2px solid #00c853', gradient:null, shadow:'0 0 6px #00c85388' };
+  if (income <= 50)  return { key:'rarity_epic_rare', border:'2px solid #00bcd4', gradient:null, shadow:'0 0 6px #00bcd488' };
+  if (income <= 80)  return { key:'rarity_epic',      border:'2px solid #aa00ff', gradient:null, shadow:'0 0 8px #aa00ff88' };
+  if (income <= 130) return { key:'rarity_mythic',    border:'2px solid #ff1744', gradient:null, shadow:'0 0 8px #ff174488' };
+  if (income <= 200) return { key:'rarity_legendary', border:'2px solid #ffd600', gradient:null, shadow:'0 0 10px #ffd60088' };
+  return { key:'rarity_ultra', border:'2px solid transparent', gradient:'linear-gradient(135deg,#2979ff,#d500f9,#ff1744)', shadow:'0 0 12px #9c27b088' };
+}
+
+function _skinBorderStyle(rar) {
+  if (rar.gradient) return `border:2px solid transparent;outline:2px solid;outline-color:transparent;background:linear-gradient(#1a1a1a,#1a1a1a) padding-box,${rar.gradient} border-box;box-shadow:${rar.shadow};`;
+  return `border:${rar.border};box-shadow:${rar.shadow};`;
+}
+
+function renderProfileTab() {
+  const el = document.getElementById('profileTabContent');
+  if (!el) return;
+  if (!d.profile) d.profile = { bio:'', favSkin:'', favGame:'', createdAt: Date.now() };
+
+  const myUid = getMyUid();
+  const avatar = _getMyAvatar();
+  const name = _getMyName();
+  const ownedSkins = _getOwnedSkinsList();
+  const skinCount = ownedSkins.length;
+  const tokenCount = (d.market?.myTokens || []).filter(tk => String(tk.creatorId) === _getMyId()).length;
+  const income = Math.round(getHourlyRate());
+  const playtime = _formatPlaytime(d.playtimeMs || 0);
+  const ticketsSpent = d.ticketsLifetime || 0;
+
+  const totalSkins = Object.keys(SKIN_INCOME).length;
+
+  el.innerHTML = `
+    <div class="profile-card" style="text-align:center;">
+      <!-- Аватарка -->
+      <div style="position:relative;width:80px;margin:0 auto 6px;">
+        <img src="${avatar}" onerror="this.src='seri.png'" class="profile-avatar" id="profileAvatar">
+        <div class="profile-online-dot"></div>
+      </div>
+      <!-- Кнопки аватарки -->
+      <div style="display:flex;gap:6px;justify-content:center;margin-bottom:8px;">
+        <button onclick="profileChangeAvatar()" style="background:#1a1a1a;border:1px solid #333;color:#00bcd4;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;">📷 ${t('profile_change_avatar')}</button>
+        <button onclick="profileResetAvatar()" style="background:#1a1a1a;border:1px solid #333;color:#888;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;">↩ ${t('profile_reset_avatar')}</button>
+      </div>
+      <!-- Ник -->
+      <div style="font-size:18px;font-weight:bold;margin-bottom:2px;display:flex;align-items:center;justify-content:center;gap:6px;">
+        <span>${name}</span>
+        <button onclick="profileChangeName()" style="background:#1a1a1a;border:1px solid #333;color:#00bcd4;border-radius:6px;padding:3px 9px;font-size:12px;cursor:pointer;">${t('profile_change_name')}</button>
+      </div>
+      <div style="font-size:11px;color:#555;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px;">
+        <span>ID: ${myUid}</span>
+        <button onclick="profileCopyId()" style="background:#1a1a1a;border:1px solid #333;color:#00bcd4;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;" data-lang-key="profile_copy_id">Copy ID</button>
+      </div>
+      <!-- Bio -->
+      <div style="margin-bottom:10px;">
+        <textarea id="profileBioInput" maxlength="250"
+          style="width:100%;background:#1a1a1a;border:1px solid #333;border-radius:10px;color:#fff;padding:8px;font-size:13px;resize:none;box-sizing:border-box;"
+          rows="3" placeholder="${t('profile_bio_placeholder')}">${d.profile.bio || ''}</textarea>
+      </div>
+      <!-- Fav skin picker — коллапсируемый -->
+      <div style="margin-bottom:10px;">
+        <div style="font-size:12px;color:#888;margin-bottom:6px;text-align:left;display:flex;align-items:center;gap:8px;">
+          <span>${t('profile_fav_skin')}:</span>
+          ${(()=>{
+            const fs = ownedSkins.find(s => s.id === d.profile.favSkin);
+            if (fs) return `<div style="display:flex;align-items:center;gap:5px;background:#1a1a1a;border:2px solid #00bcd4;border-radius:8px;padding:3px 7px;cursor:pointer;" onclick="toggleFavSkinPicker()">
+              <img src="${fs.img}" onerror="this.src='kspt.png'" style="width:20px;height:20px;object-fit:contain;">
+              <span style="font-size:11px;color:#fff;">${fs.name}</span>
+              <span style="font-size:10px;color:#00bcd4;">▾</span>
+            </div>`;
+            return `<button onclick="toggleFavSkinPicker()" style="background:#1a1a1a;border:1px solid #333;color:#00bcd4;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;">Choose ▾</button>`;
+          })()}
+        </div>
+        <div id="favSkinPicker" style="display:none;flex-wrap:wrap;gap:6px;">
+          ${ownedSkins.map(s => {
+            const selected = d.profile.favSkin === s.id;
+            return `<div onclick="profileSelectFavSkin('${s.id}')"
+              style="width:54px;cursor:pointer;border-radius:10px;padding:4px;text-align:center;
+                background:${selected?'rgba(0,188,212,0.15)':'#1a1a1a'};
+                border:${selected?'2px solid #00bcd4':'2px solid #333'};">
+              <img src="${s.img}" onerror="this.src='kspt.png'" style="width:36px;height:36px;object-fit:contain;display:block;margin:0 auto;">
+              <div style="font-size:9px;color:#aaa;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name}</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <input type="hidden" id="profileFavSkin" value="${d.profile.favSkin||''}">
+      </div>
+      <!-- Fav game picker — коллапсируемый -->
+      <div style="margin-bottom:12px;">
+        <div style="font-size:12px;color:#888;margin-bottom:6px;text-align:left;display:flex;align-items:center;gap:8px;">
+          <span>${t('profile_fav_game')}:</span>
+          ${(()=>{
+            const fg = d.profile.favGame;
+            if (fg && PROFILE_GAME_ICONS[fg]) return `<div style="display:flex;align-items:center;gap:5px;background:#1a1a1a;border:2px solid #00bcd4;border-radius:8px;padding:3px 7px;cursor:pointer;" onclick="toggleFavGamePicker()">
+              <img src="${PROFILE_GAME_ICONS[fg]}" onerror="this.src='game.png'" style="width:20px;height:20px;border-radius:4px;object-fit:cover;">
+              <span style="font-size:11px;color:#fff;">${PROFILE_GAME_NAMES[fg]}</span>
+              <span style="font-size:10px;color:#00bcd4;">▾</span>
+            </div>`;
+            return `<button onclick="toggleFavGamePicker()" style="background:#1a1a1a;border:1px solid #333;color:#00bcd4;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;">Choose ▾</button>`;
+          })()}
+        </div>
+        <div id="favGamePicker" style="display:none;flex-wrap:wrap;gap:6px;">
+          ${PROFILE_GAMES.map(g => {
+            const selected = d.profile.favGame === g;
+            return `<div onclick="profileSelectFavGame('${g}')"
+              style="display:flex;flex-direction:column;align-items:center;width:60px;cursor:pointer;border-radius:10px;padding:5px 3px;
+                background:${selected?'rgba(0,188,212,0.15)':'#1a1a1a'};
+                border:${selected?'2px solid #00bcd4':'1px solid #333'};">
+              <img src="${PROFILE_GAME_ICONS[g]||'game.png'}" style="width:32px;height:32px;border-radius:6px;object-fit:cover;">
+              <div style="font-size:9px;color:#aaa;margin-top:3px;text-align:center;line-height:1.2;">${PROFILE_GAME_NAMES[g]}</div>
+            </div>`;
+          }).join('')}
+        </div>
+        <input type="hidden" id="profileFavGame" value="${d.profile.favGame||''}">
+      </div>
+      <button onclick="saveProfileEdit()" style="background:linear-gradient(135deg,#00e676,#00c853);color:#000;font-weight:bold;width:100%;padding:10px;border-radius:10px;border:none;cursor:pointer;" data-lang-key="profile_save">Save</button>
+    </div>
+
+    <!-- Stats -->
+    <div class="profile-stat-grid">
+      <div class="profile-stat">
+        <div class="profile-stat-val">${formatNumber(d.tokens||0,0)}</div>
+        <div class="profile-stat-lbl">KSPT</div>
+      </div>
+      <div class="profile-stat">
+        <div class="profile-stat-val">${income}</div>
+        <div class="profile-stat-lbl">${t('profile_income')}</div>
+      </div>
+      <div class="profile-stat">
+        <div class="profile-stat-val">${skinCount} / ${totalSkins}</div>
+        <div class="profile-stat-lbl">${t('profile_skins_owned')}</div>
+      </div>
+      <div class="profile-stat">
+        <div class="profile-stat-val">${tokenCount}</div>
+        <div class="profile-stat-lbl">${t('profile_tokens_created')}</div>
+      </div>
+      <div class="profile-stat">
+        <div class="profile-stat-val">${ticketsSpent}</div>
+        <div class="profile-stat-lbl">${t('profile_tickets_spent')}</div>
+      </div>
+      <div class="profile-stat">
+        <div class="profile-stat-val">${playtime}</div>
+        <div class="profile-stat-lbl">${t('profile_playtime')}</div>
+      </div>
+    </div>
+
+    <!-- Skins collection -->
+    <div class="profile-card">
+      <div style="font-weight:bold;margin-bottom:${window._skinsCollapsed ? '0' : '10'}px;font-size:14px;display:flex;align-items:center;justify-content:space-between;cursor:pointer;" onclick="toggleSkinsCollection()">
+        <span>🎨 ${t('profile_skins_owned')} <span style="color:#555;font-size:12px;font-weight:normal;">${skinCount}/${totalSkins}</span></span>
+        <span id="skinsCollapseIcon" style="color:#00bcd4;font-size:14px;">${window._skinsCollapsed ? '▸' : '▾'}</span>
+      </div>
+      <div id="skinsCollectionBody" style="display:${window._skinsCollapsed ? 'none' : 'block'};">
+      ${(function(){
+        const rarityGroups = [
+          { key:'rarity_common',    label:'Common',          color:'#888' },
+          { key:'rarity_rare',      label:'Rare',            color:'#00c853' },
+          { key:'rarity_epic_rare', label:'Super Rare',      color:'#00bcd4' },
+          { key:'rarity_epic',      label:'Epic',            color:'#aa00ff' },
+          { key:'rarity_mythic',    label:'Mythic',          color:'#ff1744' },
+          { key:'rarity_legendary', label:'Legendary',       color:'#ffd600' },
+          { key:'rarity_ultra',     label:'Ultra Legendary', color:'#9c27b0' },
+          { key:'rarity_secret',    label:'Secret',          color:'#888' },
+        ];
+        let html = '';
+        rarityGroups.forEach(group => {
+          const groupSkins = ownedSkins.filter(s => _getSkinRarity(s.income, s.isSecret).key === group.key);
+          if (!groupSkins.length) return;
+          const totalInGroup = ownedSkins.filter(s => true).length; // все скины уже отфильтрованы
+          // Считаем сколько всего скинов такой редкости существует в игре
+          const allOfRarity = Object.keys(SKIN_INCOME).filter(id => {
+            const isSecret = SECRET_SKIN_IDS.has(id);
+            const income = SKIN_INCOME[id] || 0;
+            return _getSkinRarity(income, isSecret).key === group.key;
+          }).length;
+          html += `<div style="font-size:11px;font-weight:bold;color:${group.color};margin:8px 0 4px;letter-spacing:0.5px;">▸ ${t(group.key)} <span style="color:#555;font-weight:normal;font-size:10px;">${groupSkins.length}/${allOfRarity}</span></div>`;
+          html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">`;
+          groupSkins.forEach(s => {
+            const rar = _getSkinRarity(s.income, s.isSecret);
+            const isActive = d.skin === s.id;
+            html += `<div onclick="profileShowSkinTip('${s.id}','${s.name}',${s.income},'${rar.key}')"
+              style="width:54px;border-radius:10px;padding:4px;text-align:center;background:#1a1a1a;cursor:pointer;
+                ${isActive?'outline:2px solid #00e676;outline-offset:2px;':''}
+                ${_skinBorderStyle(rar)}">
+              <img src="${s.img}" onerror="this.src='kspt.png'" style="width:36px;height:36px;object-fit:contain;display:block;margin:0 auto;">
+              <div style="font-size:9px;color:#aaa;margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${s.name}</div>
+            </div>`;
+          });
+          html += `</div>`;
+        });
+        return html;
+      })()}
+      <div id="skinTipBox" style="display:none;margin-top:8px;padding:8px;background:#1a1a1a;border-radius:8px;font-size:12px;color:#ccc;"></div>
+      </div><!-- /skinsCollectionBody -->
+    </div>
+  `;
+}
+
+// Скины которые считаются секретными по смыслу (не продаются, находятся особым способом)
+const SECRET_SKIN_IDS = new Set(['doge','kostia','metka','seri','artem','mystic','capsule','siulai','gkspt','cyber_android','dirty','crypto_heart','corrupted','failed','goldensafe','bhole','toilet','capsulememe','ufo','dragon']);
+
+function _getOwnedSkinsList() {
+  const result = [];
+  const allSkins = Object.keys(SKIN_INCOME);
+  const ekOwned = JSON.parse(localStorage.getItem('ekshop_owned') || '{}');
+  // нормализуем: skin_tetris → tetris, skin_joystick → joystick, skin_snake → snake
+  const ekOwnedNorm = {};
+  Object.keys(ekOwned).forEach(k => {
+    ekOwnedNorm[k] = true;
+    ekOwnedNorm[k.replace(/^skin_/, '')] = true;
+  });
+  allSkins.forEach(id => {
+    const isSecret = SECRET_SKIN_IDS.has(id) ||
+                     !!(d.secretSkins && d.secretSkins[id]);
+    const owned = (d.skins && d.skins[id]) ||
+                  (d.secretSkins && d.secretSkins[id]) ||
+                  (id === 'default') ||
+                  (d.wonX10 && id === 'priz') ||
+                  ekOwnedNorm[id];
+    if (owned) {
+      result.push({
+        id,
+        name: id.charAt(0).toUpperCase() + id.slice(1).replace(/_/g,' '),
+        img: getSkinImage(id, d.euroVar||1, d.artemVar||0),
+        income: SKIN_INCOME[id] || 0,
+        isSecret
+      });
+    }
+  });
+  // Сортировка: сначала по группе редкости, внутри группы по income
+  const rarityOrder = { rarity_common:0, rarity_rare:1, rarity_epic_rare:2, rarity_epic:3, rarity_mythic:4, rarity_legendary:5, rarity_ultra:6, rarity_secret:7 };
+  result.sort((a, b) => {
+    const ra = _getSkinRarity(a.income, a.isSecret);
+    const rb = _getSkinRarity(b.income, b.isSecret);
+    const oa = rarityOrder[ra.key] ?? 0;
+    const ob = rarityOrder[rb.key] ?? 0;
+    if (oa !== ob) return oa - ob;
+    return a.income - b.income;
+  });
+  return result;
+}
+
+function profileShowSkinTip(id, name, income, rarityKey) {
+  const box = document.getElementById('skinTipBox');
+  if (!box) return;
+  box.style.display = 'block';
+  const rarLabel = rarityKey ? t(rarityKey) : '';
+  box.innerHTML = `<b>${name}</b> — +${income} KSPT/h &nbsp;<span style="color:#aaa;font-size:11px;">${rarLabel}</span>${d.skin === id ? ' ✅ <span style="color:#00e676;">Active</span>' : ''}`;
+}
+
+function profileChangeName() {
+  const current = _getMyName();
+  const newName = prompt(t('profile_change_name'), current);
+  if (!newName || !newName.trim()) return;
+  const trimmed = newName.trim().slice(0, 32);
+  const isTg = !!window.Telegram?.WebApp?.initDataUnsafe?.user;
+  if (!isTg) localStorage.setItem('_kspt_nonTg_name', trimmed);
+  if (d.market?.account) d.market.account.name = trimmed;
+  save();
+  if (window._firebaseReady && window._firebaseDB) {
+    const uid = getMyUid();
+    if (uid && uid !== 'local') {
+      window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).update({ name: trimmed });
+    }
+  }
+  showToast('✅ ' + t('profile_save') + '!');
+  renderProfileTab();
+}
+
+function profileChangeAvatar() {
+  const isTg = !!window.Telegram?.WebApp?.initDataUnsafe?.user;
+  if (isTg) { showToast('Avatar is taken from Telegram'); return; }
+  let fileInput = document.getElementById('_profileAvatarInput');
+  if (!fileInput) {
+    fileInput = document.createElement('input');
+    fileInput.type = 'file';
+    fileInput.id = '_profileAvatarInput';
+    fileInput.accept = 'image/*';
+    fileInput.style.display = 'none';
+    document.body.appendChild(fileInput);
+  }
+  fileInput.onchange = function(e) {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = function(ev) {
+      const dataUrl = ev.target.result;
+      localStorage.setItem('_kspt_nonTg_avatar', dataUrl);
+      save();
+      if (window._firebaseReady && window._firebaseDB) {
+        const uid = getMyUid();
+        if (uid && uid !== 'local') {
+          window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).update({ photoUrl: dataUrl });
+        }
+      }
+      showToast('✅ Avatar updated!');
+      renderProfileTab();
+    };
+    reader.readAsDataURL(file);
+    fileInput.value = '';
+  };
+  fileInput.click();
+}
+
+function profileResetAvatar() {
+  const isTg = !!window.Telegram?.WebApp?.initDataUnsafe?.user;
+  if (isTg) { showToast('Avatar is from Telegram automatically'); return; }
+  localStorage.removeItem('_kspt_nonTg_avatar');
+  save();
+  showToast('✅ Avatar reset!');
+  renderProfileTab();
+}
+
+function profileCopyId() {
+  const uid = getMyUid();
+  try {
+    navigator.clipboard.writeText(uid).then(() => showToast(t('profile_copied')));
+  } catch(e) {
+    showToast(uid);
+  }
+}
+
+function profileSelectFavSkin(id) {
+  if (!d.profile) d.profile = {};
+  d.profile.favSkin = id;
+  const input = document.getElementById('profileFavSkin');
+  if (input) input.value = id;
+  // Закрыть пикер после выбора и перерисовать
+  renderProfileTab();
+}
+
+function toggleSkinsCollection() {
+  window._skinsCollapsed = !window._skinsCollapsed;
+  const body = document.getElementById('skinsCollectionBody');
+  const icon = document.getElementById('skinsCollapseIcon');
+  const hdr = body ? body.previousElementSibling : null;
+  if (body) body.style.display = window._skinsCollapsed ? 'none' : 'block';
+  if (icon) icon.textContent = window._skinsCollapsed ? '▸' : '▾';
+  if (hdr) hdr.style.marginBottom = window._skinsCollapsed ? '0' : '10px';
+}
+
+function toggleFavSkinPicker() {
+  const el = document.getElementById('favSkinPicker');
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+
+function profileSelectFavGame(g) {
+  if (!d.profile) d.profile = {};
+  d.profile.favGame = g;
+  const input = document.getElementById('profileFavGame');
+  if (input) input.value = g;
+  renderProfileTab();
+}
+
+function toggleFavGamePicker() {
+  const el = document.getElementById('favGamePicker');
+  if (!el) return;
+  el.style.display = el.style.display === 'none' ? 'flex' : 'none';
+}
+
+function profileSelectFavGame(g) {
+  if (!d.profile) d.profile = {};
+  d.profile.favGame = g;
+  const input = document.getElementById('profileFavGame');
+  if (input) input.value = g;
+  renderProfileTab();
+}
+
+function saveProfileEdit() {
+  if (!d.profile) d.profile = {};
+  const bio = document.getElementById('profileBioInput')?.value.trim() || '';
+  if (bio.length > 250) { showToast('Bio max 250 chars'); return; }
+  d.profile.bio = bio;
+  d.profile.favSkin = document.getElementById('profileFavSkin')?.value || '';
+  d.profile.favGame = document.getElementById('profileFavGame')?.value || '';
+  save();
+  // Sync to Firebase leaderboard
+  if (window._firebaseReady && window._firebaseDB) {
+    const uid = getMyUid();
+    if (uid && uid !== 'local') {
+      window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).update({
+        bio: d.profile.bio,
+        favSkin: d.profile.favSkin,
+        favGame: d.profile.favGame
+      });
+    }
+  }
+  showToast(t('profile_save') + '!');
+  renderProfileTab();
+}
+
+// ===== FRIENDS =====
+function renderFriendsTab() {
+  const el = document.getElementById('friendsTabContent');
+  if (!el) return;
+  if (!d.friends) d.friends = {};
+
+  const friendIds = Object.keys(d.friends);
+
+  el.innerHTML = `
+    <!-- Add friend -->
+    <div class="profile-card">
+      <div style="font-weight:bold;margin-bottom:8px;">${t('friends_add')}</div>
+      <div style="display:flex;gap:8px;">
+        <input id="friendIdInput" style="flex:1;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:8px;padding:8px;font-size:13px;box-sizing:border-box;"
+               placeholder="${t('friends_enter_id')}">
+        <button onclick="addFriendById()" style="background:#00bcd4;color:#000;font-weight:bold;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;">+</button>
+      </div>
+      <input id="friendSearchInput" oninput="searchFriends(this.value)"
+             style="width:100%;margin-top:8px;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:8px;padding:8px;font-size:13px;box-sizing:border-box;"
+             placeholder="${t('friends_search')}">
+      <div id="friendSearchResults" style="margin-top:6px;"></div>
+    </div>
+
+    <!-- Friends list -->
+    <div id="friendsList">
+      ${friendIds.length === 0 ? `<div style="text-align:center;color:#555;padding:20px;">${t('friends_none')}</div>` :
+        friendIds.map(uid => _renderFriendItem(uid, d.friends[uid])).join('')
+      }
+    </div>
+  `;
+}
+
+function _renderFriendItem(uid, friend) {
+  const isOnline = (Date.now() - (friend.lastSeen || 0)) < 3 * 60 * 1000;
+  const lastSeen = isOnline ? `<span style="color:#00e676;font-size:11px;">● ${t('profile_online')}</span>`
+    : `<span style="color:#555;font-size:11px;">${formatLastSeen(friend.lastSeen)}</span>`;
+  return `
+    <div class="friend-item" onclick="openFriendProfile('${uid}')">
+      <img src="${friend.avatar || 'seri.png'}" onerror="this.src='seri.png'"
+           class="friend-avatar ${isOnline ? 'friend-online' : ''}">
+      <div style="flex:1;min-width:0;">
+        <div style="font-weight:bold;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${friend.name || uid}</div>
+        ${lastSeen}
+      </div>
+      <button onclick="event.stopPropagation();openReactionPicker('${uid}')"
+              style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:6px 10px;color:#fff;cursor:pointer;font-size:16px;">🎁</button>
+      <button onclick="event.stopPropagation();removeFriend('${uid}')"
+              style="background:#2a0a0a;border:1px solid #5a1a1a;border-radius:8px;padding:6px 10px;color:#ff4081;cursor:pointer;font-size:12px;">✕</button>
+    </div>
+  `;
+}
+
+function addFriendById() {
+  const input = document.getElementById('friendIdInput');
+  const uid = (input?.value.trim() || '').replace(/^ID:\s*/i, '');
+  if (!uid) return;
+  const myUid = getMyUid();
+  if (uid === myUid) { showToast(t('friends_self')); return; }
+  if (d.friends[uid]) { showToast(t('friends_already')); return; }
+
+  if (!window._firebaseReady || !window._firebaseDB) { showToast('Firebase not available'); return; }
+
+  window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).once('value').then(snap => {
+    const data = snap?.val();
+    if (!data) { showToast(t('friends_not_found')); return; }
+    if (!d.friends) d.friends = {};
+    d.friends[uid] = {
+      name: data.name || uid,
+      avatar: data.photoUrl || 'seri.png',
+      lastSeen: data.lastSeen || 0
+    };
+    save();
+    if (input) input.value = '';
+    showToast(t('friends_added'));
+    renderFriendsTab();
+  });
+}
+
+function removeFriend(uid) {
+  if (!d.friends) return;
+  delete d.friends[uid];
+  save();
+  renderFriendsTab();
+}
+
+function searchFriends(query) {
+  const results = document.getElementById('friendSearchResults');
+  if (!results) return;
+  if (!query || query.length < 2) { results.innerHTML = ''; return; }
+  if (!window._firebaseReady || !window._firebaseDB) return;
+
+  window._firebaseRef(window._firebaseDB, 'leaderboard').once('value').then(snap => {
+    const all = snap?.val();
+    if (!all) return;
+    const matches = Object.entries(all)
+      .filter(([uid, p]) => p.name && p.name.toLowerCase().includes(query.toLowerCase()) && uid !== getMyUid())
+      .slice(0, 5);
+
+    if (!matches.length) { results.innerHTML = `<div style="color:#555;font-size:12px;padding:4px;">${t('friends_not_found')}</div>`; return; }
+
+    results.innerHTML = matches.map(([uid, p]) => `
+      <div style="display:flex;align-items:center;gap:8px;padding:6px;background:#1a1a1a;border-radius:8px;margin-bottom:4px;cursor:pointer;"
+           onclick="addFriendDirect('${uid}','${(p.name||'').replace(/'/g,"\\'")}','${p.photoUrl||'seri.png'}',${p.lastSeen||0})">
+        <img src="${p.photoUrl||'seri.png'}" onerror="this.src='seri.png'" style="width:30px;height:30px;border-radius:50%;object-fit:cover;">
+        <span style="font-size:13px;">${p.name}</span>
+        <span style="margin-left:auto;color:#00bcd4;font-size:20px;">+</span>
+      </div>
+    `).join('');
+  });
+}
+
+function addFriendDirect(uid, name, avatar, lastSeen) {
+  const myUid = getMyUid();
+  if (uid === myUid) { showToast(t('friends_self')); return; }
+  if (d.friends && d.friends[uid]) { showToast(t('friends_already')); return; }
+  if (!d.friends) d.friends = {};
+  d.friends[uid] = { name, avatar, lastSeen };
+  save();
+  showToast(t('friends_added'));
+  renderFriendsTab();
+}
+
+function openReactionPicker(targetUid) {
+  const friend = d.friends?.[targetUid];
+  const name = friend?.name || targetUid;
+
+  // Показать модалку с реакциями
+  let modal = document.getElementById('reactionPickerModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'reactionPickerModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.7);display:flex;align-items:flex-end;';
+    modal.onclick = e => { if(e.target===modal) modal.remove(); };
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div style="background:#111;border-radius:18px 18px 0 0;padding:16px;width:100%;border-top:1px solid #333;">
+      <div style="font-weight:bold;margin-bottom:10px;text-align:center;">${t('friends_send_reaction')} → ${name}</div>
+      <div class="reaction-grid">
+        ${PROFILE_REACTIONS.map(r => `
+          <button class="reaction-btn" onclick="sendReaction('${targetUid}','${r}',this.closest('#reactionPickerModal'))">${r}</button>
+        `).join('')}
+      </div>
+    </div>
+  `;
+  modal.style.display = 'flex';
+}
+
+function sendReaction(targetUid, reaction, modal) {
+  if (!window._firebaseReady || !window._firebaseDB) return;
+  const myName = _getMyName();
+  const myUid = getMyUid();
+  window._firebaseRef(window._firebaseDB, `reactions/${targetUid}`).push({
+    from: myUid,
+    fromName: myName,
+    reaction: reaction,
+    ts: Date.now()
+  });
+  if (modal) modal.remove();
+  showToast(reaction + ' sent!');
+}
+
+function _checkPendingReactions() {
+  if (!window._firebaseReady || !window._firebaseDB) return;
+  const myUid = getMyUid();
+  if (!myUid || myUid === 'local') return;
+  window._firebaseRef(window._firebaseDB, `reactions/${myUid}`).once('value').then(snap => {
+    const data = snap?.val();
+    if (!data) return;
+    const entries = Object.entries(data);
+    if (!entries.length) return;
+    // Показать уведомление
+    const last = entries[entries.length - 1][1];
+    showToast(`${last.reaction} from ${last.fromName || 'someone'}!`);
+    // Очистить
+    window._firebaseRef(window._firebaseDB, `reactions/${myUid}`).remove();
+  });
+}
+
+function openFriendProfile(uid) {
+  if (!window._firebaseReady || !window._firebaseDB) return;
+  window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).once('value').then(snap => {
+    const p = snap?.val();
+    if (!p) { showToast(t('friends_not_found')); return; }
+    _showPublicProfile(uid, p);
+  });
+}
+
+function _showPublicProfile(uid, p) {
+  const isOnline = (Date.now() - (p.lastSeen || 0)) < 3 * 60 * 1000;
+  const modal = document.getElementById('tokenDetailModal'); // переиспользуем стиль
+  // Создаём отдельный модал
+  let m = document.getElementById('publicProfileModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'publicProfileModal';
+    m.style.cssText = 'display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.8);align-items:center;justify-content:center;overflow-y:auto;padding:20px;box-sizing:border-box;';
+    m.onclick = e => { if(e.target===m) m.style.display='none'; };
+    document.body.appendChild(m);
+  }
+  const favGame = p.favGame ? PROFILE_GAME_NAMES[p.favGame] : null;
+  const favGameIcon = p.favGame ? PROFILE_GAME_ICONS[p.favGame] : null;
+
+  m.innerHTML = `
+    <div style="background:#111;border-radius:18px;padding:20px;width:100%;max-width:360px;border:1px solid #333;position:relative;">
+      <button onclick="document.getElementById('publicProfileModal').style.display='none'"
+        style="position:absolute;top:10px;right:10px;background:rgba(255,255,255,0.08);border:none;color:#aaa;font-size:16px;width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">✕</button>
+
+      <div style="text-align:center;margin-bottom:14px;">
+        <div style="position:relative;width:70px;margin:0 auto 8px;">
+          <img src="${p.photoUrl||'seri.png'}" onerror="this.src='seri.png'"
+               style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid ${isOnline?'#00e676':'#333'};">
+          ${isOnline?'<div style="position:absolute;bottom:3px;right:3px;width:13px;height:13px;border-radius:50%;background:#00e676;border:2px solid #111;"></div>':''}
+        </div>
+        <div style="font-size:18px;font-weight:bold;">${p.name||uid}</div>
+        <div style="font-size:12px;color:${isOnline?'#00e676':'#555'};">${isOnline ? t('profile_online') : formatLastSeen(p.lastSeen)}</div>
+        ${p.bio ? `<div style="font-size:12px;color:#aaa;margin-top:6px;padding:0 10px;">${p.bio}</div>` : ''}
+      </div>
+
+      <div class="profile-stat-grid" style="margin-bottom:10px;">
+        <div class="profile-stat">
+          <div class="profile-stat-val">${formatNumber(p.tokens||0,0)}</div>
+          <div class="profile-stat-lbl">KSPT</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-val">${formatNumber(p.rate||0,0)}</div>
+          <div class="profile-stat-lbl">${t('profile_income')}</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-val">${p.ekLifetime||0}</div>
+          <div class="profile-stat-lbl">EK total</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-val">${p.playtimeMs ? _formatPlaytime(p.playtimeMs) : '—'}</div>
+          <div class="profile-stat-lbl">${t('profile_playtime')}</div>
+        </div>
+      </div>
+
+      ${favGame ? `
+      <div style="display:flex;align-items:center;gap:8px;background:#1a1a1a;border-radius:10px;padding:10px;margin-bottom:10px;">
+        <img src="${favGameIcon}" style="width:28px;height:28px;border-radius:6px;">
+        <div>
+          <div style="font-size:10px;color:#888;">${t('profile_fav_game')}</div>
+          <div style="font-weight:bold;font-size:13px;">${favGame}</div>
+        </div>
+      </div>` : ''}
+
+      <button onclick="openReactionPicker('${uid}');document.getElementById('publicProfileModal').style.display='none';"
+        style="width:100%;padding:11px;background:linear-gradient(135deg,#7c3aed,#d946ef);color:#fff;font-weight:bold;border:none;border-radius:10px;cursor:pointer;font-size:14px;">
+        ${t('friends_send_reaction')} 🎁
+      </button>
+    </div>
+  `;
+  m.style.display = 'flex';
+}
+
+// ==========================================
+// END PROFILE SYSTEM
+// ==========================================
 
 // Блокируем контекстное меню на Android при удержании спрайтов
 document.addEventListener('contextmenu', e => e.preventDefault());

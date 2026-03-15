@@ -246,6 +246,7 @@ function consumeTicketForCurrentGame() {
   if (typeof d !== 'undefined') {
     d.questTicketsSpent = (d.questTicketsSpent || 0) + 1;
     d.wQuestTicketsSpent = (d.wQuestTicketsSpent || 0) + 1;
+    d.ticketsLifetime = (d.ticketsLifetime || 0) + 1;
     d.questTicketsInGame = d.questTicketsInGame || {};
     d.wQuestTicketsInGame = d.wQuestTicketsInGame || {};
     const g = typeof currentGame !== 'undefined' ? currentGame : 'unknown';

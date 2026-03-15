@@ -1965,6 +1965,128 @@ body.kspt-game-active{
   background: rgba(0,230,118,0.1);
 }
 
+/* ===== PROFILE ===== */
+.profile-avatar-wrap {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin: 0 auto 10px;
+}
+.profile-avatar {
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 3px solid var(--accent, #00bcd4);
+  display: block;
+}
+.profile-online-dot {
+  position: absolute;
+  bottom: 4px;
+  right: 4px;
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  background: #00e676;
+  border: 2px solid #111;
+}
+.profile-card {
+  background: #111;
+  border-radius: 14px;
+  padding: 14px;
+  margin-bottom: 10px;
+  border: 1px solid #222;
+}
+.profile-stat-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.profile-stat {
+  background: #1a1a1a;
+  border-radius: 10px;
+  padding: 10px;
+  text-align: center;
+}
+.profile-stat-val {
+  font-size: 16px;
+  font-weight: bold;
+  color: #00bcd4;
+}
+.profile-stat-lbl {
+  font-size: 10px;
+  color: #666;
+  margin-top: 2px;
+}
+.skin-mini-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+.skin-mini {
+  width: 44px;
+  height: 44px;
+  border-radius: 8px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+}
+.skin-mini img {
+  width: 32px;
+  height: 32px;
+  object-fit: contain;
+}
+.skin-mini-active {
+  outline: 2px solid #00e676;
+  outline-offset: 2px;
+  background: rgba(0,230,118,0.1);
+}
+.friend-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 10px 12px;
+  background: #111;
+  border-radius: 12px;
+  margin-bottom: 8px;
+  border: 1px solid #222;
+  cursor: pointer;
+}
+.friend-avatar {
+  width: 42px;
+  height: 42px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #333;
+  flex-shrink: 0;
+}
+.friend-online { border-color: #00e676; }
+.reaction-grid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  padding: 10px 0;
+}
+.reaction-btn {
+  font-size: 22px;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 10px;
+  width: 44px;
+  height: 44px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.15s;
+}
+.reaction-btn:active { background: #2a2a2a; }
+
 </style>
 </head>
 

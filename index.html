@@ -245,6 +245,30 @@ window.addEventListener('message', (event) => {
   </div>
 </div>
 
+<div id="profile" class="screen">
+  <div class="top-bar">
+    <img src="profile.png" onerror="this.src='seri.png'" style="width:28px;height:28px;border-radius:50%;">
+    <span style="font-weight:bold;" data-lang-key="profile">Profile</span>
+    <img src="iks.png" class="close-x" onclick="openScreen('main')">
+  </div>
+
+  <!-- Tabs -->
+  <div style="display:flex;gap:8px;padding:0 12px 10px;">
+    <button id="profileTabBtn" onclick="switchProfileTab('profile')"
+      style="flex:1;padding:9px;border-radius:10px;border:none;font-weight:bold;font-size:13px;cursor:pointer;background:linear-gradient(135deg,#00bcd4,#0097a7);color:#000;"
+      data-lang-key="profile_tab_profile">Profile</button>
+    <button id="friendsTabBtn" onclick="switchProfileTab('friends')"
+      style="flex:1;padding:9px;border-radius:10px;border:1px solid #333;background:#1a1a1a;color:#aaa;font-weight:bold;font-size:13px;cursor:pointer;"
+      data-lang-key="profile_tab_friends">Friends</button>
+  </div>
+
+  <!-- Profile Tab -->
+  <div id="profileTabContent" style="padding:0 12px 80px;"></div>
+
+  <!-- Friends Tab -->
+  <div id="friendsTabContent" style="display:none;padding:0 12px 80px;"></div>
+</div>
+
 <div id="market" class="screen">
   <div id="marketContainer"></div>
 </div>
@@ -1600,6 +1624,10 @@ window.addEventListener('message', (event) => {
     <div class="nav-icon" style="background: url('bir.png') center/cover;"></div>
     <span data-lang-key="market">Market</span>
     <div id="badge-market" class="notif-badge" style="display:none; top:4px; right:12px;"></div>
+  </div>
+  <div class="nav-item" id="navProfile" onclick="openScreen('profile')">
+    <div class="nav-icon" style="background: url('profile.png') center/cover;"></div>
+    <span data-lang-key="profile">Profile</span>
   </div>
 </div>
 

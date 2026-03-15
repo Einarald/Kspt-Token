@@ -1804,6 +1804,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <div id="adminTabGlobal"  class="ap-tab ap-tab-active" onclick="adminTab('global')">🌐 Global</div>
     <div id="adminTabEffects" class="ap-tab" onclick="adminTab('effects')">✨ Effects</div>
     <div id="adminTabMod"     class="ap-tab" onclick="adminTab('mod')">🔨 Mod</div>
+    <div id="adminTabOther"   class="ap-tab" onclick="adminTab('other')">⚙️ Other</div>
   </div>
 
   <!-- ===== GLOBAL ===== -->
@@ -2572,6 +2573,27 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
 
   </div><!-- /modSection -->
+
+  <div id="adminOtherSection" style="display:none;">
+    <div class="ap-card" style="border-color:#4a1515;">
+      <h3 style="color:#ef5350;">🗑 Force Delete Token</h3>
+      <p style="color:#9fa8da;font-size:11px;margin:0 0 8px;">Select a token to permanently remove it from the exchange.</p>
+      <div id="apTokenList" style="display:flex;flex-direction:column;gap:6px;margin-bottom:8px;">
+        <div style="color:#555;font-size:12px;">Loading tokens...</div>
+      </div>
+      <div id="apSelectedToken" style="display:none;background:#1a1a1a;border-radius:8px;padding:8px;margin-bottom:8px;">
+        <div style="display:flex;align-items:center;gap:8px;">
+          <img id="apSelectedTokenIcon" src="kspt.png" style="width:32px;height:32px;border-radius:50%;object-fit:cover;">
+          <div>
+            <div id="apSelectedTokenName" style="font-weight:bold;"></div>
+            <div id="apSelectedTokenId" style="font-size:10px;color:#555;"></div>
+          </div>
+        </div>
+      </div>
+      <button class="ap-btn ap-btn-red" style="width:100%;" onclick="adminForceDeleteToken()">🗑 Force Delete Selected Token</button>
+    </div>
+  </div><!-- /otherSection -->
+
 </div><!-- /ap-wrap -->
 </div>
 <!-- ===================== /ADMIN PANEL MODAL ===================== -->
@@ -2610,7 +2632,14 @@ document.addEventListener('DOMContentLoaded', function () {
     </div>
   </div>
 </div>
-<!-- ===================== /PLAYER DETAIL MODAL ===================== -->
+
+<!-- ===================== TOKEN DETAIL MODAL ===================== -->
+<div id="tokenDetailModal" onclick="if(event.target===this)this.style.display='none'" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.8);align-items:center;justify-content:center;overflow-y:auto;padding:20px;box-sizing:border-box;">
+  <div style="background:#111;border-radius:18px;padding:20px;width:100%;max-width:360px;border:1px solid #333;position:relative;">
+    <button onclick="document.getElementById('tokenDetailModal').style.display='none'" style="position:absolute;top:10px;right:10px;background:rgba(255,255,255,0.08);border:none;color:#aaa;font-size:16px;width:28px;height:28px;border-radius:50%;cursor:pointer;display:flex;align-items:center;justify-content:center;line-height:1;">✕</button>
+    <div id="tokenDetailContent"></div>
+  </div>
+</div>
 
 </body>
 </html>

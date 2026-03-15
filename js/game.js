@@ -300,7 +300,7 @@ const translations = {
     'token_created': 'Personal token created!',
     'token_deleted': 'Personal token deleted',
     'token_details': 'Token Details',
-    'ticker_label': 'Ticker (3-5 characters):',
+    'ticker_label': 'Ticker (3-8 characters):',
     'name_label': 'Token Name:',
     'desc_label': 'Description:',
     'supply_label': 'Total Supply:',
@@ -310,10 +310,10 @@ const translations = {
     'creation_cost': 'Creation Cost',
     'confirm_token': 'Create token {0} ({1}) with supply {2}? Initial price: {3} KSPT. Cost: {4} KSPT.',
     'need_kspt': 'Need {0} KSPT to create token',
-    'ticker_error': 'Ticker must be 3-5 characters',
+    'ticker_error': 'Ticker must be 3-8 characters',
     'name_error': 'Name must be 1-20 characters',
     'desc_error': 'Description must be 10-250 characters',
-    'supply_error': 'Supply must be 100-99999',
+    'supply_error': 'Supply must be 1-999999',
     'image_cropped': 'Image cropped successfully',
     'invalid_image': 'Please select a valid image',
     'my_token': 'My Token',
@@ -738,7 +738,7 @@ const translations = {
     'token_created': 'Персональный токен создан!',
     'token_deleted': 'Персональный токен удален',
     'token_details': 'Детали токена',
-    'ticker_label': 'Тикер (3-5 символов):',
+    'ticker_label': 'Тикер (3-8 символов):',
     'name_label': 'Название токена:',
     'desc_label': 'Описание:',
     'supply_label': 'Общее предложение:',
@@ -748,10 +748,10 @@ const translations = {
     'creation_cost': 'Стоимость создания',
     'confirm_token': 'Создать токен {0} ({1}) с предложением {2}? Начальная цена: {3} KSPT. Стоимость: {4} KSPT.',
     'need_kspt': 'Нужно {0} KSPT для создания токена',
-    'ticker_error': 'Тикер должен быть 3-5 символов',
+    'ticker_error': 'Тикер должен быть 3-8 символов',
     'name_error': 'Название должно быть 1-20 символов',
     'desc_error': 'Описание должно быть 10-250 символов',
-    'supply_error': 'Предложение должно быть 100-99999',
+    'supply_error': 'Предложение должно быть 1-999999',
     'image_cropped': 'Изображение обрезано успешно',
     'invalid_image': 'Пожалуйста, выберите валидное изображение',
     'my_token': 'Мой Токен',
@@ -5673,11 +5673,21 @@ function renderTradeView() {
   
   container.innerHTML = `
     <div class="top-bar">
-      ${tokenIcon.startsWith('data:') ? 
-        `<img src="${tokenIcon}" style="width:32px;height:32px;border-radius:50%;" onerror="this.src='kspt.png'">` :
-        `<img src="${tokenIcon}" onerror="this.src='kspt.png'">`
-      }
-      <span style="font-weight:bold">${tokenName}</span>
+      ${(selectedToken === 'personalToken' || selectedToken.startsWith('userToken_')) && tokenData?.firebaseId ? `
+        <div style="display:flex;align-items:center;gap:8px;cursor:pointer;" onclick="showTokenDetail('${tokenData.firebaseId}')">
+          ${tokenIcon.startsWith('data:') ?
+            `<img src="${tokenIcon}" style="width:32px;height:32px;border-radius:50%;" onerror="this.src='kspt.png'">` :
+            `<img src="${tokenIcon}" onerror="this.src='kspt.png'">`
+          }
+          <span style="font-weight:bold;">${tokenName}</span>
+        </div>
+      ` : `
+        ${tokenIcon.startsWith('data:') ?
+          `<img src="${tokenIcon}" style="width:32px;height:32px;border-radius:50%;" onerror="this.src='kspt.png'">` :
+          `<img src="${tokenIcon}" onerror="this.src='kspt.png'">`
+        }
+        <span style="font-weight:bold">${tokenName}</span>
+      `}
       <img src="iks.png" class="close-x" onclick="closeTrade()">
     </div>
     
@@ -5882,19 +5892,21 @@ function initMarketUI() {
         <button onclick="createPersonalToken()" style="background:#ff9800; color:#000; margin-bottom:10px;">${t('create_token')} (899 KSPT)</button>
       ` : `<div style="font-size:12px;color:#ff9800;margin-bottom:8px;">Max 3 tokens per user</div>`}
       ${(d.market.myTokens && d.market.myTokens.length > 0) ? d.market.myTokens.map(tok => `
-        <div style="border:1px solid ${String(tok.creatorId) === _getMyId() ? '#ff9800' : '#333'};border-radius:10px;padding:8px;margin-top:8px;display:flex;flex-direction:column;gap:6px;">
+        <div style="border:1px solid ${String(tok.creatorId) === _getMyId() ? '#ff9800' : '#333'};border-radius:10px;padding:8px;margin-top:8px;display:flex;flex-direction:column;gap:6px;cursor:pointer;"
+             onclick="showTokenDetail('${tok.firebaseId}')">
           <div style="display:flex;align-items:center;gap:8px;">
-            <img src="${tok.icon}" style="width:32px;height:32px;border-radius:50%;object-fit:cover;" onerror="this.src='kspt.png'">
+            <img src="${tok.icon}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;" onerror="this.src='kspt.png'">
             <div style="flex:1;">
-              <div style="display:flex;align-items:center;gap:6px;">
+              <div style="display:flex;align-items:center;gap:6px;flex-wrap:wrap;">
                 <b>${tok.ticker}</b> — ${tok.name}
                 ${String(tok.creatorId) === _getMyId() ? '<span style="font-size:10px;background:#ff9800;color:#000;padding:1px 6px;border-radius:8px;font-weight:bold;">MY TOKEN</span>' : ''}
               </div>
               <div style="font-size:11px;color:#aaa;">by ${tok.creatorName || tok.creatorId}</div>
             </div>
+            <div style="font-size:12px;color:#ff9800;font-weight:bold;">${formatNumber(tok.price,4)}</div>
           </div>
-          ${tok.creatorId === _getMyId() ? `
-          <div style="display:flex;gap:6px;">
+          ${String(tok.creatorId) === _getMyId() ? `
+          <div style="display:flex;gap:6px;" onclick="event.stopPropagation()">
             <button onclick="changeTokenIcon('${tok.firebaseId}')" style="background:#1565c0;font-size:12px;flex:1;">Change Icon</button>
             <button onclick="deletePersonalToken('${tok.firebaseId}')" style="background:#d32f2f;font-size:12px;flex:1;">${t('delete_token')}</button>
           </div>
@@ -6108,22 +6120,22 @@ function renderTokenCreationForm() {
       
       <div style="margin-bottom: 10px;">
         <div style="font-size: 13px; margin-bottom: 5px; color: #aaa;">${t('ticker_label')}</div>
-        <input type="text" id="tokenTicker" placeholder="PERS" maxlength="5">
+        <input type="text" id="tokenTicker" placeholder="PERS" maxlength="8" style="box-sizing:border-box;width:100%;">
       </div>
       
       <div style="margin-bottom: 10px;">
         <div style="font-size: 13px; margin-bottom: 5px; color: #aaa;">${t('name_label')}</div>
-        <input type="text" id="tokenName" placeholder="${t('my_token')}" maxlength="20">
+        <input type="text" id="tokenName" placeholder="${t('my_token')}" maxlength="20" style="box-sizing:border-box;width:100%;">
       </div>
       
       <div style="margin-bottom: 10px;">
         <div style="font-size: 13px; margin-bottom: 5px; color: #aaa;">${t('desc_label')}</div>
-        <input type="text" id="tokenDesc" placeholder="${t('token_desc')}">
+        <input type="text" id="tokenDesc" placeholder="${t('token_desc')}" style="box-sizing:border-box;width:100%;">
       </div>
       
       <div style="margin-bottom: 10px;">
         <div style="font-size: 13px; margin-bottom: 5px; color: #aaa;">${t('supply_label')}</div>
-        <input type="number" id="tokenSupply" placeholder="1000" min="100" max="99999">
+        <input type="number" id="tokenSupply" placeholder="1000" min="1" max="999999" style="box-sizing:border-box;width:100%;">
       </div>
       
       <div style="margin-bottom: 15px;">
@@ -6144,7 +6156,7 @@ function renderTokenCreationForm() {
       </div>
       
       <div style="border-top: 1px solid #333; padding-top: 15px; margin-top: 15px;">
-        <div style="font-size: 13px; margin-bottom: 10px; color: #aaa;">${t('creation_cost')}: <span style="color: #ff9800;">899 KSPT</span></div>
+        <div style="font-size: 13px; margin-bottom: 10px; color: #aaa; word-break: break-word;">${t('creation_cost')}: <span style="color: #ff9800;">899 KSPT</span></div>
         <button onclick="confirmTokenCreation()" style="background: #ff9800; color: #000; font-weight: bold;">${t('create_token')}</button>
         <button onclick="closeTokenCreation()" style="margin-top: 8px; background: #444;">${t('cancel')}</button>
       </div>
@@ -6179,7 +6191,7 @@ function confirmTokenCreation() {
   const description = document.getElementById('tokenDesc')?.value.trim();
   const supply = parseInt(document.getElementById('tokenSupply')?.value);
   
-  if (!ticker || ticker.length < 3 || ticker.length > 5) {
+  if (!ticker || ticker.length < 3 || ticker.length > 8) {
     showToast(t('ticker_error'));
     return;
   }
@@ -6194,7 +6206,7 @@ function confirmTokenCreation() {
     return;
   }
   
-  if (!supply || supply < 100 || supply > 99999) {
+  if (!supply || supply < 1 || supply > 999999) {
     showToast(t('supply_error'));
     return;
   }
@@ -7819,10 +7831,10 @@ function closeAdminPanel() {
 }
 
 function adminTab(tab) {
-  ['adminTabGlobal','adminTabEffects','adminTabMod'].forEach(id => {
+  ['adminTabGlobal','adminTabEffects','adminTabMod','adminTabOther'].forEach(id => {
     const el = document.getElementById(id); if (el) el.classList.remove('ap-tab-active');
   });
-  ['adminGlobalSection','adminEffectsSection','adminModSection'].forEach(id => {
+  ['adminGlobalSection','adminEffectsSection','adminModSection','adminOtherSection'].forEach(id => {
     const el = document.getElementById(id); if (el) el.style.display = 'none';
   });
   if (tab === 'global') {
@@ -7831,9 +7843,13 @@ function adminTab(tab) {
   } else if (tab === 'effects') {
     document.getElementById('adminTabEffects').classList.add('ap-tab-active');
     document.getElementById('adminEffectsSection').style.display = 'block';
-  } else {
+  } else if (tab === 'mod') {
     document.getElementById('adminTabMod').classList.add('ap-tab-active');
     document.getElementById('adminModSection').style.display = 'block';
+  } else {
+    document.getElementById('adminTabOther').classList.add('ap-tab-active');
+    document.getElementById('adminOtherSection').style.display = 'block';
+    adminLoadTokenList();
   }
 }
 
@@ -14567,7 +14583,20 @@ document.addEventListener('firebase-ready', _updateLastSeen);
 if (window._firebaseReady) _updateLastSeen();
 setInterval(_updateLastSeen, 10000);
 
+// Квесты стартуют автоматически при загрузке
+(function() {
+  if (!d.quests) initQuestsData();
+  startQuestTimers();
+})();
+
 document.querySelectorAll('img').forEach(img => img.setAttribute('draggable', 'false'));
+const _bombImg = document.getElementById('bombBoxImg');
+if (_bombImg) {
+    _bombImg.style.webkitTouchCallout = 'none';
+    _bombImg.style.webkitUserSelect = 'none';
+    _bombImg.addEventListener('contextmenu', e => e.preventDefault());
+    _bombImg.addEventListener('touchstart', e => { if (e.cancelable) e.preventDefault(); }, {passive: false});
+}
 
 // ========== GAME RECORDS LEADERBOARD ==========
 let _grCurrentGame = 'snake';
@@ -14674,6 +14703,150 @@ function renderGameRecordsLB() {
   el.innerHTML = html;
 }
 // ========== END GAME RECORDS LEADERBOARD ==========
+
+async function adminForceDeleteToken() {
+  if (!_isAdminUser() || !window._firebaseDB) return;
+  const fid = window._adminSelectedTokenId;
+  if (!fid) { showToast('Select a token first'); return; }
+  const name = document.getElementById('apSelectedTokenName')?.textContent || fid;
+  if (!confirm(`Force delete token: ${name}?`)) return;
+  try {
+    await window._firebaseRef(window._firebaseDB, 'market/userTokens/' + fid).remove();
+    showToast('✅ Token deleted: ' + name);
+    window._adminSelectedTokenId = null;
+    document.getElementById('apSelectedToken').style.display = 'none';
+    adminLoadTokenList();
+  } catch(e) {
+    showToast('❌ Error: ' + e.message);
+  }
+}
+
+function adminLoadTokenList() {
+  if (!window._firebaseDB) return;
+  const list = document.getElementById('apTokenList');
+  if (!list) return;
+  list.innerHTML = '<div style="color:#555;font-size:12px;">Loading...</div>';
+  window._firebaseRef(window._firebaseDB, 'market/userTokens').once('value').then(snap => {
+    const tokens = snap.val();
+    if (!tokens) { list.innerHTML = '<div style="color:#555;font-size:12px;">No tokens found</div>'; return; }
+    list.innerHTML = '';
+    Object.entries(tokens).forEach(([fid, tok]) => {
+      const div = document.createElement('div');
+      div.style.cssText = 'display:flex;align-items:center;gap:8px;padding:7px 8px;border-radius:8px;cursor:pointer;border:1px solid #333;background:#111;';
+      div.innerHTML = `<img src="${tok.icon||'kspt.png'}" onerror="this.src='kspt.png'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;">
+        <div style="flex:1;min-width:0;">
+          <div style="font-weight:bold;font-size:13px;">${tok.ticker||'?'} — ${tok.name||''}</div>
+          <div style="font-size:10px;color:#555;">by ${tok.creatorName||tok.creatorId||'?'}</div>
+        </div>
+        <div style="font-size:11px;color:#ff9800;">${formatNumber(tok.price||0,4)} KSPT</div>`;
+      div.onclick = () => {
+        document.querySelectorAll('#apTokenList > div').forEach(d => d.style.borderColor = '#333');
+        div.style.borderColor = '#ef5350';
+        window._adminSelectedTokenId = fid;
+        document.getElementById('apSelectedToken').style.display = 'block';
+        document.getElementById('apSelectedTokenIcon').src = tok.icon || 'kspt.png';
+        document.getElementById('apSelectedTokenName').textContent = `${tok.ticker} — ${tok.name}`;
+        document.getElementById('apSelectedTokenId').textContent = fid;
+      };
+      list.appendChild(div);
+    });
+  });
+}
+
+function showTokenDetail(firebaseId) {
+  const tok = (d.market.myTokens || []).find(t => t.firebaseId === firebaseId);
+  if (!tok) return;
+
+  const initialPrice = tok.history && tok.history.length ? tok.history[0] : tok.price;
+  const currentPrice = tok.price;
+  const priceChange = initialPrice > 0 ? ((currentPrice - initialPrice) / initialPrice * 100).toFixed(1) : '0.0';
+  const changeColor = priceChange >= 0 ? '#00e676' : '#ff4081';
+  const createdDate = tok.createdAt ? new Date(tok.createdAt).toLocaleDateString() : '—';
+  const lastPrice = tok.history && tok.history.length >= 2 ? tok.history[tok.history.length - 2] : currentPrice;
+
+  // Аватарка создателя из leaderboard
+  let creatorAvatar = 'seri.png';
+  if (window._firebaseDB) {
+    window._firebaseRef(window._firebaseDB, 'leaderboard/' + tok.creatorId).once('value').then(snap => {
+      const data = snap?.val();
+      if (data?.photoUrl) {
+        const img = document.getElementById('tokenDetailCreatorAvatar');
+        if (img) img.src = data.photoUrl;
+      }
+    });
+  }
+
+  document.getElementById('tokenDetailContent').innerHTML = `
+    <!-- Шапка -->
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:16px;">
+      <img src="${tok.icon}" onerror="this.src='kspt.png'" style="width:60px;height:60px;border-radius:50%;object-fit:cover;border:2px solid #ff9800;">
+      <div>
+        <div style="font-size:20px;font-weight:bold;">${tok.ticker}</div>
+        <div style="color:#aaa;font-size:13px;">${tok.name}</div>
+        ${tok.description ? `<div style="color:#666;font-size:11px;margin-top:2px;">${tok.description}</div>` : ''}
+      </div>
+    </div>
+
+    <!-- Цена -->
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:10px;">
+      <div style="background:#1a1a1a;border-radius:10px;padding:10px;">
+        <div style="color:#888;font-size:11px;">Current Price</div>
+        <div style="font-weight:bold;color:#ff9800;" data-live-price>${formatNumber(currentPrice, 4)} KSPT</div>
+      </div>
+      <div style="background:#1a1a1a;border-radius:10px;padding:10px;">
+        <div style="color:#888;font-size:11px;">Previous Price</div>
+        <div style="font-weight:bold;color:#aaa;">${formatNumber(lastPrice, 4)} KSPT</div>
+      </div>
+      <div style="background:#1a1a1a;border-radius:10px;padding:10px;">
+        <div style="color:#888;font-size:11px;">Initial Price</div>
+        <div style="font-weight:bold;color:#ccc;">${formatNumber(initialPrice, 4)} KSPT</div>
+      </div>
+      <div style="background:#1a1a1a;border-radius:10px;padding:10px;">
+        <div style="color:#888;font-size:11px;">Change</div>
+        <div style="font-weight:bold;color:${changeColor};">${priceChange >= 0 ? '+' : ''}${priceChange}%</div>
+      </div>
+    </div>
+
+    <!-- Инфо -->
+    <div style="background:#1a1a1a;border-radius:10px;padding:10px;margin-bottom:10px;display:flex;flex-direction:column;gap:6px;">
+      <div style="display:flex;justify-content:space-between;">
+        <span style="color:#888;font-size:12px;">Total Supply</span>
+        <span style="font-weight:bold;">${formatNumber(tok.supply, 0)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="color:#888;font-size:12px;">You own</span>
+        <span style="font-weight:bold;color:#00e676;">${formatNumber(tok.owned || 0, 2)}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="color:#888;font-size:12px;">Created</span>
+        <span style="font-weight:bold;color:#aaa;">${createdDate}</span>
+      </div>
+    </div>
+
+    <!-- Создатель -->
+    <div style="background:#1a1a1a;border-radius:10px;padding:10px;display:flex;align-items:center;gap:10px;">
+      <img id="tokenDetailCreatorAvatar" src="seri.png" onerror="this.src='seri.png'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1px solid #333;">
+      <div>
+        <div style="font-size:11px;color:#888;">Creator</div>
+        <div style="font-weight:bold;font-size:13px;">${tok.creatorName || tok.creatorId}</div>
+      </div>
+      ${String(tok.creatorId) === _getMyId() ? '<span style="margin-left:auto;font-size:10px;background:#ff9800;color:#000;padding:2px 7px;border-radius:8px;font-weight:bold;">YOU</span>' : ''}
+    </div>
+  `;
+
+  const modal = document.getElementById('tokenDetailModal');
+  modal.style.display = 'flex';
+
+  // Обновлять цену каждые 3 сек пока открыто
+  clearInterval(window._tokenDetailInterval);
+  window._tokenDetailInterval = setInterval(() => {
+    if (modal.style.display === 'none') { clearInterval(window._tokenDetailInterval); return; }
+    const updated = (d.market.myTokens || []).find(t => t.firebaseId === firebaseId);
+    if (!updated) return;
+    const el = document.querySelector('#tokenDetailContent [data-live-price]');
+    if (el) el.textContent = formatNumber(updated.price, 4) + ' KSPT';
+  }, 10000);
+}
 
 // Блокируем контекстное меню на Android при удержании спрайтов
 document.addEventListener('contextmenu', e => e.preventDefault());

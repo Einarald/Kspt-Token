@@ -344,9 +344,9 @@ function step(dt){
             score++;
             currentSpeedMultiplier += 0.02;
             // Плавный переход в ночь после 100 очков
-            if (score >= 100) {
-                // Каждые 100 очков чередуем день/ночь
-                const cycle = Math.floor(score / 100);
+            if (score >= 50) {
+                // Каждые 50 очков чередуем день/ночь
+                const cycle = Math.floor(score / 50);
                 const targetNight = cycle % 2 === 1 ? 1 : 0; // нечётный цикл = ночь, чётный = день
                 if (nightMode < targetNight) nightMode = Math.min(targetNight, nightMode + 0.25);
                 else if (nightMode > targetNight) nightMode = Math.max(targetNight, nightMode - 0.25);

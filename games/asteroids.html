@@ -343,6 +343,8 @@ let __kspt_gameOverHandled = false;
 let score = 0;
 let lives = 3;
 let wave = 1;
+let sessionEK = 0;
+let _ekMilestone = 0; 
 
 // Player
 let player = {
@@ -371,9 +373,6 @@ let _bossQueue = [];
 function _getNextBossType(waveNum) {
     if (waveNum === 100) return 100;
     if (_bossQueue.length === 0) {
-        // Первая волна — всегда босс 1
-        if (waveNum === 5) return 1;
-        // Перемешиваем 1-5
         _bossQueue = [1,2,3,4,5].sort(() => Math.random()-0.5);
     }
     return _bossQueue.shift();
@@ -675,12 +674,12 @@ function step(dtSec) {
         } else {
             const homingStrength = 0.05;
             const dxToPlayer = player.x - e.x;
-            e.x += (currentEnemySpeed * e.speedOffset) * enemyDirection * dtSec + dxToPlayer * homingStrength * dtSec;
+            e.x += (currentEnemySpeed * e.speedOffset) * enemyDirection * dtSec;
             e.y = e.baseY + Math.sin(Date.now()/300 + e.phase) * 10;
             if(e.x > GAME_W - e.w/2 || e.x < e.w/2) hitEdge = true;
             if(e.y > bottomMost) bottomMost = e.y;
             e.shootTimer = (e.shootTimer||0) + dtSec;
-            if(e.shootTimer > 5.0 - Math.min(wave*0.08, 3)) {
+            if(e.shootTimer > 5.3 - Math.min(wave*0.06, 3)) {
                 e.shootTimer = 0;
                 const dx = player.x - e.x;
                 const dy = player.y - e.y;
@@ -696,10 +695,17 @@ function step(dtSec) {
         for(let e of enemies) {
             if(e.x > GAME_W - e.w/2) e.x = GAME_W - e.w/2 - 1;
             if(e.x < e.w/2) e.x = e.w/2 + 1;
-            if(!e.isMinion && !e.isBoss) {
-                e.baseY += enemyDropDist;
-                if(e.baseY > player.y - 30) lives = 0;
-            }
+        }
+        // Опускаем всех обычных врагов на шаг вниз
+        enemies.filter(e => !e.isMinion && !e.isBoss).forEach(e => {
+            e.baseY += enemyDropDist;
+        });
+        // Проверяем только самого нижнего
+        const lowest = enemies.filter(e => !e.isMinion && !e.isBoss).reduce((a,b) => a.baseY > b.baseY ? a : b, {baseY:0});
+        if(lowest.baseY > player.y - 30) {
+            lives--; updateUI();
+            // Откатываем всех обратно
+            enemies.filter(e => !e.isMinion && !e.isBoss).forEach(e => e.baseY -= enemyDropDist);
         }
     }
 
@@ -725,7 +731,12 @@ function step(dtSec) {
                         // Спавним сердечко
                         hearts.push({ x: e.x, y: e.y, vy: 140, life: 3.3 });
                         enemies.splice(ei, 1);
-                        score += e.bossType >= 50 ? 2000 : e.bossType === 1 ? 300 : e.bossType === 2 ? 440 : 500;
+                        score += e.bossType === 100 ? 5000 : e.bossType === 1 ? 300 : e.bossType === 2 ? 440 : 500;
+                        if (e.bossType === 100) {
+                            sessionEK += 3;
+                            safeAwardGameEK(3, e.x, e.y);
+                            spawnFloatingText('+3 EK 💀', e.x, e.y - 30, '#ea80fc');
+                        }
                         const reward = safeGetOfflinePercent(0.4 * 15 + 5) || 0;
                         window.__kspt_earnedKSPT = (window.__kspt_earnedKSPT||0) + reward;
                         spawnFloatingText(e.bossType >= 50 ? `👾 SECRET! +${reward.toFixed(2)}` : `💥 BOSS! +${reward.toFixed(2)}`, e.x, e.y, '#ffd54f');
@@ -738,7 +749,15 @@ function step(dtSec) {
                     createExplosion(e.x, e.y, e.type === 1 ? '#ff4081' : e.isMinion ? '#00e676' : '#b388ff');
                     enemies.splice(ei, 1);
                     score += e.isMinion ? 5 : 10;
-                    const reward = safeGetOfflinePercent(0.29) || 0;
+                    // +1 EK за каждые 1000 очков, макс 2
+                    const ekThreshold = Math.floor(score / 1000);
+                    if (ekThreshold > _ekMilestone && _ekMilestone < 2) {
+                        _ekMilestone = Math.min(2, ekThreshold);
+                        sessionEK++;
+                        safeAwardGameEK(1, player.x, player.y);
+                        spawnFloatingText('+1 EK 🏆', player.x, player.y - 30, '#ff4081');
+                    }
+                    const reward = safeGetOfflinePercent(0.3) || 0;
                     window.__kspt_earnedKSPT = (window.__kspt_earnedKSPT||0) + reward;
                     spawnFloatingText(`+${reward.toFixed(2)}`, e.x, e.y, '#00e676');
                     try { const crect = canvas.getBoundingClientRect(); safeAwardGameReward(reward, crect.left + e.x, crect.top + e.y); } catch(err){}
@@ -1176,6 +1195,8 @@ function restartGame(){
     score = 0;
     lives = 3;
     wave = 1;
+    sessionEK = 0;
+    _ekMilestone = 0;
     _bossQueue = [];
     player.x = GAME_W / 2;
     bullets = [];

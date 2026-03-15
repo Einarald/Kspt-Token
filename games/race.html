@@ -1730,9 +1730,9 @@ scene.add(car);
                 }
             } else {
                 // Боты: как раньше
-                if (raceResults[0]?.name === 'You') { ekReward = 2; totalEK = 2; } 
+                if (raceResults[0]?.name === 'You') { ekReward = 1; totalEK = 1; bonusPercent = 5; }
                 else if (raceResults[1]?.name === 'You') { ekReward = 1; totalEK = 1; } 
-                else if (raceResults[2]?.name === 'You') { bonusPercent = 5; totalEK = 0; }
+                else if (raceResults[2]?.name === 'You') { bonusPercent = 8; totalEK = 0; }
             }
 
             if (bonusPercent > 0) {

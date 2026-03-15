@@ -607,6 +607,42 @@ function setupJoystick() {
         resetKnob();
     });
 
+// Управление пальцем по canvas
+    canvas.addEventListener('touchstart', (e) => {
+        e.preventDefault();
+        const t = e.changedTouches[0];
+        canvas._touchStartX = t.clientX;
+        canvas._touchStartY = t.clientY;
+        canvas._touchActive = t.identifier;
+        markUserInteracted();
+    }, {passive: false});
+
+    canvas.addEventListener('touchmove', (e) => {
+        e.preventDefault();
+        for(const t of e.changedTouches) {
+            if(t.identifier !== canvas._touchActive) continue;
+            const dx = t.clientX - canvas._touchStartX;
+            const dy = t.clientY - canvas._touchStartY;
+            const dist = Math.sqrt(dx*dx+dy*dy);
+            if(dist > 8 && gameRunning && !gamePaused && !player.isDead) {
+                joystickAngle = Math.atan2(dy, dx);
+                joystickPower = Math.min(1, dist / 60);
+                joystickActive = true;
+            }
+        }
+    }, {passive: false});
+
+    canvas.addEventListener('touchend', (e) => {
+        e.preventDefault();
+        for(const t of e.changedTouches) {
+            if(t.identifier === canvas._touchActive) {
+                canvas._touchActive = null;
+                joystickActive = false;
+                joystickPower = 0;
+            }
+        }
+    }, {passive: false});
+
     // Mouse events
     joystick.addEventListener('mousedown', (e) => {
         e.preventDefault();

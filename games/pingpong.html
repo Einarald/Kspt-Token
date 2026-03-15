@@ -467,31 +467,53 @@ downBtn.addEventListener('pointerdown', (e)=>{
 upBtn.addEventListener('contextmenu', e => e.preventDefault());
 downBtn.addEventListener('contextmenu', e => e.preventDefault());
 
-// Управление пальцем по канвасу
+// Управление пальцем по канвасу — тап (верх/низ) + перетаскивание
 (function(){
     let activeTouch = null;
+    let lastTouchY = null;
+    let dragMode = false;
+
     canvas.addEventListener('touchstart', (e) => {
         e.preventDefault();
         const t = e.changedTouches[0];
         activeTouch = t.identifier;
+        lastTouchY = t.clientY;
+        dragMode = false;
+        // По умолчанию — верх/низ
         const rect = canvas.getBoundingClientRect();
         const touchY = t.clientY - rect.top;
         joystickDirection = touchY < rect.height / 2 ? -1 : 1;
     }, {passive: false});
+
     canvas.addEventListener('touchmove', (e) => {
         e.preventDefault();
         for(const t of e.changedTouches) {
             if(t.identifier !== activeTouch) continue;
-            const rect = canvas.getBoundingClientRect();
-            const touchY = t.clientY - rect.top;
-            joystickDirection = touchY < rect.height / 2 ? -1 : 1;
+            const dy = t.clientY - lastTouchY;
+            if(Math.abs(dy) > 5) dragMode = true;
+            if(dragMode) {
+                // Перетаскивание — двигаем платформу напрямую
+                const rect = canvas.getBoundingClientRect();
+                const scaleY = canvas.height / rect.height;
+                const newY = (t.clientY - rect.top) * scaleY - playerPaddle.height / 2;
+                playerPaddle.y = Math.max(0, Math.min(canvas.height - playerPaddle.height, newY));
+                joystickDirection = 0;
+            } else {
+                const rect = canvas.getBoundingClientRect();
+                const touchY = t.clientY - rect.top;
+                joystickDirection = touchY < rect.height / 2 ? -1 : 1;
+            }
+            lastTouchY = t.clientY;
         }
     }, {passive: false});
+
     canvas.addEventListener('touchend', (e) => {
         e.preventDefault();
         for(const t of e.changedTouches) {
             if(t.identifier === activeTouch) {
                 activeTouch = null;
+                lastTouchY = null;
+                dragMode = false;
                 joystickDirection = 0;
             }
         }
@@ -518,8 +540,8 @@ document.addEventListener('keyup', (e)=>{
     ball.x = canvas.width / 2;
     ball.y = canvas.height / 2;
 
-    // Базовая скорость — НЕ умножаем на gameSpeed здесь
-    ball.speedX = (Math.random() > 0.5 ? 1 : -1) * 4;
+    // Мяч всегда летит к ИИ (вправо = положительный speedX)
+    ball.speedX = 4;
     ball.speedY = (Math.random() * 2 - 1) * 3;
 }
 

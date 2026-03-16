@@ -11201,6 +11201,8 @@ function initGame() {
     processOfflineIncome();
     // Streak check
     try { checkStreak(); } catch(e) { console.warn('streak error', e); }
+    // Apply profile tab location on startup
+    try { _applyProfileTabLocation(d.settings?.profileTabLocation || 'bottom'); } catch(e) {}
 
     // Initial UI update
     ui();

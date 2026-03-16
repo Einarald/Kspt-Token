@@ -232,6 +232,11 @@ const translations = {
     'buy_upgrade': 'Buy (+500) {0} KSPT',
      'back_to_main': 'Back to Main',
      'loading': 'Loading...',
+
+    //Egg
+    'easter_egg_box': 'Easter Egg',
+    'easter_egg_desc': 'Swipe to scratch open!',
+    'easter_egg_obtained': '🥚 Easter Egg obtained!',
     
     // Capsule
     'ancient_puzzle': 'Ancient Puzzle',
@@ -554,6 +559,9 @@ const translations = {
     'rarity_secret': 'Secret',
     'profile_reset_avatar': 'Reset avatar',
     'profile_reset_name': 'Name reset to Telegram name',
+    'gift_box': 'Gift Box',
+    'gift_box_desc': 'A gift from a friend!',
+    'gift_box_obtained': '🎁 You received a gift!',
   },
   ru: {
     // Main UI
@@ -575,6 +583,11 @@ const translations = {
     'exclusive': 'Эксклюзив',
     'capsule_exclusive': 'Эксклюзив капсулы',
     'preview': 'Превью 15с',
+
+    // Egg
+    'easter_egg_box': 'Пасхальное яйцо',
+    'easter_egg_desc': 'Свайпайте чтобы открыть!',
+    'easter_egg_obtained': '🥚 Пасхальное яйцо получено!',
     
     // Settings
     'settings': 'Настройки',
@@ -1096,6 +1109,9 @@ const translations = {
     'rarity_secret': 'Секретный',
     'profile_reset_avatar': 'Сбросить аватарку',
     'profile_reset_name': 'Имя сброшено на имя Telegram',
+    'gift_box': 'Подарок',
+    'gift_box_desc': 'Подарок от друга!',
+    'gift_box_obtained': '🎁 Вы получили подарок!',
   }
 };
 
@@ -1540,12 +1556,30 @@ if(cheatStage >= 3) {
   document.getElementById("redScreen").style.display = "flex";
 }
 
+const easterEggRewards = [
+  { type: 'kspt3h',    weight: 30, name: '3h Offline Income',  img: 'kspt.png' },
+  { type: 'znetons',   weight: 20, name: '+3 Tokens',          img: 'zneton.png' },
+  { type: 'capsule',   weight: 20, name: 'Free Capsule',       img: 'capsule.png' },
+  { type: 'yellowKey', weight: 10, name: '🟡 Yellow Key',      img: 'yellow.png' },
+  { type: 'puzzle',    weight: 7,  name: 'Puzzle Piece',       img: 'puz.png' },
+  { type: 'redKey',    weight: 5,  name: '🔴 Red Key',         img: 'red.png' },
+  { type: 'greenKey',  weight: 3,  name: '🟢 Green Key',       img: 'green.png' },
+  { type: 'bg_bunny',  weight: 2,  name: 'Background: Easter Bunny', img: 'bunn.png' }
+];
+
+function getWeightedEasterEggReward() {
+  const total = easterEggRewards.reduce((s, r) => s + r.weight, 0);
+  let rand = Math.random() * total;
+  for (const r of easterEggRewards) { rand -= r.weight; if (rand < 0) return r; }
+  return easterEggRewards[0];
+}
+
 const noobBoxRewards = [
   { type: 'kspt', value: 1, weight: 40, name: '+1 KSPT', img: 'kspt.png' },
   { type: 'banx', value: 5500, weight: 30, name: '+5500 BANX', img: 'bandit.png' },
   { type: 'jvm', value: 6.7, weight: 15, name: '+6.7 JVM', img: 'jvm.png' },
   { type: 'puzzle', weight: 5, name: 'Random Puzzle Piece', img: 'puz.png' },
-  { type: 'capsuleSkip', weight: 5, name: 'Capsule Timer Skip', img: 'iks.png' },
+  { type: 'capsuleSkip', weight: 5, name: 'Capsule Timer Skip', img: 'capsule5.png' },
   { type: 'skin', id: 'dirty', weight: 5, name: 'Skin: Dirty Fingers', img: 'dirty.png' }
 ];
 
@@ -1870,6 +1904,7 @@ function migrateData(oldData, defaultData) {
   if (!merged.market.jvmToken) merged.market.jvmToken = defaultData.market.jvmToken;
 
   if (!merged.noobBox) merged.noobBox = defaultData.noobBox;
+  if (!merged.easterEgg) merged.easterEgg = { obtained: false, swipes: 0 };
 
   return merged;
 }
@@ -1881,6 +1916,9 @@ if (!d.keys) {
 
 if (!d.keyBox) d.keyBox = { taps: 0 };
 if (!d.bombBox) d.bombBox = { obtained: false };
+if (!d.easterEgg) d.easterEgg = { obtained: false, swipes: 0 };
+if (!d.giftBox) d.giftBox = { obtained: false };
+if (!d.giftSentLog) d.giftSentLog = {};
 if (!d.fortuneWheel) d.fortuneWheel = { spinsUsed: 0, lastResetTime: 0 };
 // Admin ban check — runs every load
 if (d.adminBanned) {
@@ -1938,6 +1976,7 @@ function saveToFirebase() {
   try {
     const snapshot = JSON.parse(JSON.stringify(d));
     snapshot._savedAt = Date.now();
+    try { snapshot._ekshop = JSON.parse(localStorage.getItem('ekshop_owned') || '{}'); } catch(e) { snapshot._ekshop = {}; }
     // Don't save market history to save space
     if (snapshot.market) {
       ['ksptToken','banxToken','jvmToken'].forEach(k => {
@@ -1977,7 +2016,11 @@ function tryRestoreFromCloud() {
     if (cloudTime > localTime) {
       console.log('cloud save is newer — restoring');
       try {
+        if (cloudData._ekshop && typeof cloudData._ekshop === 'object') {
+          localStorage.setItem('ekshop_owned', JSON.stringify(cloudData._ekshop));
+        }
         delete cloudData._savedAt;
+        delete cloudData._ekshop;
         d = migrateData(cloudData, defaultData);
         localStorage.setItem('kspt', JSON.stringify(d));
         loadEkshopData();
@@ -3476,6 +3519,10 @@ function updateBackground() {
         body.style.backgroundImage = "url('elit.png')";
         body.style.backgroundColor = "transparent";
         break;
+      case "bunny":
+        body.style.backgroundImage = "url('bunn.png')";
+        body.style.backgroundColor = "transparent";
+        break;
       case "alone":
         body.style.backgroundImage = "url('one.png')";
         body.style.backgroundColor = "transparent";
@@ -4869,6 +4916,7 @@ function updateSettingsUI() {
     {id: 'bg-btn-dirt',      key: 'dirt',      price: 0},
     {id: 'bg-btn-bank',      key: 'bank',      price: 0},
     {id: 'bg-btn-elit',      key: 'elit',      price: 0},
+    {id: 'bg-btn-bunny',     key: 'bunny',     price: 0},
   ];
   
   bgButtons.forEach(bg => {
@@ -4956,6 +5004,16 @@ function updateSettingsUI() {
              btn.onclick = () => equipBackground('elit');
          } else {
              btn.textContent = '🔒 Elite Safe Only';
+             btn.className = "owned";
+             btn.onclick = null;
+         }
+      } else if (bg.key === 'bunny') {
+         if (d.ownedBgs.includes('bunny')) {
+             btn.textContent = t('select');
+             btn.className = "";
+             btn.onclick = () => equipBackground('bunny');
+         } else {
+             btn.textContent = '🔒 Easter Egg Only';
              btn.className = "owned";
              btn.onclick = null;
          }
@@ -7075,6 +7133,12 @@ function setPrivacy(key, value) {
   if (!d.settings.privacy) d.settings.privacy = {};
   d.settings.privacy[key] = value;
   save();
+  if (window._firebaseReady && window._firebaseDB) {
+    const uid = getMyUid();
+    if (uid && uid !== 'local') {
+      window._firebaseRef(window._firebaseDB, `leaderboard/${uid}/privacy`).update({ [key]: value });
+    }
+  }
 }
 
 function setProfileTabLocation(loc) {
@@ -8179,7 +8243,15 @@ async function adminGiveOpeningAll() {
   if (!_isAdminUser()) return;
   const type = document.getElementById('apOpeningType').value;
   const onlineOnly = document.getElementById('apOpeningOnline')?.checked || false;
-  await _db.ref('admin/giveOpening').set({ type, onlineOnly, ts: Date.now() });
+  const payload = { type, onlineOnly, ts: Date.now() };
+  if (type === 'giftBox_letter') {
+    const _ltEl = document.getElementById('apGiftLetterAll');
+    if (_ltEl) _ltEl.style.display = 'flex'; // показать если скрыт
+    payload.letterText  = document.getElementById('apGiftTextAll')?.value.trim() || '';
+    payload.letterEmoji = document.getElementById('apGiftEmojiAll')?.value.trim() || '❤️';
+    if (payload.letterText.length < 5) { showToast('✏️ Enter letter text (min 5 chars)'); return; }
+  }
+  await _db.ref('admin/giveOpening').set(payload);
   setTimeout(() => _db.ref('admin/giveOpening').remove(), 10000);
   showToast(onlineOnly ? `🎁 ${type} sent to online players!` : `🎁 ${type} sent to all!`);
 }
@@ -8323,7 +8395,15 @@ async function adminGiveOpeningPlayer() {
   if (!_isAdminUser()) return;
   const uid = _adminSelectedUid(); if (!uid) return;
   const type = document.getElementById('apModOpeningType').value;
-  await _db.ref(`admin/modActions/${uid}`).set({ action: 'giveOpening', type, ts: Date.now() });
+  const payload = { action: 'giveOpening', type, ts: Date.now() };
+  if (type === 'giftBox_letter') {
+    const _ltEl = document.getElementById('apGiftLetterMod');
+    if (_ltEl) _ltEl.style.display = 'flex';
+    payload.letterText  = document.getElementById('apGiftTextMod')?.value.trim() || '';
+    payload.letterEmoji = document.getElementById('apGiftEmojiMod')?.value.trim() || '❤️';
+    if (payload.letterText.length < 5) { showToast('✏️ Enter letter text (min 5 chars)'); return; }
+  }
+  await _db.ref(`admin/modActions/${uid}`).set(payload);
   showToast(`🎁 ${type} opening queued`);
 }
 
@@ -8511,7 +8591,7 @@ function _startAdminListener() {
     if (!v || v.ts <= _adminPollTs.giveOpening) return;
     _adminPollTs.giveOpening = v.ts;
     if (v.onlineOnly && !_wasOnline(v.ts)) return;
-    _adminApplyOpening(v.type);
+    _adminApplyOpening(v.type, v);
   });
 
   _db.ref('admin/skipCooldown').on('value', snap => {
@@ -9222,7 +9302,7 @@ function _adminApplyTapEvent(v) {
       ligting:"url('ligting.png')", fire:"url('fire.png')", ogon:"url('ogon.png')",
       king:"url('king.png')", castle:"url('castle.png')", admin:"url('admin.png')",
       meme:"url('meme.png')", hole:"url('hole.png')",
-      waterbomb:"url('waterbomb.png')", dirt:"url('dirt.png')", bank:"url('bank.png')",
+      waterbomb:"url('waterbomb.png')", dirt:"url('dirt.png')", bank:"url('bank.png')", bunny:"url('bunn.png')",
       elit:"url('elit.png')", alone:"url('one.png')", scary:"url('knife.png')"
     };
     document.body.style.backgroundImage = bgMap[v.bg] || 'none';
@@ -9316,7 +9396,7 @@ function _adminGlobalStatusUpdate() {
 }
 
 /* ---- Apply opening ---- */
-function _adminApplyOpening(type) {
+function _adminApplyOpening(type, v) {
   if (!d) return;
   switch(type) {
     case 'noobBox':
@@ -9370,6 +9450,32 @@ function _adminApplyOpening(type) {
       save(); showToast('💣 Bomb Box from Admin!');
       if (typeof startBombBoxSequence === 'function') startBombBoxSequence();
       break;
+    case 'easterEgg':
+      if (!d.easterEgg) d.easterEgg = { obtained: false, swipes: 0 };
+      d.easterEgg.obtained = true; d.easterEgg.swipes = 0;
+      save(); showToast(t('easter_egg_obtained'));
+      if (typeof startEasterEggSequence === 'function') startEasterEggSequence();
+      break;
+    case 'giftBox_kspt':
+    case 'giftBox_noobBox':
+    case 'giftBox_bombBox':
+    case 'giftBox_tickets':
+    case 'giftBox_letter': {
+      const _giftContentMap = {
+        giftBox_kspt:    { type: 'kspt' },
+        giftBox_noobBox: { type: 'noobBox' },
+        giftBox_bombBox: { type: 'bombBox' },
+        giftBox_tickets: { type: 'tickets' },
+        giftBox_letter:  { type: 'letter', text: v?.letterText || '📨 Message from Admin', emoji: v?.letterEmoji || '❤️' }
+      };
+      if (!d.giftBox) d.giftBox = {};
+      d.giftBox.obtained = true;
+      d.giftBox.fromName = 'Admin';
+      d.giftBox.content  = _giftContentMap[type];
+      save(); showToast(t('gift_box_obtained'));
+      if (typeof startGiftBoxSequence === 'function') startGiftBoxSequence();
+      break;
+    }
     case 'safeNoob':
     case 'safeIron':
     case 'safeElite': {
@@ -9508,7 +9614,7 @@ function _adminApplyModAction(v) {
       location.reload();
       break;
     case 'giveOpening':
-      _adminApplyOpening(v.type);
+      _adminApplyOpening(v.type, v);
       break;
     case 'giveEKSkinMod': {
       try {
@@ -9594,9 +9700,292 @@ document.addEventListener('DOMContentLoaded', function() {
   _startAdminListener();
   // Запускаем слушатель реакций сразу при старте, не ждём открытия профиля
   setTimeout(_checkPendingReactions, 1500);
+  setTimeout(_checkPendingGifts, 1500);
 });
 // Also call immediately in case DOMContentLoaded already fired
 _adminInjectButton();
+
+// ==========================================
+// GIFT BOX
+// ==========================================
+let _giftTaps = 0;
+let _giftOpening = false;
+
+function startGiftBoxSequence() {
+  if (_giftOpening) return;
+  if (!d.giftBox || !d.giftBox.obtained) { showToast(t('locked')); return; }
+  _giftOpening = true;
+  _giftTaps = 0;
+  const modal = document.getElementById('giftBoxModal');
+  const img   = document.getElementById('giftBoxImg');
+  const hint  = document.getElementById('giftBoxHint');
+  if (!modal || !img) { _giftOpening = false; return; }
+  img.src = 'gifi.png';
+  hint.textContent = `Tap to unwrap! (0/10)`;
+  modal.classList.add('active');
+  img.removeEventListener('click', _giftTapHandler);
+  img.addEventListener('click', _giftTapHandler);
+}
+
+function _giftTapHandler() {
+  const now = Date.now();
+  if (window._giftLastTap && now - window._giftLastTap < 100) return;
+  window._giftLastTap = now;
+
+  _giftTaps++;
+  const img  = document.getElementById('giftBoxImg');
+  const hint = document.getElementById('giftBoxHint');
+
+  // Анимация нажатия — лёгкое уменьшение
+  img.style.transform = 'scale(0.88)';
+  setTimeout(() => { img.style.transform = 'scale(1)'; }, 130);
+
+  if (navigator.vibrate) navigator.vibrate(15);
+
+  hint.textContent = `Tap to unwrap! (${_giftTaps}/10)`;
+
+  if (_giftTaps >= 10) {
+    hint.textContent = 'Opening...';
+    img.removeEventListener('click', _giftTapHandler);
+    img.src = 'gifi1.png';
+    setTimeout(() => _openGiftBox(), 400);
+  }
+}
+
+function _openGiftBox() {
+  const modal = document.getElementById('giftBoxModal');
+  const gift  = d.giftBox;
+  if (!gift) return;
+
+  const whiteFade = document.getElementById('whiteFade');
+  if (whiteFade) { whiteFade.classList.add('active'); setTimeout(() => whiteFade.classList.remove('active'), 250); }
+
+  const fromName = gift.fromName || '???';
+  const type     = gift.content?.type || 'kspt';
+
+  let rewardText = '', rewardImg = 'gifi.png';
+
+  switch (type) {
+    case 'kspt': {
+      const amt = Math.round(getHourlyRate());
+      d.tokens += amt;
+      rewardText = `🎁 ${fromName} sent you +${amt} KSPT!`;
+      rewardImg = 'kspt.png';
+      break;
+    }
+    case 'noobBox':
+      if (!d.noobBox) d.noobBox = { obtained: false, opened: false, taps: 0 };
+      d.noobBox.obtained = true; d.noobBox.opened = false; d.noobBox.taps = 0;
+      rewardText = `🎁 ${fromName} sent you a Noob Box!`;
+      rewardImg = 'noob.png';
+      break;
+    case 'bombBox':
+      if (!d.bombBox) d.bombBox = { obtained: false };
+      d.bombBox.obtained = true;
+      rewardText = `🎁 ${fromName} sent you a Bomb Box!`;
+      rewardImg = 'bomb.png';
+      break;
+    case 'tickets':
+      if (typeof gameTickets !== 'undefined') {
+        gameTickets.current = Math.min(gameTickets.max || 10, (gameTickets.current || 0) + 3);
+        if (typeof saveTickets === 'function') saveTickets();
+        if (typeof updateTicketsUI === 'function') updateTicketsUI();
+      }
+      rewardText = `🎁 ${fromName} sent you 3 tickets!`;
+      rewardImg = 'ticket.png';
+      break;
+    case 'letter':
+      rewardText = `💌 Letter from ${fromName}!`;
+      rewardImg = 'gifi1.png';
+      break;
+  }
+
+  d.giftBox.obtained = false;
+  _giftTaps = 0;
+  _giftOpening = false;
+  save();
+  if (modal) modal.classList.remove('active');
+
+  if (type === 'letter') {
+    _showGiftLetter(fromName, gift.content.text || '', gift.content.emoji || '❤️');
+  } else {
+    showReward(rewardText, rewardImg);
+    // После закрытия попапа награды — запускаем бокс если нужно
+    if (type === 'noobBox' || type === 'bombBox') {
+      const btn = document.querySelector('#rewardPopup button');
+      if (btn) {
+        const _origOnclick = btn.onclick;
+        btn.onclick = () => {
+          document.getElementById('rewardPopup').style.display = 'none';
+          setTimeout(() => {
+            if (type === 'noobBox' && typeof startNoobBoxSequence === 'function') startNoobBoxSequence();
+            if (type === 'bombBox' && typeof startBombBoxSequence === 'function') startBombBoxSequence();
+          }, 400);
+        };
+      }
+    }
+  }
+  ui();
+}
+
+function _showGiftLetter(fromName, text, emoji) {
+  const m = document.getElementById('giftLetterModal');
+  if (!m) return;
+  document.getElementById('giftLetterEmoji').textContent = emoji;
+  document.getElementById('giftLetterFrom').textContent = '— from ' + fromName + ' —';
+  document.getElementById('giftLetterText').textContent = text;
+  // перезапускаем анимацию
+  const inner = document.getElementById('giftLetterInner');
+  inner.style.animation = 'none';
+  requestAnimationFrame(() => { inner.style.animation = ''; });
+  m.style.display = 'flex';
+}
+
+// ===== ОТПРАВКА ПОДАРКА =====
+const GIFT_COOLDOWN_MS = 3 * 24 * 3600 * 1000; // 3 дня
+
+function openGiftSendModal(targetUid) {
+  const isFriend = !!(d.friends && d.friends[targetUid]);
+  if (!isFriend) { showToast('🎁 Friends only!'); return; }
+
+  // Проверка кулдауна
+  const lastSent = (d.giftSentLog || {})[targetUid] || 0;
+  const remaining = GIFT_COOLDOWN_MS - (Date.now() - lastSent);
+  if (remaining > 0) {
+    const h = Math.floor(remaining / 3600000);
+    const min = Math.floor((remaining % 3600000) / 60000);
+    showToast(`⏳ Cooldown: ${h}h ${min}m`); return;
+  }
+
+  let m = document.getElementById('giftSendModal');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'giftSendModal';
+    m.style.cssText = 'position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.8);display:flex;align-items:flex-end;';
+    m.onclick = e => { if (e.target === m) m.remove(); };
+    document.body.appendChild(m);
+  }
+
+  const friendName = d.friends[targetUid]?.name || targetUid;
+
+  m.innerHTML = `
+    <div style="background:#111;border-radius:18px 18px 0 0;padding:20px;width:100%;border-top:1px solid #333;max-height:85vh;overflow-y:auto;">
+      <div style="font-weight:bold;font-size:16px;margin-bottom:4px;text-align:center;">🎁 Send Gift</div>
+      <div style="font-size:12px;color:#888;text-align:center;margin-bottom:16px;">to ${friendName} · costs 100 KSPT</div>
+
+      <div id="giftTypeSelector" style="display:flex;flex-direction:column;gap:8px;margin-bottom:14px;">
+        ${[
+          { type:'kspt',    label:'💰 1h Income',   desc:'Your current hourly rate' },
+          { type:'noobBox', label:'📦 Noob Box',     desc:'A mystery box' },
+          { type:'bombBox', label:'💣 Bomb Box',     desc:'Explosive surprise' },
+          { type:'tickets', label:'🎫 3 Tickets',   desc:'For mini-games' },
+          { type:'letter',  label:'💌 Letter',       desc:'Write a personal message' },
+        ].map(o => `
+          <div onclick="_giftSelectType('${o.type}',this)"
+            style="display:flex;align-items:center;gap:10px;padding:10px 12px;background:#1a1a1a;border:2px solid #333;border-radius:10px;cursor:pointer;"
+            data-gtype="${o.type}">
+            <div style="font-size:22px;">${o.label.split(' ')[0]}</div>
+            <div><div style="font-weight:bold;font-size:13px;">${o.label}</div><div style="font-size:11px;color:#777;">${o.desc}</div></div>
+          </div>`).join('')}
+      </div>
+
+      <div id="giftLetterCompose" style="display:none;margin-bottom:12px;">
+        <div style="font-size:12px;color:#aaa;margin-bottom:6px;">Choose emoji:</div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;" id="giftEmojiPicker">
+          ${['❤️','💛','💚','💙','💜','🧡','🖤','🤍','🌹','🌟','✨','🎉','🌸','🦋','🕊️'].map(e =>
+            `<span onclick="_giftPickEmoji('${e}',this)" style="font-size:22px;cursor:pointer;padding:4px;border-radius:6px;">${e}</span>`
+          ).join('')}
+        </div>
+        <textarea id="giftLetterInput" maxlength="250" rows="4"
+          style="width:100%;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:10px;padding:8px;font-size:13px;resize:none;box-sizing:border-box;"
+          placeholder="Write your message (5–250 chars)..."></textarea>
+        <div style="font-size:10px;color:#555;text-align:right;margin-top:2px;">max 250</div>
+      </div>
+
+      <button onclick="_giftSendConfirm('${targetUid}')"
+        style="width:100%;padding:12px;background:linear-gradient(135deg,#e91e8c,#ff6b35);color:#fff;font-weight:bold;border:none;border-radius:10px;cursor:pointer;font-size:15px;">
+        Send Gift 🎁 (100 KSPT)
+      </button>
+    </div>`;
+
+  window._giftSelectedType = 'kspt';
+  window._giftSelectedEmoji = '❤️';
+  m.style.display = 'flex';
+}
+
+function _giftSelectType(type, el) {
+  window._giftSelectedType = type;
+  document.querySelectorAll('#giftTypeSelector [data-gtype]').forEach(e => e.style.border = '2px solid #333');
+  el.style.border = '2px solid #e91e8c';
+  const compose = document.getElementById('giftLetterCompose');
+  if (compose) compose.style.display = type === 'letter' ? 'block' : 'none';
+}
+
+function _giftPickEmoji(emoji, el) {
+  window._giftSelectedEmoji = emoji;
+  document.querySelectorAll('#giftEmojiPicker span').forEach(e => e.style.background = 'transparent');
+  el.style.background = 'rgba(233,30,140,0.25)';
+}
+
+function _giftSendConfirm(targetUid) {
+  if ((d.tokens || 0) < 100) { showToast('Not enough KSPT (need 100)'); return; }
+  const type = window._giftSelectedType || 'kspt';
+  if (type === 'letter') {
+    const text = document.getElementById('giftLetterInput')?.value.trim() || '';
+    if (text.length < 5) { showToast('Message too short (min 5)'); return; }
+    if (text.length > 250) { showToast('Message too long (max 250)'); return; }
+  }
+
+  if (!window._firebaseReady || !window._firebaseDB) { showToast('Firebase not available'); return; }
+
+  d.tokens -= 100;
+  if (!d.giftSentLog) d.giftSentLog = {};
+  d.giftSentLog[targetUid] = Date.now();
+  save();
+
+  const myName = _getMyName();
+  const content = { type };
+  if (type === 'letter') {
+    content.text  = document.getElementById('giftLetterInput')?.value.trim();
+    content.emoji = window._giftSelectedEmoji || '❤️';
+  }
+
+  window._firebaseRef(window._firebaseDB, `giftBox/${targetUid}`).set({
+    fromUid: getMyUid(), fromName: myName, content, ts: Date.now()
+  });
+
+  document.getElementById('giftSendModal')?.remove();
+  showToast('🎁 Gift sent!');
+  ui();
+}
+
+// ===== СЛУШАТЕЛЬ ВХОДЯЩИХ ПОДАРКОВ =====
+let _giftListenerActive = false;
+
+function _checkPendingGifts() {
+  if (!window._firebaseReady || !window._firebaseDB) return;
+  const myUid = getMyUid();
+  if (!myUid || myUid === 'local') return;
+  if (_giftListenerActive) return;
+  _giftListenerActive = true;
+
+  window._firebaseRef(window._firebaseDB, `giftBox/${myUid}`).on('value', snap => {
+    const item = snap?.val();
+    if (!item) return;
+    if (!d.giftBox) d.giftBox = {};
+    d.giftBox.obtained = true;
+    d.giftBox.fromName = item.fromName || '???';
+    d.giftBox.content  = item.content || { type: 'kspt' };
+    save();
+    snap.ref.remove();
+    // Показываем тост и сразу запускаем открытие
+    showToast(`🎁 Gift from ${item.fromName}!`);
+    setTimeout(() => startGiftBoxSequence(), 800);
+  });
+}
+// ==========================================
+// END GIFT BOX
+// ==========================================
 
 // ==========================================
 // BOMB BOX
@@ -9884,6 +10273,229 @@ function closeBombBoxModal() {
 // CAPSULE FUNCTIONS - UPDATED WITH FIXES
 // ==========================================
 
+// ==========================================
+// EASTER EGG BOX
+// ==========================================
+let _eggSwipes = 0;
+let _eggOpening = false;
+
+function startEasterEggSequence() {
+  if (_eggOpening) return;
+  if (!d.easterEgg || !d.easterEgg.obtained) { showToast(t('locked')); return; }
+  _eggOpening = true;
+  _eggSwipes = d.easterEgg.swipes || 0;
+  const modal = document.getElementById('easterEggModal');
+  const img = document.getElementById('easterEggImg');
+  const hint = document.getElementById('easterEggHint');
+  if (!modal || !img) { _eggOpening = false; return; }
+  _eggUpdateImg(img);
+  hint.textContent = `Swipe to scratch! (${_eggSwipes}/5)`;
+  modal.classList.add('active');
+  _eggAttachSwipe(img);
+}
+
+function _eggUpdateImg(img) {
+  const srcs = ['egg.png','egg1.png','egg2.png','egg3.png','egg4.png','egg5.png'];
+  img.src = srcs[Math.min(_eggSwipes, 5)];
+}
+
+function _eggAttachSwipe(img) {
+  img.removeEventListener('touchstart', _eggTouchStart);
+  img.removeEventListener('mousedown',  _eggMouseDown);
+  img.addEventListener('touchstart', _eggTouchStart, { passive: true });
+  img.addEventListener('mousedown',  _eggMouseDown);
+}
+
+let _eggStartX = 0, _eggStartY = 0, _eggSwiping = false;
+
+function _eggTouchStart(e) {
+  if (_eggSwiping) return;
+  _eggStartX = e.touches[0].clientX;
+  _eggStartY = e.touches[0].clientY;
+  // слушаем на document чтобы не потерять если палец ушёл за img
+  document.addEventListener('touchend', _eggTouchEnd, { once: true });
+  document.addEventListener('touchcancel', _eggTouchCancel, { once: true });
+}
+function _eggTouchCancel() {
+  document.removeEventListener('touchend', _eggTouchEnd);
+}
+function _eggMouseDown(e) {
+  if (_eggSwiping) return;
+  _eggStartX = e.clientX; _eggStartY = e.clientY;
+  document.addEventListener('mouseup', _eggMouseUp, { once: true });
+}
+function _eggTouchEnd(e) {
+  document.removeEventListener('touchcancel', _eggTouchCancel);
+  const dx = e.changedTouches[0].clientX - _eggStartX;
+  const dy = e.changedTouches[0].clientY - _eggStartY;
+  if (Math.sqrt(dx*dx + dy*dy) > 20) _eggOnSwipe();
+}
+function _eggMouseUp(e) {
+  const dx = e.clientX - _eggStartX;
+  const dy = e.clientY - _eggStartY;
+  if (Math.sqrt(dx*dx + dy*dy) > 20) _eggOnSwipe();
+}
+
+function _eggOnSwipe() {
+  if (_eggSwipes >= 5 || _eggSwiping) return;
+  _eggSwiping = true;
+  _eggSwipes++;
+  d.easterEgg.swipes = _eggSwipes;
+  save();
+  const img = document.getElementById('easterEggImg');
+  const hint = document.getElementById('easterEggHint');
+  _eggUpdateImg(img);
+
+  // тряска
+  img.style.transition = 'none';
+  img.style.animation = 'none';
+  let s = 0;
+  const shakeInterval = setInterval(() => {
+    const x = (Math.random() - 0.5) * 10;
+    const y = (Math.random() - 0.5) * 6;
+    img.style.transform = `translate(${x}px,${y}px)`;
+    s++;
+    if (s >= 8) {
+      clearInterval(shakeInterval);
+      img.style.transform = '';
+      _eggSwiping = false;
+    }
+  }, 35);
+
+  if (navigator.vibrate) navigator.vibrate([20, 10, 20]);
+
+  if (_eggSwipes >= 5) {
+    hint.textContent = 'Opening...';
+    img.removeEventListener('touchstart', _eggTouchStart);
+    img.removeEventListener('mousedown', _eggMouseDown);
+    document.removeEventListener('touchend', _eggTouchEnd);
+    document.removeEventListener('mouseup', _eggMouseUp);
+    setTimeout(() => _openEasterEgg(), 500);
+  } else {
+    hint.textContent = `Swipe to scratch! (${_eggSwipes}/5)`;
+  }
+}
+
+function _openEasterEgg() {
+  const modal = document.getElementById('easterEggModal');
+  const whiteFade = document.getElementById('whiteFade');
+  if (whiteFade) { whiteFade.classList.add('active'); setTimeout(() => whiteFade.classList.remove('active'), 250); }
+
+  const reward = getWeightedEasterEggReward();
+  let rewardText = '', rewardImg = reward.img || 'kspt.png';
+
+  switch (reward.type) {
+    case 'kspt3h':
+      const amt = Math.round(getHourlyRate() * 3);
+      d.tokens += amt;
+      rewardText = `+${amt} KSPT (3h income)!`;
+      break;
+    case 'znetons':
+      if (!d.quests) d.quests = {};
+      d.quests.znetons = (d.quests.znetons || 0) + 3;
+      rewardText = '+3 Tokens!';
+      break;
+    case 'capsule':
+      d.easterEgg.obtained = false;
+      d.easterEgg.swipes = 0;
+      _eggSwipes = 0;
+      _eggOpening = false;
+      save();
+      if (modal) modal.classList.remove('active');
+      // Сохраняем текущий таймер капсулы
+      const _savedCapsuleLastOpen = d.capsule ? d.capsule.lastOpen : 0;
+      const _savedCapsuleFirst = d.capsule ? d.capsule.firstOpen : false;
+      // Разрешаем открыть без кулдауна
+      if (!d.capsule) d.capsule = {};
+      d.capsule.firstOpen = true;
+      // После открытия восстанавливаем таймер
+      window._easterCapsuleRestore = { lastOpen: _savedCapsuleLastOpen, firstOpen: _savedCapsuleFirst };
+      if (typeof startCapsuleSequence === 'function') startCapsuleSequence();
+      return;
+    case 'yellowKey':
+      if (!d.keys) d.keys = {}; d.keys.yellow = (d.keys.yellow || 0) + 1;
+      rewardText = t('key_obtained').replace('{0}', '🟡 Yellow');
+      break;
+    case 'redKey':
+      if (!d.keys) d.keys = {}; d.keys.red = (d.keys.red || 0) + 1;
+      rewardText = t('key_obtained').replace('{0}', '🔴 Red');
+      rewardImg = 'red.png';
+      break;
+    case 'greenKey':
+      if (!d.keys) d.keys = {}; d.keys.green = (d.keys.green || 0) + 1;
+      rewardText = t('key_obtained').replace('{0}', '🟢 Green');
+      rewardImg = 'green.png';
+      break;
+    case 'puzzle': {
+      const pr = _eggGivePuzzle();
+      rewardText = pr.text;
+      rewardImg = pr.img;
+      break;
+    }
+    case 'bg_bunny':
+      if (!d.ownedBgs) d.ownedBgs = ['default'];
+      if (!d.ownedBgs.includes('bunny')) {
+        d.ownedBgs.push('bunny');
+        rewardText = 'Background: Easter Bunny unlocked!';
+      } else {
+        d.tokens += Math.round(getHourlyRate() * 3);
+        rewardText = '+3h KSPT (bg already owned)!';
+      }
+      break;
+  }
+
+  d.easterEgg.obtained = false;
+  d.easterEgg.swipes = 0;
+  _eggSwipes = 0;
+  _eggOpening = false;
+  save();
+  if (modal) modal.classList.remove('active');
+  showReward(rewardText, rewardImg);
+  ui();
+}
+
+function _applyEasterCapsuleReward(reward) {
+  // Применяет награду капсулы без изменения таймера
+  switch(reward.type) {
+    case 'kspt': d.tokens += reward.value; break;
+    case 'puzzle': _eggGivePuzzle(); break;
+    case 'background':
+      if (!d.ownedBgs) d.ownedBgs = ['default'];
+      if (!d.ownedBgs.includes(reward.id)) d.ownedBgs.push(reward.id);
+      break;
+    case 'skin':
+      if (!d.skins) d.skins = {};
+      if (!d.skins[reward.id]) d.skins[reward.id] = 1;
+      break;
+    default: if (reward.value) d.tokens += reward.value; break;
+  }
+}
+
+function _eggGivePuzzle() {
+  if (!d.puzzleDone) {
+    const m = []; for (let i=0;i<9;i++) if (!d.puzzles[i]) m.push(i);
+    if (m.length) { const idx=m[Math.floor(Math.random()*m.length)]; d.puzzles[idx]=1; return { text:`Puzzle Piece ${idx+1}!`, img:`pazl${idx+1}.png` }; }
+  }
+  if (!d.puzzle2Done) {
+    const m = []; for (let i=0;i<9;i++) if (!d.puzzles2[i]) m.push(i);
+    if (m.length) { const idx=m[Math.floor(Math.random()*m.length)]; d.puzzles2[idx]=1; return { text:`Puzzle Piece ${idx+11}!`, img:`pazl${idx+11}.png` }; }
+  }
+  if (!d.puzzle3Done) {
+    const m = []; for (let i=0;i<9;i++) if (!d.puzzles3[i]) m.push(i);
+    if (m.length) { const idx=m[Math.floor(Math.random()*m.length)]; d.puzzles3[idx]=1; if(typeof updateThirdPuzzleUI==='function') updateThirdPuzzleUI(); return { text:`Puzzle Piece ${idx+20}!`, img:`puzl${idx+1}.png` }; }
+  }
+  if (!d.puzzle4Done) {
+    const m = []; for (let i=0;i<9;i++) if (!d.puzzles4[i]) m.push(i);
+    if (m.length) { const idx=m[Math.floor(Math.random()*m.length)]; d.puzzles4[idx]=1; if(typeof updateFourthPuzzleUI==='function') updateFourthPuzzleUI(); return { text:`UFO Piece ${idx+1}!`, img:`puzzle${idx+1}.png` }; }
+  }
+  const m = []; for (let i=0;i<25;i++) if (!d.puzzles5[i]) m.push(i);
+  if (m.length) { const idx=m[Math.floor(Math.random()*m.length)]; d.puzzles5[idx]=1; if(typeof updateFifthPuzzleUI==='function') updateFifthPuzzleUI(); return { text:`Dragon Piece ${idx+1}!`, img:`p${idx+1}.png` }; }
+  d.tokens += 10; return { text:'+10 KSPT (puzzles done)!', img:'kspt.png' };
+}
+// ==========================================
+// END EASTER EGG BOX
+// ==========================================
+
 // ---- Noob Box ----
 let noobBoxOpening = false;
 let noobBoxTaps = 0;
@@ -10090,6 +10702,7 @@ function openNoobBox() {
     }
 
     // Mark box as opened
+    d.noobBox.obtained = false;
     d.noobBox.opened = true;
     d.noobBox.taps = 0;
     d.noobBox.lastOpen = Date.now();
@@ -10366,7 +10979,13 @@ if (siulaiTopBtn) {
       }
       
       // Update capsule state
+      if (window._easterCapsuleRestore) {
+      d.capsule.lastOpen = window._easterCapsuleRestore.lastOpen;
+      d.capsule.firstOpen = window._easterCapsuleRestore.firstOpen;
+      window._easterCapsuleRestore = null;
+    } else {
       d.capsule.lastOpen = Date.now();
+    }
       if (d.capsule.firstOpen) {
         d.capsule.firstOpen = false;
       }
@@ -11224,7 +11843,6 @@ function initGame() {
     processOfflineIncome();
     // Streak check
     try { checkStreak(); } catch(e) { console.warn('streak error', e); }
-    try { initQuestsData(); } catch(e) { console.warn('quests init error', e); }
     // Apply profile tab location on startup
     try { _applyProfileTabLocation(d.settings?.profileTabLocation || 'bottom'); } catch(e) {}
 
@@ -12805,6 +13423,7 @@ function closeFortuneWheel() {
 
 // ===== LEADERBOARD =====
 let _lbInterval = null;
+let _lbLastPlayers = [];
 
 function getMyTelegramUser() {
   const u = window.Telegram?.WebApp?.initDataUnsafe?.user;
@@ -12903,7 +13522,8 @@ function pushMyLeaderboardData() {
     secretSkins: d.secretSkins || {},
     myTokens: (d.market?.myTokens || []).map(tk => ({ ticker: tk.ticker||'', name: tk.name||'' })),
     streakDays: d.streak?.days || 0,
-    streakActive: d.streak?.lastClaimTs ? (Date.now() - d.streak.lastClaimTs) < 86400000 * 1.5 : false
+    streakActive: d.streak?.lastClaimTs ? (Date.now() - d.streak.lastClaimTs) < 86400000 * 1.5 : false,
+    verified: d.verified || false
   };
   window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).set(entry);
 }
@@ -13019,6 +13639,7 @@ function openPlayerDetail(p) {
 }
 
 function renderLeaderboard(players) {
+  _lbLastPlayers = players;
   const myUid = getMyUid();
   const list = document.getElementById('lbList');
   if (!list) return;
@@ -14367,6 +14988,7 @@ function _startFirebaseSync() {
 const QUEST_GAME_NAMES = ['Snake Game', 'Ping-Pong', 'BlocksFast', 'Slither: KSPT Mode', 'Ghost Train', 'KSPT Races', 'Flappy Bird', 'Space Asteroids'];
 const QUEST_GAME_IDS   = ['snake',      'pingpong',  'blocksfast', 'slither',            'train',       'race',       'flappy',      'asteroids'];
 const QUEST_GAME_ICONS = ['snake.png',  'pong.png',  'tetris.png', 'slither.png',        'train.png',   'race.png',   'flappy.png',  'aster.png'];
+try { initQuestsData(); } catch(e) { console.warn('quests init error', e); }
 
 function getQuestCryptoPool() {
   const base = [
@@ -15313,7 +15935,9 @@ window.selectGameRecord = function(game) {
 
 function loadGameRecordsLB() {
   if (!window._firebaseReady || !window._firebaseDB) return;
+  const reqId = (window._grReqId = (window._grReqId || 0) + 1);
   window._firebaseRef(window._firebaseDB, 'leaderboard').once('value').then(snap => {
+    if (reqId !== window._grReqId) return;
     _grCache = snap.val();
     renderGameRecordsLB();
     const el = document.getElementById('gameRecordsUpdated');
@@ -15363,7 +15987,7 @@ function renderGameRecordsLB() {
   let html = `<div style="color:#666;font-size:11px;margin-bottom:6px;">${meta.label}</div>`;
   entries.forEach((e, i) => {
     const medal = i === 0 ? '🥇' : i === 1 ? '🥈' : i === 2 ? '🥉' : `<span style="color:#666;font-size:11px;">${i+1}.</span>`;
-    const isMe = e.uid === myUid;
+    const isMe = String(e.uid) === String(myUid);
     const valStr = game === 'race' ? e.value.toFixed(2) + 's' : e.value + (meta.unit ? ' ' + meta.unit : '');
     const avatar = e.photoUrl || 'seri.png';
     html += `<div style="display:flex;align-items:center;gap:8px;padding:5px 6px;border-radius:6px;margin-bottom:3px;background:${isMe ? 'rgba(0,230,118,0.1)' : 'rgba(255,255,255,0.04)'};">
@@ -15636,7 +16260,7 @@ function renderProfileTab() {
       <!-- Аватарка -->
       <div style="position:relative;width:80px;margin:0 auto 6px;">
         <img src="${avatar}" onerror="this.src='seri.png'" class="profile-avatar" id="profileAvatar">
-        <div class="profile-online-dot"></div>
+        <div id="profileOnlineDot" class="profile-online-dot"></div>
       </div>
       <!-- Кнопки аватарки -->
       <div style="display:flex;gap:6px;justify-content:center;margin-bottom:8px;">
@@ -16076,10 +16700,12 @@ function _renderFriendItem(uid, friend) {
         ${lastSeen}
       </div>
       <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button onclick="event.stopPropagation();openGiftSendModal('${uid}')"
+                style="background:#1a1a1a;border:1px solid #333;border-radius:7px;width:32px;height:32px;color:#fff;cursor:pointer;font-size:15px;padding:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex-shrink:0;">🎁</button>
         <button onclick="event.stopPropagation();openReactionPicker('${uid}')"
-                style="background:#1a1a1a;border:1px solid #333;border-radius:7px;padding:4px 7px;color:#fff;cursor:pointer;font-size:14px;line-height:1;">🎁</button>
+                style="background:#1a1a1a;border:1px solid #333;border-radius:7px;width:32px;height:32px;color:#fff;cursor:pointer;font-size:15px;padding:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex-shrink:0;">🙂</button>
         <button onclick="event.stopPropagation();removeFriend('${uid}')"
-                style="background:#1a1a1a;border:1px solid #3a1a1a;border-radius:7px;padding:4px 7px;color:#ff4081;cursor:pointer;font-size:12px;line-height:1;">✕</button>
+                style="background:#1a1a1a;border:1px solid #3a1a1a;border-radius:7px;width:32px;height:32px;color:#ff4081;cursor:pointer;font-size:13px;padding:0;box-sizing:border-box;display:flex;align-items:center;justify-content:center;flex-shrink:0;">✕</button>
       </div>
     </div>
   `;
@@ -16207,14 +16833,19 @@ function sendReaction(targetUid, reaction, modal) {
   if (!window._firebaseReady || !window._firebaseDB) return;
   const myName = _getMyName();
   const myUid = getMyUid();
-  window._firebaseRef(window._firebaseDB, `reactions/${targetUid}`).push({
-    from: myUid,
-    fromName: myName,
-    reaction: reaction,
-    ts: Date.now()
+  // Проверяем настройки приватности получателя
+  window._firebaseRef(window._firebaseDB, `leaderboard/${targetUid}`).once('value').then(snap => {
+    const p = snap?.val();
+    const privacy = p?.privacy?.sendReactions || 'everyone';
+    const isFriend = !!(p?.friends?.[myUid]);
+    if (privacy === 'nobody') { showToast('🚫 ' + t('privacy_nobody')); return; }
+    if (privacy === 'friends' && !isFriend) { showToast('🚫 ' + t('privacy_friends')); return; }
+    window._firebaseRef(window._firebaseDB, `reactions/${targetUid}`).push({
+      from: myUid, fromName: myName, reaction: reaction, ts: Date.now()
+    });
+    if (modal) modal.remove();
+    showToast(reaction + ' sent!');
   });
-  if (modal) modal.remove();
-  showToast(reaction + ' sent!');
 }
 
 function _showReactionRain(emoji, fromName) {
@@ -16257,11 +16888,26 @@ function _checkFriendRequests() {
   if (!myUid || myUid === 'local') return;
   if (_friendRequestListenerActive) return;
   _friendRequestListenerActive = true;
+  // Слушаем подтверждения дружбы
+  window._firebaseRef(window._firebaseDB, `friendAccepted/${myUid}`).on('child_added', snap => {
+    const item = snap?.val();
+    if (!item) return;
+    if (!d.friends) d.friends = {};
+    d.friends[item.uid] = { name: item.name, avatar: item.avatar, lastSeen: item.lastSeen || Date.now() };
+    save();
+    snap.ref.remove();
+    showToast('✅ ' + item.name + ' ' + t('friends_added'));
+    renderFriendsTab();
+  });
+
   window._firebaseRef(window._firebaseDB, `friendRequests/${myUid}`).on('child_added', snap => {
     const item = snap?.val();
     if (!item) return;
     const reqUid = snap.key;
+    const toastId = 'friendReq_' + reqUid;
+    if (document.getElementById(toastId)) return;
     const toast = document.createElement('div');
+    toast.id = toastId;
     toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid #00bcd4;border-radius:14px;padding:14px 16px;z-index:99999;min-width:280px;max-width:320px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.6);';
     toast.innerHTML = `
       <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
@@ -16269,31 +16915,31 @@ function _checkFriendRequests() {
         <div style="font-size:13px;text-align:left;">${t('friends_request_from')} <b>${item.fromName||reqUid}</b></div>
       </div>
       <div style="display:flex;gap:8px;">
-        <button onclick="_acceptFriendRequest('${reqUid}','${(item.fromName||'').replace(/'/g,"\\'")}','${(item.fromAvatar||'seri.png').replace(/'/g,"\\'")}',this.closest('div[style]'))" style="flex:1;padding:8px;background:#00e676;color:#000;font-weight:bold;border:none;border-radius:8px;cursor:pointer;font-size:20px;">✅</button>
-        <button onclick="_declineFriendRequest('${reqUid}',this.closest('div[style]'))" style="flex:1;padding:8px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:20px;">❌</button>
+        <button onclick="_acceptFriendRequest('${reqUid}','${(item.fromName||'').replace(/'/g,"\\'")}','${(item.fromAvatar||'seri.png').replace(/'/g,"\\'")}','${toastId}')" style="flex:1;padding:8px;background:#00e676;color:#000;font-weight:bold;border:none;border-radius:8px;cursor:pointer;font-size:20px;">✅</button>
+        <button onclick="_declineFriendRequest('${reqUid}','${toastId}')" style="flex:1;padding:8px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:20px;">❌</button>
       </div>`;
     document.body.appendChild(toast);
   });
 }
 
-function _acceptFriendRequest(fromUid, name, avatar, toastEl) {
+function _acceptFriendRequest(fromUid, name, avatar, toastId) {
   if (!d.friends) d.friends = {};
   d.friends[fromUid] = { name, avatar, lastSeen: Date.now() };
   save();
   const myUid = getMyUid();
   const myName = _getMyName();
   const myAv = localStorage.getItem('_kspt_tg_custom_avatar') || localStorage.getItem('_kspt_nonTg_avatar') || window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url || 'seri.png';
-  window._firebaseRef(window._firebaseDB, `leaderboard/${fromUid}/friends/${myUid}`).set({ name: myName, avatar: myAv, lastSeen: Date.now() });
+  window._firebaseRef(window._firebaseDB, `friendAccepted/${fromUid}/${myUid}`).set({ uid: myUid, name: myName, avatar: myAv, lastSeen: Date.now() });
   window._firebaseRef(window._firebaseDB, `friendRequests/${myUid}/${fromUid}`).remove();
-  if (toastEl) toastEl.remove();
+  const toastEl = document.getElementById(toastId); if (toastEl) toastEl.remove();
   showToast(t('friends_added'));
   renderFriendsTab();
 }
 
-function _declineFriendRequest(fromUid, toastEl) {
+function _declineFriendRequest(fromUid, toastId) {
   const myUid = getMyUid();
   window._firebaseRef(window._firebaseDB, `friendRequests/${myUid}/${fromUid}`).remove();
-  if (toastEl) toastEl.remove();
+  const toastEl = document.getElementById(toastId); if (toastEl) toastEl.remove();
   showToast(t('friends_declined'));
 }
 
@@ -16418,7 +17064,7 @@ function _showPublicProfile(uid, p) {
         return `<div style="display:flex;align-items:center;gap:8px;background:#1a1a1a;border-radius:10px;padding:10px;margin-bottom:10px;">
           <img src="${img}" onerror="this.src='kspt.png'" style="width:36px;height:36px;object-fit:contain;">
           <div>
-            <div style="font-size:10px;color:#888;">Любимый скин</div>
+            <div style="font-size:10px;color:#888;">Favourite Skin</div>
             <div style="font-weight:bold;font-size:13px;">${name}</div>
           </div>
         </div>`;
@@ -16433,15 +17079,21 @@ function _showPublicProfile(uid, p) {
           return `<img src="${img}" onerror="this.src='kspt.png'" title="${id}" style="width:32px;height:32px;object-fit:contain;border-radius:6px;background:#1a1a1a;padding:2px;">`;
         }).join('');
         return `<div style="margin-bottom:10px;">
-          <div style="font-size:10px;color:#888;margin-bottom:6px;">🎨 Скины (${allIds.length})</div>
+          <div style="font-size:10px;color:#888;margin-bottom:6px;">🎨 Skins (${allIds.length})</div>
           <div style="display:flex;flex-wrap:wrap;gap:4px;">${items}</div>
         </div>`;
       })()}
 
-      <button onclick="openReactionPicker('${uid}');document.getElementById('publicProfileModal').style.display='none';"
-        style="width:100%;padding:11px;background:linear-gradient(135deg,#7c3aed,#d946ef);color:#fff;font-weight:bold;border:none;border-radius:10px;cursor:pointer;font-size:14px;">
-        ${t('friends_send_reaction')} 🎁
-      </button>
+      <div style="display:flex;gap:8px;margin-top:4px;">
+        <button onclick="openReactionPicker('${uid}');document.getElementById('publicProfileModal').style.display='none';"
+          style="flex:1;padding:11px;background:linear-gradient(135deg,#7c3aed,#d946ef);color:#fff;font-weight:bold;border:none;border-radius:10px;cursor:pointer;font-size:14px;">
+          ${t('friends_send_reaction')}
+        </button>
+        <button onclick="openGiftSendModal('${uid}');document.getElementById('publicProfileModal').style.display='none';"
+          style="padding:11px 14px;background:linear-gradient(135deg,#e91e8c,#ff6b35);color:#fff;font-weight:bold;border:none;border-radius:10px;cursor:pointer;font-size:18px;">
+          🎁
+        </button>
+      </div>
     </div>
   `;
   m.style.display = 'flex';

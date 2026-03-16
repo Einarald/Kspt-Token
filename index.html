@@ -29,6 +29,14 @@
   window._firebaseReady = true;
 </script>
 <style>
+
+@keyframes letterUnfold {
+  0%   { opacity:0; transform:scaleY(0.2) translateY(30px); }
+  60%  { transform:scaleY(1.04) translateY(-4px); }
+  100% { opacity:1; transform:scaleY(1) translateY(0); }
+}
+#giftLetterInner { animation: letterUnfold 0.6s cubic-bezier(.22,1,.36,1) forwards; }
+
 #raceModeModal {
   display:none; position:fixed; inset:0; z-index:100000;
   background:rgba(0,0,0,0.92); align-items:center; justify-content:center;
@@ -1135,6 +1143,13 @@ window.addEventListener('message', (event) => {
   <button id="bg-btn-elit" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
 </div>
       
+      <div class="settings-section">
+  <div class="bg-preview" style="background-image: url('bunn.png');"></div>
+  <div class="card-title" style="color:#f48fb1;">Easter Bunny</div>
+  <div class="card-sub">🥚 Easter Egg Exclusive</div>
+  <button id="bg-btn-bunny" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
+</div>
+
       <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
   </div>
 
@@ -1541,6 +1556,35 @@ window.addEventListener('message', (event) => {
     <div id="whiteFade" style="display:none;"></div>
   </div>
 </div>
+
+<div id="giftBoxModal" class="capsule-modal">
+  <div id="giftBoxHint" style="margin-bottom:20px;font-size:22px;font-weight:bold;">Tap to unwrap! (0/10)</div>
+  <img id="giftBoxImg" src="gifi.png" class="capsule-center" draggable="false"
+    style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;transition:transform 0.1s;">
+</div>
+
+<!-- GIFT LETTER MODAL -->
+<div id="giftLetterModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.85);align-items:center;justify-content:center;">
+  <div id="giftLetterInner" style="position:relative;max-width:340px;width:90%;padding:32px 28px;border-radius:18px;
+    background:linear-gradient(160deg,#2d1a0e,#3d2510);
+    border:2px solid #c8a06a;box-shadow:0 0 40px #c8a06a44;text-align:center;overflow:hidden;">
+    <div style="position:absolute;inset:0;opacity:0.07;background:repeating-linear-gradient(45deg,#c8a06a 0px,#c8a06a 1px,transparent 1px,transparent 12px);pointer-events:none;"></div>
+    <div id="giftLetterEmoji" style="font-size:40px;margin-bottom:10px;">❤️</div>
+    <div id="giftLetterFrom" style="font-size:12px;color:#c8a06a;margin-bottom:14px;letter-spacing:1px;"></div>
+    <div id="giftLetterText" style="font-family:Georgia,serif;font-size:16px;line-height:1.7;color:#f5e6cc;white-space:pre-wrap;"></div>
+    <button onclick="document.getElementById('giftLetterModal').style.display='none'"
+      style="margin-top:22px;padding:10px 28px;background:linear-gradient(135deg,#c8a06a,#8b5e2a);color:#1a0e00;font-weight:bold;border:none;border-radius:10px;cursor:pointer;font-size:14px;">
+      Close 💌
+    </button>
+  </div>
+</div>
+
+<div id="easterEggModal" class="capsule-modal">
+  <div id="easterEggHint" style="margin-bottom:20px;font-size:24px;font-weight:bold;">Swipe to scratch!</div>
+  <img id="easterEggImg" src="egg.png" class="capsule-center" draggable="false" style="user-select:none;-webkit-user-select:none;-webkit-touch-callout:none;">
+</div>
+
+
 
 <!-- Noob Box Opening Modal -->
 <div id="noobBoxModal" class="capsule-modal">
@@ -2088,7 +2132,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="ap-card">
       <h3>🎁 Give Opening to All</h3>
       <div class="ap-row">
-        <select id="apOpeningType" class="ap-select">
+        <select id="apOpeningType" class="ap-select" onchange="document.getElementById('apGiftLetterAll').style.display=this.value==='giftBox_letter'?'flex':'none'">
           <option value="noobBox">Noob Box</option>
           <option value="capsule">Capsule</option>
           <option value="goldCapsule">Gold Capsule</option>
@@ -2096,6 +2140,14 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="keyBox">Key Box</option>
           <option value="fortuneWheel">Fortune Wheel Spin</option>
           <option value="bombBox">💣 Bomb Box</option>
+          <option value="easterEgg">🥚 Easter Egg</option>
+          <optgroup label="─── Gift Box ───">
+            <option value="giftBox_kspt">🎁 Gift: 1h Income</option>
+            <option value="giftBox_noobBox">🎁 Gift: Noob Box</option>
+            <option value="giftBox_bombBox">🎁 Gift: Bomb Box</option>
+            <option value="giftBox_tickets">🎁 Gift: 3 Tickets</option>
+            <option value="giftBox_letter">🎁 Gift: Letter</option>
+          </optgroup>
           <option value="safeNoob">Noob Safe</option>
           <option value="safeIron">Iron Safe</option>
           <option value="safeElite">💎 Elite Safe</option>
@@ -2109,6 +2161,10 @@ document.addEventListener('DOMContentLoaded', function () {
           </optgroup>
         </select>
         <button class="ap-btn ap-btn-green" onclick="adminGiveOpeningAll()">🎁 Give All</button>
+      </div>
+      <div id="apGiftLetterAll" style="display:none;margin-top:8px;flex-direction:column;gap:6px;">
+        <input id="apGiftEmojiAll" class="ap-input" value="❤️" placeholder="Emoji" style="width:60px;">
+        <textarea id="apGiftTextAll" class="ap-input" rows="3" placeholder="Letter text (5-250 chars)..." style="width:100%;resize:none;box-sizing:border-box;"></textarea>
       </div>
       <div class="ap-row">
         <label style="color:#9fa8da;font-size:12px;display:flex;align-items:center;gap:6px;cursor:pointer;">
@@ -2607,7 +2663,7 @@ document.addEventListener('DOMContentLoaded', function () {
     <div class="ap-card">
       <h3>🎁 Give Opening</h3>
       <div class="ap-row">
-        <select id="apModOpeningType" class="ap-select">
+        <select id="apModOpeningType" class="ap-select" onchange="document.getElementById('apGiftLetterMod').style.display=this.value==='giftBox_letter'?'flex':'none'">
           <option value="noobBox">Noob Box</option>
           <option value="capsule">Capsule</option>
           <option value="goldCapsule">Gold Capsule</option>
@@ -2615,6 +2671,14 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="keyBox">Key Box</option>
           <option value="fortuneWheel">Fortune Wheel Spin</option>
           <option value="bombBox">💣 Bomb Box</option>
+          <option value="easterEgg">🥚 Easter Egg</option>
+          <optgroup label="─── Gift Box ───">
+            <option value="giftBox_kspt">🎁 Gift: 1h Income</option>
+            <option value="giftBox_noobBox">🎁 Gift: Noob Box</option>
+            <option value="giftBox_bombBox">🎁 Gift: Bomb Box</option>
+            <option value="giftBox_tickets">🎁 Gift: 3 Tickets</option>
+            <option value="giftBox_letter">🎁 Gift: Letter</option>
+          </optgroup>
           <option value="safeNoob">Noob Safe</option>
           <option value="safeIron">Iron Safe</option>
           <option value="safeElite">💎 Elite Safe</option>
@@ -2627,6 +2691,10 @@ document.addEventListener('DOMContentLoaded', function () {
           </optgroup>
         </select>
         <button class="ap-btn ap-btn-amber" onclick="adminGiveOpeningPlayer()">🎁 Give</button>
+      </div>
+      <div id="apGiftLetterMod" style="display:none;margin-top:8px;flex-direction:column;gap:6px;">
+        <input id="apGiftEmojiMod" class="ap-input" value="❤️" placeholder="Emoji" style="width:60px;">
+        <textarea id="apGiftTextMod" class="ap-input" rows="3" placeholder="Letter text (5-250 chars)..." style="width:100%;resize:none;box-sizing:border-box;"></textarea>
       </div>
     </div>
 

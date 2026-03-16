@@ -830,8 +830,12 @@ window.addEventListener('message', (event) => {
       <button onclick="showSettingsSub('bg')" style="margin-bottom:12px;" data-lang-key="backgrounds">Backgrounds</button>
       <button onclick="showSettingsSub('language')" style="margin-bottom:12px;" data-lang-key="language">Language</button>
       <button onclick="showSettingsSub('notifications')" style="margin-bottom:12px;" data-lang-key="notifications_title">Notifications</button>
-      <button onclick="openLeaderboard()" style="display:flex; align-items:center; gap:10px; justify-content:center;">
+      <button onclick="showSettingsSub('profile')" style="margin-bottom:12px;" data-lang-key="settings_profile">Profile Settings</button>
+      <button onclick="openLeaderboard()" style="margin-bottom:12px;display:flex; align-items:center; gap:10px; justify-content:center;">
         <img src="records.png" style="width:22px; height:22px; object-fit:contain; pointer-events:none;"> <span data-lang-key="records" style="pointer-events:none;">Records</span>
+      </button>
+      <button id="profileInSettingsBtn" onclick="openScreen('profile')" style="display:none;align-items:center;gap:10px;justify-content:center;">
+        <img src="profile.png" style="width:22px;height:22px;object-fit:contain;pointer-events:none;"> <span data-lang-key="profile_tab_profile" style="pointer-events:none;">Profile</span>
       </button>
     </div>
     <button class="back" onclick="openScreen('main')" data-lang-key="back">Back</button>
@@ -1176,6 +1180,60 @@ window.addEventListener('message', (event) => {
       <!-- Last updated -->
       <div id="lbUpdated" style="text-align:center; font-size:11px; color:#555; margin-top:12px; padding-bottom:20px;"></div>
     </div>
+  </div>
+
+<div id="settings-profile" style="display:none;">
+    <div class="settings-section">
+      <div class="card-title" data-lang-key="settings_profile">Profile Settings</div>
+      <div class="card-sub" data-lang-key="settings_profile_desc">Customize your profile experience</div>
+
+      <!-- Расположение вкладки профиля -->
+      <div style="margin-top:16px;margin-bottom:6px;font-size:13px;color:#aaa;" data-lang-key="profile_tab_location">Profile tab location</div>
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        <button onclick="setProfileTabLocation('bottom')" id="ptLocBottom"
+          style="text-align:left;padding:10px 14px;background:#262626;border-radius:8px;border:2px solid #00bcd4;color:#fff;cursor:pointer;">
+          <span data-lang-key="profile_tab_bottom">Bottom bar (default)</span>
+        </button>
+        <button onclick="setProfileTabLocation('settings')" id="ptLocSettings"
+          style="text-align:left;padding:10px 14px;background:#262626;border-radius:8px;border:2px solid #333;color:#fff;cursor:pointer;">
+          <span data-lang-key="profile_tab_settings">In Settings (below Records)</span>
+        </button>
+      </div>
+
+      <!-- Приватность -->
+      <div style="margin-top:20px;margin-bottom:4px;font-size:13px;color:#aaa;" data-lang-key="privacy_add_friends">Who can add me as a friend?</div>
+      <select onchange="setPrivacy('addFriends',this.value)" id="privacyAddFriends"
+        style="width:100%;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:8px;padding:9px;font-size:13px;">
+        <option value="everyone" data-lang-key="privacy_everyone">Everyone</option>
+        <option value="friends" data-lang-key="privacy_friends">Friends only</option>
+        <option value="nobody" data-lang-key="privacy_nobody">Nobody</option>
+      </select>
+
+      <div style="margin-top:14px;margin-bottom:4px;font-size:13px;color:#aaa;" data-lang-key="privacy_send_reactions">Who can send me reactions?</div>
+      <select onchange="setPrivacy('sendReactions',this.value)" id="privacySendReactions"
+        style="width:100%;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:8px;padding:9px;font-size:13px;">
+        <option value="everyone" data-lang-key="privacy_everyone">Everyone</option>
+        <option value="friends" data-lang-key="privacy_friends">Friends only</option>
+        <option value="nobody" data-lang-key="privacy_nobody">Nobody</option>
+      </select>
+
+      <div style="margin-top:14px;margin-bottom:4px;font-size:13px;color:#aaa;" data-lang-key="privacy_view_info">Who can view my account info?</div>
+      <select onchange="setPrivacy('viewInfo',this.value)" id="privacyViewInfo"
+        style="width:100%;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:8px;padding:9px;font-size:13px;">
+        <option value="everyone" data-lang-key="privacy_everyone">Everyone</option>
+        <option value="friends" data-lang-key="privacy_friends">Friends only</option>
+        <option value="nobody" data-lang-key="privacy_nobody">Nobody</option>
+      </select>
+
+      <div style="margin-top:14px;margin-bottom:4px;font-size:13px;color:#aaa;" data-lang-key="privacy_view_avatar">Who can view my avatar?</div>
+      <select onchange="setPrivacy('viewAvatar',this.value)" id="privacyViewAvatar"
+        style="width:100%;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:8px;padding:9px;font-size:13px;">
+        <option value="everyone" data-lang-key="privacy_everyone">Everyone</option>
+        <option value="friends" data-lang-key="privacy_friends">Friends only</option>
+        <option value="nobody" data-lang-key="privacy_nobody">Nobody</option>
+      </select>
+    </div>
+    <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
   </div>
 
   <div id="settings-notifications" style="display:none;">
@@ -2225,6 +2283,49 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
     </div>
 
+  <!-- Maintenance -->
+    <div class="ap-card" style="border-color:#4a3800;">
+      <h3 style="color:#ffd54f;">🔧 Maintenance Break</h3>
+      <p style="color:#9fa8da;font-size:11px;margin:0 0 10px;">Show a maintenance screen to all players. Choose reason and end time.</p>
+
+      <div style="margin-bottom:8px;">
+        <label style="color:#9fa8da;font-size:11px;display:block;margin-bottom:4px;">Reason</label>
+        <select id="apMaintReason" class="ap-select" style="width:100%;margin-bottom:6px;" onchange="apMaintReasonCustomToggle(this.value)">
+          <option value="maintenance_reason_technical">Technical issues</option>
+          <option value="maintenance_reason_update">System update</option>
+          <option value="maintenance_reason_database">Database maintenance</option>
+          <option value="maintenance_reason_security">Security patch</option>
+          <option value="custom">✏️ Custom reason...</option>
+        </select>
+        <input id="apMaintReasonCustom" class="ap-input" placeholder="Write custom reason..." style="width:100%;box-sizing:border-box;display:none;">
+      </div>
+
+      <div style="margin-bottom:8px;">
+        <label style="color:#9fa8da;font-size:11px;display:block;margin-bottom:4px;">End time</label>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;">
+          <label style="display:flex;align-items:center;gap:4px;color:#ccc;font-size:12px;cursor:pointer;">
+            <input type="radio" name="apMaintTimeType" value="approx" checked onchange="apMaintTimeToggle(this.value)"> Approximate text
+          </label>
+          <label style="display:flex;align-items:center;gap:4px;color:#ccc;font-size:12px;cursor:pointer;">
+            <input type="radio" name="apMaintTimeType" value="timer" onchange="apMaintTimeToggle(this.value)"> Exact timer
+          </label>
+        </div>
+        <input id="apMaintApproxText" class="ap-input" placeholder="e.g. ~30 minutes" style="width:100%;box-sizing:border-box;margin-top:6px;">
+        <select id="apMaintTimerDur" class="ap-select" style="width:100%;margin-top:6px;display:none;">
+          <option value="300">5 minutes</option>
+          <option value="600">10 minutes</option>
+          <option value="1800">30 minutes</option>
+          <option value="3600">1 hour</option>
+          <option value="7200">2 hours</option>
+        </select>
+      </div>
+
+      <div class="ap-row" style="gap:8px;">
+        <button class="ap-btn" style="flex:1;background:#7a5800;" onclick="adminStartMaintenance()">🔧 Start Maintenance</button>
+        <button class="ap-btn ap-btn-red" style="flex:1;" onclick="adminStopMaintenance()">✕ End Maintenance</button>
+      </div>
+    </div>
+
   </div><!-- /globalSection -->
 </div><!-- /adminGlobalSection -->
 
@@ -2485,6 +2586,23 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
     </div>
 
+<!-- EK Shop Skins -->
+    <div class="ap-card">
+      <h3>🛒 EK Shop Skins</h3>
+      <div class="ap-row" style="gap:6px;">
+        <select id="apModEKSkin" class="ap-select" style="flex:1;">
+          <option value="tetris">Tetris KSPT</option>
+          <option value="joystick">Cosmic Joystick</option>
+          <option value="snake">Snake Token</option>
+          <option value="bg_club">Computer Club (BG)</option>
+          <option value="skin_8bit_coin">8-Bit Coin</option>
+          <option value="skin_zombie_train">KSPT: Zombie Train</option>
+        </select>
+        <button class="ap-btn ap-btn-green ap-btn-sm" onclick="adminModGiveEKSkin()">+ Give</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminModTakeEKSkin()">− Take</button>
+      </div>
+    </div>
+
     <!-- Give Opening (personal) -->
     <div class="ap-card">
       <h3>🎁 Give Opening</h3>
@@ -2603,6 +2721,18 @@ document.addEventListener('DOMContentLoaded', function () {
   </div><!-- /modSection -->
 
   <div id="adminOtherSection" style="display:none;">
+
+    <!-- Verified Badge -->
+    <div class="ap-card" style="border-color:#1a5276;">
+      <h3 style="color:#5dade2;">✅ Verified Badge</h3>
+      <p style="color:#9fa8da;font-size:11px;margin:0 0 10px;">Grant or revoke the official verified checkmark next to a player's name.</p>
+      <div id="apVerifyList" style="display:flex;flex-direction:column;gap:6px;max-height:200px;overflow-y:auto;margin-bottom:10px;"></div>
+      <div class="ap-row" style="gap:8px;">
+        <button class="ap-btn" style="flex:1;background:#1a5276;" onclick="adminToggleVerified(true)">✅ Grant Verified</button>
+        <button class="ap-btn ap-btn-red" style="flex:1;" onclick="adminToggleVerified(false)">✕ Revoke</button>
+      </div>
+    </div>
+
     <div class="ap-card" style="border-color:#4a1515;">
       <h3 style="color:#ef5350;">🗑 Force Delete Token</h3>
       <p style="color:#9fa8da;font-size:11px;margin:0 0 8px;">Select a token to permanently remove it from the exchange.</p>

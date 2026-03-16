@@ -114,6 +114,22 @@ const translations = {
     'russian_desc': 'Russian language',
     '3d_effect': '3D Coin Effect',
     '3d_effect_desc': 'Tilt the coin with mouse/finger',
+    'settings_profile': 'Profile Settings',
+    'settings_profile_desc': 'Customize your profile experience',
+    'profile_tab_location': 'Profile tab location',
+    'profile_tab_bottom': 'Bottom bar (default)',
+    'profile_tab_settings': 'In Settings (below Records)',
+    'privacy_add_friends': 'Who can add me as a friend?',
+    'privacy_send_reactions': 'Who can send me reactions?',
+    'privacy_view_info': 'Who can view my account info?',
+    'privacy_view_avatar': 'Who can view my avatar?',
+    'privacy_everyone': 'Everyone',
+    'privacy_friends': 'Friends only',
+    'privacy_nobody': 'Nobody',
+    'maintenance_reason_technical': 'Technical issues',
+    'maintenance_reason_update': 'System update',
+    'maintenance_reason_database': 'Database maintenance',
+    'maintenance_reason_security': 'Security patch',
     
     // Backgrounds
     'customize_menu': 'Customize your main menu',
@@ -585,7 +601,23 @@ const translations = {
     'english_desc': 'Английский язык',
     'russian_desc': 'Русский язык',
     '3d_effect': '3D эффект монеты',
-    '3d_effect_desc': 'Наклоняйте монету мышкой/пальцем',
+    '3d_effect_desc': 'Наклоняйте монету мышью/пальцем',
+    'settings_profile': 'Настройки профиля',
+    'settings_profile_desc': 'Настройте отображение профиля',
+    'profile_tab_location': 'Расположение вкладки профиля',
+    'profile_tab_bottom': 'Нижняя панель (по умолч.)',
+    'profile_tab_settings': 'В настройках (ниже рекордов)',
+    'privacy_add_friends': 'Кто может добавлять меня в друзья?',
+    'privacy_send_reactions': 'Кто может отправлять мне эмоции?',
+    'privacy_view_info': 'Кто может видеть мою информацию?',
+    'privacy_view_avatar': 'Кто может видеть мою аватарку?',
+    'privacy_everyone': 'Все',
+    'privacy_friends': 'Только друзья',
+    'privacy_nobody': 'Никто',
+    'maintenance_reason_technical': 'Технические неполадки',
+    'maintenance_reason_update': 'Обновление системы',
+    'maintenance_reason_database': 'Обслуживание базы данных',
+    'maintenance_reason_security': 'Патч безопасности',
     
     // Backgrounds
     'customize_menu': 'Настройте главное меню',
@@ -1549,6 +1581,13 @@ profile: {
 
   x2: false,
   lastLogin: Date.now(),
+  streak: {
+    days: 0,
+    lastClaimDay: 0,
+    lastClaimTs: 0,
+    restoresLeft: 3,
+    pendingClaim: false
+  },
   wonX10: false,
   cards: { 
     c1: -1, c2: -1, c3: -1, c4: -1, c5: -1,
@@ -7019,8 +7058,49 @@ updateNotificationBadges();
   save();
 }
 
+function setPrivacy(key, value) {
+  if (!d.settings) d.settings = {};
+  if (!d.settings.privacy) d.settings.privacy = {};
+  d.settings.privacy[key] = value;
+  save();
+}
+
+function setProfileTabLocation(loc) {
+  if (!d.settings) d.settings = {};
+  d.settings.profileTabLocation = loc;
+  save();
+  _applyProfileTabLocation(loc);
+}
+
+function _applyProfileTabLocation(loc) {
+  const navProfile = document.getElementById('navProfile');
+  const btnBottom = document.getElementById('ptLocBottom');
+  const btnSettings = document.getElementById('ptLocSettings');
+  const profileInSettings = document.getElementById('profileInSettingsBtn');
+  if (loc === 'settings') {
+    if (navProfile) navProfile.style.display = 'none';
+    if (profileInSettings) profileInSettings.style.display = 'flex';
+  } else {
+    if (navProfile) navProfile.style.display = '';
+    if (profileInSettings) profileInSettings.style.display = 'none';
+  }
+  if (btnBottom) btnBottom.style.borderColor = loc === 'bottom' ? '#00bcd4' : '#333';
+  if (btnSettings) btnSettings.style.borderColor = loc === 'settings' ? '#00bcd4' : '#333';
+}
+
+function initProfileSettingsUI() {
+  const loc = d.settings?.profileTabLocation || 'bottom';
+  _applyProfileTabLocation(loc);
+
+  const privacy = d.settings?.privacy || {};
+  ['addFriends','sendReactions','viewInfo','viewAvatar'].forEach(key => {
+    const el = document.getElementById('privacy' + key.charAt(0).toUpperCase() + key.slice(1));
+    if (el && privacy[key]) el.value = privacy[key];
+  });
+}
+
 function showSettingsSub(sub) {
-  const subs = ["settings-main", "settings-animation", "settings-sound", "settings-bg", "settings-language", "settings-notifications"];
+  const subs = ["settings-main", "settings-animation", "settings-sound", "settings-bg", "settings-language", "settings-notifications", "settings-profile"];
   subs.forEach(s => {
     const elem = document.getElementById(s);
     if (elem) elem.style.display = "none";
@@ -7028,6 +7108,7 @@ function showSettingsSub(sub) {
   
   const target = document.getElementById("settings-" + sub);
   if (target) target.style.display = "block";
+  if (sub === 'profile') initProfileSettingsUI();
 }
 
 function toggleAnimationSetting(setting, value) {
@@ -7907,7 +7988,7 @@ function _adminInjectButton() {
   btn.onclick = openAdminPanel;
   btn.innerHTML = `<img src="kspt.png" style="width:18px;height:18px;filter:hue-rotate(200deg) brightness(1.4);"><span>Admin</span>`;
   btn.style.cssText = `
-    display:none; position:fixed; bottom:90px; right:14px; z-index:9000;
+    display:none; position:fixed; bottom:90px; right:14px; z-index:50001;
     background:linear-gradient(135deg,#1a237e,#283593);
     border:1.5px solid #5c6bc0; border-radius:22px; padding:8px 14px;
     align-items:center; gap:6px; cursor:pointer;
@@ -7958,6 +8039,7 @@ function adminTab(tab) {
     document.getElementById('adminTabOther').classList.add('ap-tab-active');
     document.getElementById('adminOtherSection').style.display = 'block';
     adminLoadTokenList();
+    _adminLoadVerifyList();
   }
 }
 
@@ -8014,6 +8096,38 @@ async function adminSendPoll() {
   await _db.ref('admin/pollVotes').remove();
   setTimeout(() => _db.ref('admin/poll').remove(), (dur + 10) * 1000);
   showToast('🗳 Poll sent!');
+}
+
+/* ---- GLOBAL: Maintenance ---- */
+function apMaintReasonCustomToggle(val) {
+  const custom = document.getElementById('apMaintReasonCustom');
+  if (custom) custom.style.display = val === 'custom' ? 'block' : 'none';
+}
+function apMaintTimeToggle(val) {
+  document.getElementById('apMaintApproxText').style.display = val === 'approx' ? 'block' : 'none';
+  document.getElementById('apMaintTimerDur').style.display = val === 'timer' ? 'block' : 'none';
+}
+async function adminStartMaintenance() {
+  if (!_isAdminUser()) return;
+  const reasonKey = document.getElementById('apMaintReason').value;
+  const customText = document.getElementById('apMaintReasonCustom').value.trim();
+  const reason = reasonKey === 'custom' ? customText : reasonKey;
+  if (!reason) { showToast('Enter a reason'); return; }
+  const timeType = document.querySelector('input[name="apMaintTimeType"]:checked')?.value || 'approx';
+  let endTs = 0, approxText = '';
+  if (timeType === 'timer') {
+    const dur = Number(document.getElementById('apMaintTimerDur').value) || 600;
+    endTs = Date.now() + dur * 1000;
+  } else {
+    approxText = document.getElementById('apMaintApproxText').value.trim() || '~30 min';
+  }
+  await _db.ref('admin/maintenance').set({ active: true, reason, endTs, approxText, ts: Date.now() });
+  showToast('🔧 Maintenance started');
+}
+async function adminStopMaintenance() {
+  if (!_isAdminUser()) return;
+  await _db.ref('admin/maintenance').remove();
+  showToast('✅ Maintenance ended');
 }
 
 /* ---- GLOBAL: Broadcast ---- */
@@ -8124,6 +8238,44 @@ function _adminSelectedUid() {
   return sel?.value || null;
 }
 
+/* ---- OTHER: Verified badge ---- */
+let _adminVerifySelectedUid = null;
+
+function _adminLoadVerifyList() {
+  if (!window._firebaseReady) return;
+  const container = document.getElementById('apVerifyList');
+  if (!container) return;
+  _db.ref('leaderboard').limitToLast(200).once('value', snap => {
+    const data = snap.val() || {};
+    container.innerHTML = '';
+    Object.entries(data).forEach(([uid, p]) => {
+      const isVerified = !!p.verified;
+      const row = document.createElement('div');
+      row.style.cssText = 'display:flex;align-items:center;gap:8px;padding:6px 8px;border-radius:8px;cursor:pointer;border:1px solid #222;background:#0d0d0d;';
+      row.innerHTML = `
+        <img src="${p.photoUrl||'seri.png'}" onerror="this.src='seri.png'" style="width:28px;height:28px;border-radius:50%;object-fit:cover;flex-shrink:0;">
+        <span style="font-size:13px;flex:1;">${p.name||uid}</span>
+        ${isVerified ? '<img src="gal.png" style="width:14px;height:14px;object-fit:contain;vertical-align:middle;">' : ''}
+      `;
+      row.onclick = () => {
+        container.querySelectorAll('div').forEach(r => r.style.background = '#0d0d0d');
+        row.style.background = '#1a2a3a';
+        _adminVerifySelectedUid = uid;
+      };
+      container.appendChild(row);
+    });
+  });
+}
+
+async function adminToggleVerified(grant) {
+  if (!_isAdminUser()) return;
+  const uid = _adminVerifySelectedUid;
+  if (!uid) { showToast('Select a player first'); return; }
+  await _db.ref(`leaderboard/${uid}`).update({ verified: grant ? true : null });
+  showToast(grant ? `✅ Verified granted to ${uid}` : `✕ Verified revoked`);
+  _adminLoadVerifyList();
+}
+
 /* ---- MOD: Set/Give KSPT ---- */
 async function adminSetKSPT() {
   if (!_isAdminUser()) return;
@@ -8203,6 +8355,23 @@ async function adminLoadPlayerSkins() {
   const owned = Object.entries(skins).filter(([k,v]) => v && v !== '0').map(([k]) => k);
   container.textContent = owned.length ? owned.join(', ') : 'No skins owned.';
 }
+
+async function adminModGiveEKSkin() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) { showToast('Select a player'); return; }
+  const skinId = document.getElementById('apModEKSkin').value;
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'giveEKSkinMod', skinId, take: false, ts: Date.now() });
+  showToast(`✅ EK skin "${skinId}" queued for ${uid}`);
+}
+
+async function adminModTakeEKSkin() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) { showToast('Select a player'); return; }
+  const skinId = document.getElementById('apModEKSkin').value;
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'giveEKSkinMod', skinId, take: true, ts: Date.now() });
+  showToast(`✅ EK skin "${skinId}" take queued for ${uid}`);
+}
+
 async function adminModGiveSkin() {
   if (!_isAdminUser()) return;
   const uid = _adminSelectedUid(); if (!uid) { showToast('Select a player'); return; }
@@ -8537,6 +8706,15 @@ _db.ref('admin/coinControl').on('value', snap => {
     }
   });
 
+_db.ref('admin/maintenance').on('value', snap => {
+    const v = snap.val();
+    if (v && v.active) {
+      _adminShowMaintenance(v);
+    } else {
+      _adminHideMaintenance();
+    }
+  });
+
   // Personal actions (per-UID node)
   const myUid = typeof getMyUid === 'function' ? getMyUid() : null;
   if (myUid) {
@@ -8548,6 +8726,78 @@ _db.ref('admin/coinControl').on('value', snap => {
       _db.ref(`admin/modActions/${myUid}`).remove();
     });
   }
+}
+
+/* ---- Maintenance Screen ---- */
+let _maintTimerInterval = null;
+
+function _adminShowMaintenance(v) {
+  let m = document.getElementById('maintenanceScreen');
+  if (!m) {
+    m = document.createElement('div');
+    m.id = 'maintenanceScreen';
+    document.body.appendChild(m);
+  }
+
+  const reasonText = v.reason && v.reason.startsWith('maintenance_reason_') ? t(v.reason) : (v.reason || '');
+
+  m.style.cssText = `
+    position:fixed;inset:0;z-index:49999;
+    background:linear-gradient(135deg,#0a0a1a 0%,#0d1a2e 50%,#0a0a1a 100%);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;
+    padding:30px;box-sizing:border-box;text-align:center;
+  `;
+
+  m.innerHTML = `
+    <style>
+      @keyframes maintGear { 0%{transform:rotate(0deg)} 100%{transform:rotate(360deg)} }
+      @keyframes maintPulse { 0%,100%{opacity:0.4;transform:scale(1)} 50%{opacity:1;transform:scale(1.08)} }
+      @keyframes maintFloat { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+      @keyframes maintBar { 0%{width:0%} 100%{width:100%} }
+    </style>
+    <div style="animation:maintFloat 3s ease-in-out infinite;margin-bottom:24px;">
+      <div style="font-size:72px;animation:maintGear 4s linear infinite;display:inline-block;">⚙️</div>
+    </div>
+    <div style="font-size:22px;font-weight:bold;color:#ffd54f;margin-bottom:8px;letter-spacing:1px;">Maintenance Break</div>
+    <div style="font-size:14px;color:#90a4ae;margin-bottom:20px;max-width:280px;line-height:1.5;">${reasonText}</div>
+    <div style="background:rgba(255,255,255,0.05);border:1px solid rgba(255,213,79,0.2);border-radius:14px;padding:14px 24px;margin-bottom:20px;min-width:200px;">
+      ${v.endTs > 0 ?
+        `<div style="font-size:11px;color:#888;margin-bottom:4px;">Ends in</div>
+         <div id="maintCountdown" style="font-size:28px;font-weight:bold;color:#ffd54f;letter-spacing:2px;">—</div>` :
+        `<div style="font-size:11px;color:#888;margin-bottom:4px;">Estimated end</div>
+         <div style="font-size:16px;color:#ffd54f;">${v.approxText || '~soon'}</div>`
+      }
+    </div>
+    <div style="width:200px;height:3px;background:rgba(255,255,255,0.08);border-radius:10px;overflow:hidden;">
+      <div style="height:100%;background:linear-gradient(90deg,#ffd54f,#ff9800);border-radius:10px;animation:maintBar 2.5s ease-in-out infinite alternate;"></div>
+    </div>
+    <div style="margin-top:24px;font-size:11px;color:#37474f;animation:maintPulse 2s ease-in-out infinite;">We'll be right back ✨</div>
+  `;
+
+  // Таймер обратного отсчёта
+  clearInterval(_maintTimerInterval);
+  if (v.endTs > 0) {
+    function updateCountdown() {
+      const el = document.getElementById('maintCountdown');
+      if (!el) { clearInterval(_maintTimerInterval); return; }
+      const left = Math.max(0, v.endTs - Date.now());
+      const h = Math.floor(left / 3600000);
+      const min = Math.floor((left % 3600000) / 60000);
+      const sec = Math.floor((left % 60000) / 1000);
+      el.textContent = h > 0
+        ? `${h}:${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`
+        : `${String(min).padStart(2,'0')}:${String(sec).padStart(2,'0')}`;
+      if (left === 0) clearInterval(_maintTimerInterval);
+    }
+    updateCountdown();
+    _maintTimerInterval = setInterval(updateCountdown, 1000);
+  }
+}
+
+function _adminHideMaintenance() {
+  clearInterval(_maintTimerInterval);
+  const m = document.getElementById('maintenanceScreen');
+  if (m) m.remove();
 }
 
 /* ---- Active bar refresh ---- */
@@ -9246,6 +9496,23 @@ function _adminApplyModAction(v) {
     case 'giveOpening':
       _adminApplyOpening(v.type);
       break;
+    case 'giveEKSkinMod': {
+      try {
+        const raw = localStorage.getItem('ekshop_owned');
+        const owned = raw ? JSON.parse(raw) : {};
+        if (v.take) {
+          delete owned[v.skinId];
+        } else {
+          owned[v.skinId] = true;
+        }
+        localStorage.setItem('ekshop_owned', JSON.stringify(owned));
+        // Синхронизируем в d тоже
+        if (d) { d.ekshop_owned = owned; save(); }
+        if (typeof ui === 'function') ui();
+        _adminShowOverlay(v.take ? `🛒 EK skin "${v.skinId}" removed` : `🛒 Admin gave EK skin: ${v.skinId}!`, '#ffd54f', 4000);
+      } catch(e) { console.warn('giveEKSkinMod failed', e); }
+      break;
+    }
     case 'giveSkinMod':
       if (!d) return;
       if (!d.skins) d.skins = {};
@@ -10685,6 +10952,246 @@ function buyBackground(bg, price) {
 }
 
 // ==========================================
+// STREAK SYSTEM
+// ==========================================
+
+const STREAK_MILESTONES = {
+  10:  { reward: 'noobBox',    color: '#ff9800', label: 'Noob Box' },
+  30:  { reward: 'capsule',    color: '#f44336', label: 'Capsule' },
+  50:  { reward: 'bombBox',    color: '#9c27b0', label: 'Bomb Box' },
+  100: { reward: 'glitchBox',  color: '#2196f3', label: 'Glitch Box' },
+  200: { reward: 'keyBox',     color: '#00bcd4', label: 'Key Box' },
+  300: { reward: 'keyRed',     color: '#e0f7fa', label: 'Red Key' },
+  500: { reward: 'keyGreen',   color: '#212121', label: 'Green Key' },
+  1000:{ reward: 'goldCapsule',color: 'rainbow', label: 'Gold Capsule' }
+};
+
+function _streakGetColor(days, active) {
+  if (!active) return '#555';
+  if (days >= 1000) return 'rainbow';
+  if (days >= 500)  return '#1a1a2e';
+  if (days >= 300)  return '#b3e5fc';
+  if (days >= 200)  return '#00bcd4';
+  if (days >= 100)  return '#1565c0';
+  if (days >= 50)   return '#9c27b0';
+  if (days >= 30)   return '#f44336';
+  if (days >= 10)   return '#ff9800';
+  return '#ffc107';
+}
+
+function _streakGetBorderColor(days) {
+  if (days >= 1000) return 'rainbow';
+  if (days >= 500)  return '#37474f';
+  if (days >= 300)  return '#b3e5fc';
+  if (days >= 200)  return '#00bcd4';
+  if (days >= 100)  return '#1e88e5';
+  if (days >= 50)   return '#9c27b0';
+  if (days >= 30)   return '#f44336';
+  if (days >= 10)   return '#ff9800';
+  return null; // no special border below 10
+}
+
+function _streakFlameHTML(days, active, size) {
+  size = size || 22;
+  const color = _streakGetColor(days, active);
+  const isRainbow = color === 'rainbow';
+  const id = 'sf_' + Math.random().toString(36).slice(2,7);
+
+  if (!active) {
+    // Grey flame SVG
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="vertical-align:middle;flex-shrink:0;">
+      <defs>
+        <radialGradient id="${id}g" cx="50%" cy="80%" r="60%">
+          <stop offset="0%" stop-color="#666"/>
+          <stop offset="100%" stop-color="#333"/>
+        </radialGradient>
+      </defs>
+      <path d="M12 2 C10 6 6 8 7 13 C7.5 15.5 9 17 11 17.5 C9.5 16 9.5 13.5 11 12 C11 14 12.5 15 13 17.5 C15 17 16.5 15.5 17 13 C18 8 14 6 12 2Z" fill="url(#${id}g)" opacity="0.5"/>
+    </svg>`;
+  }
+
+  if (isRainbow) {
+    return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="vertical-align:middle;flex-shrink:0;">
+      <defs>
+        <linearGradient id="${id}rg" x1="0%" y1="100%" x2="100%" y2="0%">
+          <stop offset="0%"><animate attributeName="stop-color" values="#ff0000;#ff9900;#ffff00;#00ff00;#00ffff;#0099ff;#cc00ff;#ff0000" dur="2s" repeatCount="indefinite"/></stop>
+          <stop offset="50%"><animate attributeName="stop-color" values="#ff9900;#ffff00;#00ff00;#00ffff;#0099ff;#cc00ff;#ff0000;#ff9900" dur="2s" repeatCount="indefinite"/></stop>
+          <stop offset="100%"><animate attributeName="stop-color" values="#ffff00;#00ff00;#00ffff;#0099ff;#cc00ff;#ff0000;#ff9900;#ffff00" dur="2s" repeatCount="indefinite"/></stop>
+        </linearGradient>
+        <filter id="${id}glow"><feGaussianBlur stdDeviation="1.5" result="blur"/><feMerge><feMergeNode in="blur"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+      </defs>
+      <g filter="url(#${id}glow)">
+        <path d="M12 1 C9.5 5.5 5 8 6.5 14 C7 16.5 9 18.5 11.5 19 C10 17.5 10 14.5 12 13 C12 15 13.5 16.5 14 19 C16.5 18.5 18 16.5 18.5 14 C20 8 15.5 5.5 12 1Z" fill="url(#${id}rg)">
+          <animateTransform attributeName="transform" type="scale" values="1,1;1.04,1.06;1,1" dur="0.8s" repeatCount="indefinite" additive="sum"/>
+        </path>
+        <ellipse cx="12" cy="16" rx="2" ry="1.5" fill="white" opacity="0.6">
+          <animate attributeName="opacity" values="0.6;0.3;0.6" dur="0.9s" repeatCount="indefinite"/>
+        </ellipse>
+      </g>
+    </svg>`;
+  }
+
+  // Standard colored flame
+  const c1 = color, c2 = _lighten(color), c3 = '#fff8e1';
+  return `<svg width="${size}" height="${size}" viewBox="0 0 24 24" style="vertical-align:middle;flex-shrink:0;">
+    <defs>
+      <radialGradient id="${id}g" cx="50%" cy="70%" r="65%">
+        <stop offset="0%" stop-color="${c3}" stop-opacity="0.9"/>
+        <stop offset="40%" stop-color="${c2}"/>
+        <stop offset="100%" stop-color="${c1}"/>
+      </radialGradient>
+      <filter id="${id}f"><feGaussianBlur stdDeviation="0.8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+    </defs>
+    <g filter="url(#${id}f)">
+      <path d="M12 1 C9.5 5.5 5 8 6.5 14 C7 16.5 9 18.5 11.5 19 C10 17.5 10 14.5 12 13 C12 15 13.5 16.5 14 19 C16.5 18.5 18 16.5 18.5 14 C20 8 15.5 5.5 12 1Z" fill="url(#${id}g)">
+        <animateTransform attributeName="transform" type="scale" values="1,1;1.03,1.05;0.98,1.02;1,1" dur="1.1s" repeatCount="indefinite" additive="sum"/>
+      </path>
+      <ellipse cx="12" cy="16" rx="2.5" ry="1.8" fill="white" opacity="0.55">
+        <animate attributeName="opacity" values="0.55;0.25;0.55" dur="1s" repeatCount="indefinite"/>
+        <animate attributeName="ry" values="1.8;1.2;1.8" dur="1s" repeatCount="indefinite"/>
+      </ellipse>
+    </g>
+  </svg>`;
+}
+
+function _lighten(hex) {
+  try {
+    let c = hex.replace('#','');
+    if (c.length === 3) c = c.split('').map(x=>x+x).join('');
+    const num = parseInt(c,16);
+    const r = Math.min(255, ((num>>16)&0xff) + 60);
+    const g = Math.min(255, ((num>>8)&0xff) + 60);
+    const b = Math.min(255, (num&0xff) + 60);
+    return '#' + [r,g,b].map(x=>x.toString(16).padStart(2,'0')).join('');
+  } catch(e) { return '#fff'; }
+}
+
+function checkStreak() {
+  if (!d.streak) d.streak = { days:0, lastClaimDay:0, lastClaimTs:0, restoresLeft:3, pendingClaim:false };
+
+  const now = Date.now();
+  const MS_DAY = 86400000;
+
+  // Первый вход
+  if (!d.streak.lastClaimTs) {
+    d.streak.lastClaimTs = now;
+    d.streak.lastClaimDay = 1;
+    d.streak.days = 1;
+    save();
+    return;
+  }
+
+  const msSinceLastClaim = now - d.streak.lastClaimTs;
+  const daysSince = Math.floor(msSinceLastClaim / MS_DAY);
+
+  if (daysSince === 0) return; // уже сегодня
+
+  if (daysSince === 1) {
+    // Продолжение серии
+    d.streak.days += 1;
+    d.streak.lastClaimTs = now;
+    d.streak.pendingClaim = true;
+    save();
+    _streakShowAnimation(d.streak.days);
+    _streakGiveRewards(d.streak.days);
+  } else if (daysSince >= 2) {
+    // Серия прервана
+    d.streak.days = 0;
+    d.streak.lastClaimTs = now;
+    d.streak.pendingClaim = false;
+    save();
+  }
+}
+
+function _streakGiveRewards(days) {
+  // +1 жетон за каждый кратный 10 день
+  if (days % 10 === 0) {
+    if (!d.quests) d.quests = {};
+    d.quests.znetons = (d.quests.znetons || 0) + 1;
+    save();
+    const zEl = document.getElementById('znetonCount');
+    if (zEl) zEl.textContent = d.quests.znetons;
+    showToast(`🎖️ *+1 token for a ${days}-day streak!*`);
+  }
+
+  // Milestone rewards
+  const milestone = STREAK_MILESTONES[days];
+  if (milestone) {
+    setTimeout(() => {
+      if (typeof _adminApplyOpening === 'function') {
+        _adminApplyOpening(milestone.reward);
+        showToast(`🔥 ${days}-day streak! Reward: ${milestone.label}!`);
+      }
+    }, 3500); // после анимации
+  }
+}
+
+function restoreStreak() {
+  if (!d.streak) return;
+  if ((d.streak.restoresLeft || 0) <= 0) { showToast('No restores left!'); return; }
+  const cost = 5;
+  if ((d.quests?.znetons || 0) < cost) { showToast(`You need ${cost} tokens to restore`); return; }
+  if (!confirm(`Восстановить серию за ${cost} жетонов?`)) return;
+
+  d.quests.znetons -= cost;
+  save();
+  const zEl = document.getElementById('znetonCount');
+  if (zEl) zEl.textContent = d.quests.znetons;
+
+  d.streak.days += 1;
+  d.streak.restoresLeft -= 1;
+  d.streak.lastClaimTs = Date.now();
+  d.streak.pendingClaim = false;
+  save();
+  showToast(`🔥 Streak restored! Day ${d.streak.days}`);
+  if (typeof renderProfileTab === 'function') renderProfileTab();
+}
+
+function _streakShowAnimation(days) {
+  const color = _streakGetColor(days, true);
+  const isRainbow = color === 'rainbow';
+
+  const overlay = document.createElement('div');
+  overlay.style.cssText = `position:fixed;inset:0;z-index:99998;display:flex;flex-direction:column;align-items:center;justify-content:center;pointer-events:none;`;
+  overlay.innerHTML = `
+    <style>
+      @keyframes streakPop { 0%{transform:scale(0.3);opacity:0} 60%{transform:scale(1.2);opacity:1} 100%{transform:scale(1);opacity:1} }
+      @keyframes streakFadeOut { 0%{opacity:1} 100%{opacity:0} }
+      @keyframes streakParticle { 0%{transform:translateY(0) scale(1);opacity:1} 100%{transform:translateY(-120px) scale(0);opacity:0} }
+      ${isRainbow ? `@keyframes rainbowText{0%{color:#ff0000}16%{color:#ff9900}33%{color:#ffff00}50%{color:#00ff00}66%{color:#00ffff}83%{color:#0099ff}100%{color:#cc00ff}}` : ''}
+    </style>
+    <div style="animation:streakPop 0.6s cubic-bezier(.36,2,.5,1) forwards;text-align:center;padding:30px;background:rgba(0,0,0,0.85);border-radius:24px;border:2px solid ${isRainbow?'#ffd700':color};box-shadow:0 0 40px ${isRainbow?'#ffd700':color}88;max-width:280px;">
+      <div style="font-size:72px;margin-bottom:8px;">${_streakFlameHTML(days, true, 72)}</div>
+      <div style="font-size:28px;font-weight:bold;margin-bottom:4px;${isRainbow?'animation:rainbowText 1s linear infinite;':'color:'+color+';'}">Day ${days}!</div>
+      <div style="font-size:15px;color:#aaa;">🔥 Streak continues!</div>
+      ${days % 10 === 0 ? `<div style="font-size:13px;color:#ffd700;margin-top:6px;">🎫 +1 Ticket bonus!</div>` : ''}
+      ${STREAK_MILESTONES[days] ? `<div style="font-size:13px;color:#ffd700;margin-top:4px;">🎁 ${STREAK_MILESTONES[days].label} unlocked!</div>` : ''}
+    </div>
+    <div id="_streakParticles" style="position:absolute;inset:0;pointer-events:none;overflow:hidden;"></div>
+  `;
+  document.body.appendChild(overlay);
+
+  // Particles
+  const pc = overlay.querySelector('#_streakParticles');
+  for (let i = 0; i < 20; i++) {
+    const p = document.createElement('div');
+    const x = 20 + Math.random() * 60;
+    const delay = Math.random() * 1.5;
+    p.style.cssText = `position:absolute;bottom:30%;left:${x}%;font-size:${14+Math.random()*12}px;animation:streakParticle ${1+Math.random()}s ${delay}s ease-out forwards;`;
+    p.textContent = ['🔥','✨','⭐','💥'][Math.floor(Math.random()*4)];
+    pc.appendChild(p);
+  }
+
+  // Fade out
+  setTimeout(() => { overlay.style.animation = 'streakFadeOut 0.8s forwards'; }, 3000);
+  setTimeout(() => { if (overlay.parentNode) overlay.remove(); }, 3800);
+}
+
+// ==========================================
+// END STREAK SYSTEM
+// ==========================================
+
+// ==========================================
 // INITIALIZATION
 // ==========================================
 
@@ -10692,6 +11199,8 @@ function initGame() {
     console.log('initGame called');
     // Process offline income on load
     processOfflineIncome();
+    // Streak check
+    try { checkStreak(); } catch(e) { console.warn('streak error', e); }
 
     // Initial UI update
     ui();
@@ -12359,7 +12868,15 @@ function pushMyLeaderboardData() {
     lastSeen: Date.now(),
     playtimeMs: Math.round(d.playtimeMs || 0),
     adminBanned: d.adminBanned || false,
-    customRank: d.customRank || null
+    customRank: d.customRank || null,
+    bio: d.profile?.bio || '',
+    favSkin: d.profile?.favSkin || '',
+    favGame: d.profile?.favGame || '',
+    skins: d.skins || {},
+    secretSkins: d.secretSkins || {},
+    myTokens: (d.market?.myTokens || []).map(tk => ({ ticker: tk.ticker||'', name: tk.name||'' })),
+    streakDays: d.streak?.days || 0,
+    streakActive: d.streak?.lastClaimTs ? (Date.now() - d.streak.lastClaimTs) < 86400000 * 1.5 : false
   };
   window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).set(entry);
 }
@@ -12541,10 +13058,13 @@ function renderLeaderboard(players) {
       <div style="font-size:${rank <= 3 ? '20px' : '14px'}; font-weight:bold; color:${rankColor}; min-width:28px; text-align:center;">${medal || '#' + rank}</div>
       <img src="${avatarSrc}" onerror="this.src='seri.png'" style="width:38px; height:38px; border-radius:50%; object-fit:cover; border:2px solid ${rankColor}; flex-shrink:0;">
       <div style="flex:1; min-width:0;">
-        <div style="font-weight:bold; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name || 'Player'}${isMe ? ' <span style="color:#ffd700;font-size:11px;">(you)</span>' : ''}</div>
+        <div style="font-weight:bold; font-size:13px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${p.name || 'Player'}${p.verified ? ' <img src="gal.png" style="width:13px;height:13px;object-fit:contain;vertical-align:middle;">' : ''}${isMe ? ' <span style="color:#ffd700;font-size:11px;">(you)</span>' : ''}</div>
         <div style="font-size:11px; color:${seenColor}; margin-top:2px;">${seenStr}</div>
       </div>
-      <div style="font-weight:bold; font-size:13px; color:#6ee7b7; text-align:right; flex-shrink:0;">${rateStr}</div>
+      <div style="display:flex;align-items:center;gap:6px;flex-shrink:0;">
+        ${(p.streakDays && p.streakDays > 0) ? `<span style="display:inline-flex;align-items:center;gap:2px;">${_streakFlameHTML(p.streakDays, !!p.streakActive, 16)}<span style="font-size:10px;color:#aaa;">${p.streakDays}</span></span>` : ''}
+        <div style="font-weight:bold; font-size:13px; color:#6ee7b7; text-align:right;">${rateStr}</div>
+      </div>
     </div>`;
   }).join('');
 }
@@ -15083,10 +15603,41 @@ function renderProfileTab() {
         <button onclick="profileResetAvatar()" style="background:#1a1a1a;border:1px solid #333;color:#888;border-radius:8px;padding:4px 10px;font-size:12px;cursor:pointer;">↩ ${t('profile_reset_avatar')}</button>
       </div>
       <!-- Ник -->
-      <div style="font-size:18px;font-weight:bold;margin-bottom:2px;display:flex;align-items:center;justify-content:center;gap:6px;">
-        <span>${name}</span>
-        <button onclick="profileChangeName()" style="background:#1a1a1a;border:1px solid #333;color:#00bcd4;border-radius:6px;padding:3px 9px;font-size:12px;cursor:pointer;">${t('profile_change_name')}</button>
-      </div>
+      ${(function(){
+        const sd = d.streak?.days || 0;
+        const bc = sd >= 10 ? _streakGetBorderColor(sd) : null;
+        const isRainbow = bc === 'rainbow';
+        const borderStyle = bc && !isRainbow
+          ? `text-shadow:0 0 8px ${bc},0 0 16px ${bc},0 0 28px ${bc}88;`
+          : (isRainbow
+          ? `animation:rainbowGlow 2s linear infinite;`
+          : '');
+        return `<style>@keyframes rainbowGlow{0%{text-shadow:0 0 12px #f00,0 0 24px #f0088}16%{text-shadow:0 0 12px #ff9900,0 0 24px #ff990088}33%{text-shadow:0 0 12px #ffff00,0 0 24px #ffff0088}50%{text-shadow:0 0 12px #00ff00,0 0 24px #00ff0088}66%{text-shadow:0 0 12px #00ffff,0 0 24px #00ffff88}83%{text-shadow:0 0 12px #0099ff,0 0 24px #0099ff88}100%{text-shadow:0 0 12px #cc00ff,0 0 24px #cc00ff88}}</style>
+        <div style="font-size:18px;font-weight:bold;margin-bottom:2px;display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
+          <span style="${borderStyle}">${name}</span>
+          ${(typeof d !== 'undefined' && d.verified) ? '<img src="gal.png" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;">' : ''}
+          <button onclick="profileChangeName()" style="background:#1a1a1a;border:1px solid #333;color:#00bcd4;border-radius:6px;padding:3px 9px;font-size:12px;cursor:pointer;">${t('profile_change_name')}</button>
+        </div>`;
+      })()}
+
+<!-- Streak block -->
+      ${(function(){
+        const sd = d.streak?.days || 0;
+        const rl = d.streak?.restoresLeft ?? 3;
+        const lastTs = d.streak?.lastClaimTs || 0;
+        const msLeft = Math.max(0, 86400000 - (Date.now() - lastTs));
+        const h = Math.floor(msLeft/3600000), m = Math.floor((msLeft%3600000)/60000);
+        const nextIn = msLeft > 0 ? `Next in ${h}h ${m}m` : 'Ready!';
+        return `<div style="display:flex;align-items:center;justify-content:center;gap:8px;margin-bottom:8px;flex-wrap:wrap;">
+          ${_streakFlameHTML(sd, sd > 0, 28)}
+          <div style="text-align:left;">
+            <div style="font-weight:bold;font-size:15px;">${sd} day${sd===1?'':'s'}</div>
+            <div style="font-size:10px;color:#888;">${nextIn} · Restores: ${rl}/3</div>
+          </div>
+          ${(rl > 0 && sd === 0 && lastTs > 0) ? `<button onclick="restoreStreak()" style="background:#1a1a1a;border:1px solid #ff9800;color:#ff9800;border-radius:8px;padding:4px 10px;font-size:11px;cursor:pointer;">🔄 Restore (5🎖️)</button>` : ''}
+        </div>`;
+      })()}
+
       <div style="font-size:11px;color:#555;margin-bottom:10px;display:flex;align-items:center;justify-content:center;gap:6px;">
         <span>ID: ${myUid}</span>
         <button onclick="profileCopyId()" style="background:#1a1a1a;border:1px solid #333;color:#00bcd4;border-radius:6px;padding:2px 8px;font-size:11px;cursor:pointer;" data-lang-key="profile_copy_id">Copy ID</button>
@@ -15309,7 +15860,6 @@ function profileChangeName() {
 
 function profileChangeAvatar() {
   const isTg = !!window.Telegram?.WebApp?.initDataUnsafe?.user;
-  if (isTg) { showToast('Avatar is taken from Telegram'); return; }
   let fileInput = document.getElementById('_profileAvatarInput');
   if (!fileInput) {
     fileInput = document.createElement('input');
@@ -15343,11 +15893,23 @@ function profileChangeAvatar() {
 }
 
 function profileResetAvatar() {
-  const isTg = !!window.Telegram?.WebApp?.initDataUnsafe?.user;
-  if (isTg) { showToast('Avatar is from Telegram automatically'); return; }
+  const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
+  if (tgUser?.photo_url) {
+    // Сбрасываем на TG-аватарку
+    if (window._firebaseReady && window._firebaseDB) {
+      const uid = getMyUid();
+      if (uid && uid !== 'local') {
+        window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).update({ photoUrl: tgUser.photo_url });
+      }
+    }
+    showToast('✅ ' + t('profile_reset_avatar'));
+    renderProfileTab();
+    return;
+  }
+  // Браузер — удаляем кастомную
   localStorage.removeItem('_kspt_nonTg_avatar');
   save();
-  showToast('✅ Avatar reset!');
+  showToast('✅ ' + t('profile_reset_avatar'));
   renderProfileTab();
 }
 
@@ -15442,13 +16004,8 @@ function renderFriendsTab() {
     <!-- Add friend -->
     <div class="profile-card">
       <div style="font-weight:bold;margin-bottom:8px;">${t('friends_add')}</div>
-      <div style="display:flex;gap:8px;">
-        <input id="friendIdInput" style="flex:1;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:8px;padding:8px;font-size:13px;box-sizing:border-box;"
-               placeholder="${t('friends_enter_id')}">
-        <button onclick="addFriendById()" style="background:#00bcd4;color:#000;font-weight:bold;border:none;border-radius:8px;padding:8px 14px;cursor:pointer;">+</button>
-      </div>
       <input id="friendSearchInput" oninput="searchFriends(this.value)"
-             style="width:100%;margin-top:8px;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:8px;padding:8px;font-size:13px;box-sizing:border-box;"
+             style="width:100%;background:#1a1a1a;border:1px solid #333;color:#fff;border-radius:8px;padding:8px;font-size:13px;box-sizing:border-box;"
              placeholder="${t('friends_search')}">
       <div id="friendSearchResults" style="margin-top:6px;"></div>
     </div>
@@ -15474,37 +16031,56 @@ function _renderFriendItem(uid, friend) {
         <div style="font-weight:bold;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${friend.name || uid}</div>
         ${lastSeen}
       </div>
-      <button onclick="event.stopPropagation();openReactionPicker('${uid}')"
-              style="background:#1a1a1a;border:1px solid #333;border-radius:8px;padding:6px 10px;color:#fff;cursor:pointer;font-size:16px;">🎁</button>
-      <button onclick="event.stopPropagation();removeFriend('${uid}')"
-              style="background:#2a0a0a;border:1px solid #5a1a1a;border-radius:8px;padding:6px 10px;color:#ff4081;cursor:pointer;font-size:12px;">✕</button>
+      <div style="display:flex;gap:4px;flex-shrink:0;">
+        <button onclick="event.stopPropagation();openReactionPicker('${uid}')"
+                style="background:#1a1a1a;border:1px solid #333;border-radius:7px;padding:4px 7px;color:#fff;cursor:pointer;font-size:14px;line-height:1;">🎁</button>
+        <button onclick="event.stopPropagation();removeFriend('${uid}')"
+                style="background:#1a1a1a;border:1px solid #3a1a1a;border-radius:7px;padding:4px 7px;color:#ff4081;cursor:pointer;font-size:12px;line-height:1;">✕</button>
+      </div>
     </div>
   `;
 }
 
 function addFriendById() {
-  const input = document.getElementById('friendIdInput');
-  const uid = (input?.value.trim() || '').replace(/^ID:\s*/i, '');
-  if (!uid) return;
+  const input = document.getElementById('friendSearchInput');
+  const raw = (input?.value.trim() || '').replace(/^ID:\s*/i, '');
+  if (!raw) return;
   const myUid = getMyUid();
-  if (uid === myUid) { showToast(t('friends_self')); return; }
-  if (d.friends[uid]) { showToast(t('friends_already')); return; }
-
   if (!window._firebaseReady || !window._firebaseDB) { showToast('Firebase not available'); return; }
 
-  window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).once('value').then(snap => {
-    const data = snap?.val();
-    if (!data) { showToast(t('friends_not_found')); return; }
-    if (!d.friends) d.friends = {};
-    d.friends[uid] = {
-      name: data.name || uid,
-      avatar: data.photoUrl || 'seri.png',
-      lastSeen: data.lastSeen || 0
-    };
-    save();
-    if (input) input.value = '';
-    showToast(t('friends_added'));
-    renderFriendsTab();
+  // Сначала пробуем как прямой uid
+  window._firebaseRef(window._firebaseDB, 'leaderboard/' + raw).once('value').then(snap => {
+    if (snap?.val()) {
+      const data = snap.val();
+      if (raw === myUid) { showToast(t('friends_self')); return; }
+      if (d.friends && d.friends[raw]) { showToast(t('friends_already')); return; }
+      if (!d.friends) d.friends = {};
+      d.friends[raw] = { name: data.name || raw, avatar: data.photoUrl || 'seri.png', lastSeen: data.lastSeen || 0 };
+      save();
+      if (input) input.value = '';
+      document.getElementById('friendSearchResults').innerHTML = '';
+      showToast(t('friends_added'));
+      renderFriendsTab();
+    } else {
+      // Не нашли по uid — ищем по имени
+      window._firebaseRef(window._firebaseDB, 'leaderboard').once('value').then(snap2 => {
+        const all = snap2?.val();
+        if (!all) { showToast(t('friends_not_found')); return; }
+        const match = Object.entries(all).find(([uid, p]) =>
+          p.name && p.name.toLowerCase() === raw.toLowerCase() && uid !== myUid
+        );
+        if (!match) { showToast(t('friends_not_found')); return; }
+        const [uid, data] = match;
+        if (d.friends && d.friends[uid]) { showToast(t('friends_already')); return; }
+        if (!d.friends) d.friends = {};
+        d.friends[uid] = { name: data.name || uid, avatar: data.photoUrl || 'seri.png', lastSeen: data.lastSeen || 0 };
+        save();
+        if (input) input.value = '';
+        document.getElementById('friendSearchResults').innerHTML = '';
+        showToast(t('friends_added'));
+        renderFriendsTab();
+      });
+    }
   });
 }
 
@@ -15524,8 +16100,11 @@ function searchFriends(query) {
   window._firebaseRef(window._firebaseDB, 'leaderboard').once('value').then(snap => {
     const all = snap?.val();
     if (!all) return;
+    const q = query.toLowerCase();
     const matches = Object.entries(all)
-      .filter(([uid, p]) => p.name && p.name.toLowerCase().includes(query.toLowerCase()) && uid !== getMyUid())
+      .filter(([uid, p]) => uid !== getMyUid() && (
+        (p.name && p.name.toLowerCase().includes(q)) || uid.toLowerCase().includes(q)
+      ))
       .slice(0, 5);
 
     if (!matches.length) { results.innerHTML = `<div style="color:#555;font-size:12px;padding:4px;">${t('friends_not_found')}</div>`; return; }
@@ -15592,21 +16171,69 @@ function sendReaction(targetUid, reaction, modal) {
   showToast(reaction + ' sent!');
 }
 
+function _showReactionRain(emoji, fromName) {
+  const container = document.createElement('div');
+  container.style.cssText = 'position:fixed;inset:0;z-index:99999;pointer-events:none;overflow:hidden;';
+  document.body.appendChild(container);
+
+  const count = 28;
+  for (let i = 0; i < count; i++) {
+    const el = document.createElement('div');
+    el.textContent = emoji;
+    const size = 28 + Math.random() * 28;
+    const left = Math.random() * 100;
+    const delay = Math.random() * 1.5;
+    const dur = 1.6 + Math.random() * 1.2;
+    el.style.cssText = `position:absolute;font-size:${size}px;left:${left}%;top:-60px;opacity:1;animation:reactionFall ${dur}s ${delay}s linear forwards;`;
+    container.appendChild(el);
+  }
+
+  if (!document.getElementById('reactionRainStyle')) {
+    const style = document.createElement('style');
+    style.id = 'reactionRainStyle';
+    style.textContent = `@keyframes reactionFall { 0%{transform:translateY(0) rotate(0deg);opacity:1} 80%{opacity:1} 100%{transform:translateY(110vh) rotate(360deg);opacity:0} }`;
+    document.head.appendChild(style);
+  }
+
+  if (fromName) showToast(`${emoji} от ${fromName}!`);
+
+  setTimeout(() => {
+    if (container.parentNode) container.parentNode.removeChild(container);
+  }, 3500);
+}
+
+let _reactionListenerActive = false;
+
 function _checkPendingReactions() {
   if (!window._firebaseReady || !window._firebaseDB) return;
   const myUid = getMyUid();
   if (!myUid || myUid === 'local') return;
+
+  // Сначала показываем накопленные оффлайн-реакции (once)
   window._firebaseRef(window._firebaseDB, `reactions/${myUid}`).once('value').then(snap => {
     const data = snap?.val();
-    if (!data) return;
-    const entries = Object.entries(data);
-    if (!entries.length) return;
-    // Показать уведомление
-    const last = entries[entries.length - 1][1];
-    showToast(`${last.reaction} from ${last.fromName || 'someone'}!`);
-    // Очистить
-    window._firebaseRef(window._firebaseDB, `reactions/${myUid}`).remove();
+    if (data) {
+      const entries = Object.entries(data);
+      if (entries.length) {
+        // Показываем последнюю накопленную
+        const last = entries[entries.length - 1][1];
+        _showReactionRain(last.reaction, last.fromName || 'someone');
+        window._firebaseRef(window._firebaseDB, `reactions/${myUid}`).remove();
+      }
+    }
   });
+
+  // Подписываемся на новые в реальном времени (онлайн-дождь)
+  if (!_reactionListenerActive) {
+    _reactionListenerActive = true;
+    window._firebaseRef(window._firebaseDB, `reactions/${myUid}`).on('child_added', snap => {
+      const item = snap?.val();
+      if (!item) return;
+      _showReactionRain(item.reaction, item.fromName || 'someone');
+      // Удаляем эту конкретную реакцию
+      snap.ref.remove();
+    });
+  }
 }
 
 function openFriendProfile(uid) {
@@ -15616,6 +16243,15 @@ function openFriendProfile(uid) {
     if (!p) { showToast(t('friends_not_found')); return; }
     _showPublicProfile(uid, p);
   });
+}
+
+const _friendTokensCache = {};
+
+function _showFriendTokens(uid) {
+  const toks = _friendTokensCache[uid];
+  if (!toks || !toks.length) { showToast('No Tokens'); return; }
+  const names = toks.map(tk => '• ' + tk.ticker + ' (' + tk.name + ')').join('\n');
+  alert(names);
 }
 
 function _showPublicProfile(uid, p) {
@@ -15632,6 +16268,7 @@ function _showPublicProfile(uid, p) {
   }
   const favGame = p.favGame ? PROFILE_GAME_NAMES[p.favGame] : null;
   const favGameIcon = p.favGame ? PROFILE_GAME_ICONS[p.favGame] : null;
+  _friendTokensCache[uid] = p.myTokens || [];
 
   m.innerHTML = `
     <div style="background:#111;border-radius:18px;padding:20px;width:100%;max-width:360px;border:1px solid #333;position:relative;">
@@ -15644,7 +16281,11 @@ function _showPublicProfile(uid, p) {
                style="width:70px;height:70px;border-radius:50%;object-fit:cover;border:3px solid ${isOnline?'#00e676':'#333'};">
           ${isOnline?'<div style="position:absolute;bottom:3px;right:3px;width:13px;height:13px;border-radius:50%;background:#00e676;border:2px solid #111;"></div>':''}
         </div>
-        <div style="font-size:18px;font-weight:bold;">${p.name||uid}</div>
+        <div style="font-size:18px;font-weight:bold;display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;">
+          <span>${p.name||uid}</span>
+          ${p.verified ? '<img src="gal.png" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;" title="Verified">' : ''}
+          ${(p.streakDays && p.streakDays > 0) ? _streakFlameHTML(p.streakDays, !!p.streakActive, 20) + `<span style="font-size:12px;color:#aaa;">${p.streakDays}</span>` : ''}
+        </div>
         <div style="font-size:12px;color:${isOnline?'#00e676':'#555'};">${isOnline ? t('profile_online') : formatLastSeen(p.lastSeen)}</div>
         ${p.bio ? `<div style="font-size:12px;color:#aaa;margin-top:6px;padding:0 10px;">${p.bio}</div>` : ''}
       </div>
@@ -15658,9 +16299,9 @@ function _showPublicProfile(uid, p) {
           <div class="profile-stat-val">${formatNumber(p.rate||0,0)}</div>
           <div class="profile-stat-lbl">${t('profile_income')}</div>
         </div>
-        <div class="profile-stat">
-          <div class="profile-stat-val">${p.ekLifetime||0}</div>
-          <div class="profile-stat-lbl">EK total</div>
+        <div class="profile-stat" style="cursor:pointer;" onclick="_showFriendTokens('${uid}')">
+          <div class="profile-stat-val">${(p.myTokens||[]).length}</div>
+          <div class="profile-stat-lbl">${t('profile_tokens_created')}</div>
         </div>
         <div class="profile-stat">
           <div class="profile-stat-val">${p.playtimeMs ? _formatPlaytime(p.playtimeMs) : '—'}</div>
@@ -15676,6 +16317,33 @@ function _showPublicProfile(uid, p) {
           <div style="font-weight:bold;font-size:13px;">${favGame}</div>
         </div>
       </div>` : ''}
+
+      ${(function(){
+        if (!p.favSkin) return '';
+        const img = getSkinImage(p.favSkin, 1, 0);
+        const name = p.favSkin.charAt(0).toUpperCase() + p.favSkin.slice(1).replace(/_/g,' ');
+        return `<div style="display:flex;align-items:center;gap:8px;background:#1a1a1a;border-radius:10px;padding:10px;margin-bottom:10px;">
+          <img src="${img}" onerror="this.src='kspt.png'" style="width:36px;height:36px;object-fit:contain;">
+          <div>
+            <div style="font-size:10px;color:#888;">Любимый скин</div>
+            <div style="font-weight:bold;font-size:13px;">${name}</div>
+          </div>
+        </div>`;
+      })()}
+
+      ${(function(){
+        if (!p.skins && !p.secretSkins) return '';
+        const allIds = [...Object.keys(p.skins||{}), ...Object.keys(p.secretSkins||{})].filter(id => (p.skins||{})[id] || (p.secretSkins||{})[id]);
+        if (!allIds.length) return '';
+        const items = allIds.slice(0,18).map(id => {
+          const img = getSkinImage(id, 1, 0);
+          return `<img src="${img}" onerror="this.src='kspt.png'" title="${id}" style="width:32px;height:32px;object-fit:contain;border-radius:6px;background:#1a1a1a;padding:2px;">`;
+        }).join('');
+        return `<div style="margin-bottom:10px;">
+          <div style="font-size:10px;color:#888;margin-bottom:6px;">🎨 Скины (${allIds.length})</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;">${items}</div>
+        </div>`;
+      })()}
 
       <button onclick="openReactionPicker('${uid}');document.getElementById('publicProfileModal').style.display='none';"
         style="width:100%;padding:11px;background:linear-gradient(135deg,#7c3aed,#d946ef);color:#fff;font-weight:bold;border:none;border-radius:10px;cursor:pointer;font-size:14px;">

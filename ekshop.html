@@ -205,16 +205,25 @@ window.addEventListener('message', (ev) => {
 
   if (msg.type === 'kspt_init' && msg.d) {
   try {
-    // Cache the real EK from main game — this is the source of truth
     const realEk = Number(msg.d.ek || 0);
     localStorage.setItem('ekshop_ek_cache', String(realEk));
 
-    const local = loadD();
+    // Берём уже купленное из ОБОИХ источников и объединяем
+    const localOwned = getOwned();
+    const gameOwned = msg.d.ekshop_owned || {};
+    const mergedOwned = Object.assign({}, gameOwned, localOwned);
+    localStorage.setItem('ekshop_owned', JSON.stringify(mergedOwned));
+
+    // Аналогично для selected
+    const localSelected = (() => { try { return JSON.parse(localStorage.getItem('ekshop_selected') || '{}'); } catch(e){ return {}; } })();
+    const gameSelected = msg.d.ekshop_selected || {};
+    const mergedSelected = Object.assign({}, gameSelected, localSelected);
+    localStorage.setItem('ekshop_selected', JSON.stringify(mergedSelected));
+
     const merged = Object.assign({}, msg.d);
-    // Use real EK from main game (overrides any stale local value)
     merged.ek = realEk;
-    if (local.ekshop_owned) merged.ekshop_owned = local.ekshop_owned;
-    if (local.ekshop_selected) merged.ekshop_selected = local.ekshop_selected;
+    merged.ekshop_owned = mergedOwned;
+    merged.ekshop_selected = mergedSelected;
     localStorage.setItem('d', JSON.stringify(merged));
   } catch(e){
     console.warn('merge kspt_init failed', e);

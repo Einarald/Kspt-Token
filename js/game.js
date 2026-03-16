@@ -534,6 +534,11 @@ const translations = {
     'friends_added': 'Friend added!',
     'friends_already': 'Already in friends',
     'friends_self': 'That\'s you!',
+    'friends_request_sent': 'Friend request sent!',
+    'friends_request_from': 'Friend request from',
+    'friends_accept': 'Accept',
+    'friends_decline': 'Decline',
+    'friends_declined': 'Request declined',
     'profile_tickets_spent': 'Tickets spent',
     'profile_change_name': 'Change Name',
     'profile_change_avatar': 'Change Avatar',
@@ -548,6 +553,7 @@ const translations = {
     'rarity_ultra': 'Ultra Legendary',
     'rarity_secret': 'Secret',
     'profile_reset_avatar': 'Reset avatar',
+    'profile_reset_name': 'Name reset to Telegram name',
   },
   ru: {
     // Main UI
@@ -1070,6 +1076,11 @@ const translations = {
     'friends_added': 'Друг добавлен!',
     'friends_already': 'Уже в друзьях',
     'friends_self': 'Это вы!',
+    'friends_request_sent': 'Запрос дружбы отправлен!',
+    'friends_request_from': 'Запрос дружбы от',
+    'friends_accept': 'Принять',
+    'friends_decline': 'Отклонить',
+    'friends_declined': 'Запрос отклонён',
     'profile_tickets_spent': 'Потрачено билетов',
     'profile_change_name': 'Изменить ник',
     'profile_change_avatar': 'Изменить аватарку',
@@ -1084,6 +1095,7 @@ const translations = {
     'rarity_ultra': 'Ультра Легендарный',
     'rarity_secret': 'Секретный',
     'profile_reset_avatar': 'Сбросить аватарку',
+    'profile_reset_name': 'Имя сброшено на имя Telegram',
   }
 };
 
@@ -8272,6 +8284,8 @@ async function adminToggleVerified(grant) {
   const uid = _adminVerifySelectedUid;
   if (!uid) { showToast('Select a player first'); return; }
   await _db.ref(`leaderboard/${uid}`).update({ verified: grant ? true : null });
+  // Уведомляем игрока через modActions чтобы обновился d.verified
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'verify', grant: !!grant, ts: Date.now() });
   showToast(grant ? `✅ Verified granted to ${uid}` : `✕ Verified revoked`);
   _adminLoadVerifyList();
 }
@@ -9559,6 +9573,13 @@ function _adminApplyModAction(v) {
       save(); if (typeof ui==='function') ui();
       _adminShowOverlay(`🎨 Admin gave you skin: ${v.skinId}!`, '#c084fc', 5000);
       break;
+    case 'verify':
+      d.verified = v.grant ? true : false;
+      save();
+      if (typeof pushMyLeaderboardData === 'function') pushMyLeaderboardData();
+      if (typeof renderProfileTab === 'function') renderProfileTab();
+      _adminShowOverlay(v.grant ? '✅ You are now Verified!' : '✕ Verified removed', '#ffd700', 5000);
+      break;
   }
 }
 
@@ -9571,6 +9592,8 @@ function _adminGetEventMulti() {
 document.addEventListener('DOMContentLoaded', function() {
   _adminInjectButton();
   _startAdminListener();
+  // Запускаем слушатель реакций сразу при старте, не ждём открытия профиля
+  setTimeout(_checkPendingReactions, 1500);
 });
 // Also call immediately in case DOMContentLoaded already fired
 _adminInjectButton();
@@ -11089,7 +11112,7 @@ function checkStreak() {
   if (daysSince === 1) {
     // Продолжение серии
     d.streak.days += 1;
-    d.streak.lastClaimTs = now;
+    d.streak.lastClaimTs = d.streak.lastClaimTs + MS_DAY;
     d.streak.pendingClaim = true;
     save();
     _streakShowAnimation(d.streak.days);
@@ -11097,7 +11120,7 @@ function checkStreak() {
   } else if (daysSince >= 2) {
     // Серия прервана
     d.streak.days = 0;
-    d.streak.lastClaimTs = now;
+    d.streak.lastClaimTs = d.streak.lastClaimTs + (daysSince * MS_DAY);
     d.streak.pendingClaim = false;
     save();
   }
@@ -11201,6 +11224,7 @@ function initGame() {
     processOfflineIncome();
     // Streak check
     try { checkStreak(); } catch(e) { console.warn('streak error', e); }
+    try { initQuestsData(); } catch(e) { console.warn('quests init error', e); }
     // Apply profile tab location on startup
     try { _applyProfileTabLocation(d.settings?.profileTabLocation || 'bottom'); } catch(e) {}
 
@@ -12834,11 +12858,11 @@ function pushMyLeaderboardData() {
   const _checkName = _tgU?.first_name || _tgU?.username || localStorage.getItem('_kspt_nonTg_name') || '';
   if (_tgU && (!_checkName || _checkName === 'undefined')) return;
   // Для браузерных игроков: убедимся что имя задано перед пушем
+   const uid = getMyUid();
   if (!_tgU && !localStorage.getItem('_kspt_nonTg_name')) {
-    const suffix = uid.replace(/\D/g, '').slice(-2).padStart(2, '0') || '01';
-    localStorage.setItem('_kspt_nonTg_name', 'Player' + suffix);
+    const sfx = uid.replace(/\D/g, '').slice(-2).padStart(2, '0') || '01';
+    localStorage.setItem('_kspt_nonTg_name', 'Player' + sfx);
   }
-  const uid = getMyUid();
   const tgUser = getMyTelegramUser();
   const isTg = !!tgUser;
   const rate = getHourlyRate();
@@ -12846,7 +12870,8 @@ function pushMyLeaderboardData() {
   // Имя: для не-TG игроков добавляем числовой суффикс из uid
   let playerName;
   if (isTg) {
-    playerName = tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : '');
+    const savedTgName = localStorage.getItem('_kspt_tg_custom_name');
+    playerName = savedTgName || (tgUser.first_name + (tgUser.last_name ? ' ' + tgUser.last_name : ''));
   } else {
     // uid вида "u_abc123xyz" → берём последние 2 цифровых символа или просто 2 char
     const suffix = uid.replace(/\D/g, '').slice(-2).padStart(2, '0') || '01';
@@ -12862,7 +12887,7 @@ function pushMyLeaderboardData() {
     uid: uid,
     name: playerName,
     username: tgUser?.username || '',
-    photoUrl: isTg ? (tgUser.photo_url || '') : savedAvatar,
+    photoUrl: isTg ? (localStorage.getItem('_kspt_tg_custom_avatar') || tgUser.photo_url || '') : savedAvatar,
     isTg: isTg,
     rate: Math.round(rate),
     tokens: Math.round(d.tokens || 0),
@@ -13031,6 +13056,17 @@ function renderLeaderboard(players) {
           myAvatar.src = img.dataset.avatar;
           picker.querySelectorAll('.lb-avatar-option').forEach(x => x.classList.remove('selected'));
           img.classList.add('selected');
+
+// Синхронизируем verified из Firebase в d
+window._firebaseRef(window._firebaseDB, 'leaderboard/' + getMyUid()).once('value').then(snap => {
+  const fbData = snap?.val();
+  if (fbData && typeof fbData.verified !== 'undefined') {
+    d.verified = !!fbData.verified;
+    save();
+    if (typeof renderProfileTab === 'function') renderProfileTab();
+  }
+});
+
           pushMyLeaderboardData(); // обновить в Firebase
         };
       });
@@ -14420,7 +14456,8 @@ function initQuestsData() {
   if (!d.quests.dailyExpire || isNaN(d.quests.dailyExpire) || now >= d.quests.dailyExpire) {
     const generated = generateQuests();
     d.quests.daily = generated.daily;
-    d.quests.dailyExpire = now + 24 * 3600 * 1000;
+    const prevDaily = d.quests.dailyExpire && !isNaN(d.quests.dailyExpire) ? d.quests.dailyExpire : now;
+    d.quests.dailyExpire = prevDaily + 24 * 3600 * 1000;
     d.questTapCount = 0;
     d.questBetWins = 0;
     d.questOverdriveUses = 0;
@@ -14436,7 +14473,8 @@ function initQuestsData() {
   if (!d.quests.weeklyExpire || isNaN(d.quests.weeklyExpire) || now >= d.quests.weeklyExpire) {
     const generated = generateQuests();
     d.quests.weekly = generated.weekly;
-    d.quests.weeklyExpire = now + 7 * 24 * 3600 * 1000;
+    const prevWeekly = d.quests.weeklyExpire && !isNaN(d.quests.weeklyExpire) ? d.quests.weeklyExpire : now;
+    d.quests.weeklyExpire = prevWeekly + 7 * 24 * 3600 * 1000;
     d.questDailyDone = 0;
     d.questExchangeVolume = 0;
     d.wQuestOnlineSecs = 0;
@@ -15514,6 +15552,7 @@ function openScreen_profile_hook() {
   if (!d.pendingReactions) d.pendingReactions = [];
   switchProfileTab('profile');
   _checkPendingReactions();
+  _checkFriendRequests();
 }
 
 function switchProfileTab(tab) {
@@ -15848,6 +15887,7 @@ function profileChangeName() {
   const trimmed = newName.trim().slice(0, 32);
   const isTg = !!window.Telegram?.WebApp?.initDataUnsafe?.user;
   if (!isTg) localStorage.setItem('_kspt_nonTg_name', trimmed);
+  else localStorage.setItem('_kspt_tg_custom_name', trimmed);
   if (d.market?.account) d.market.account.name = trimmed;
   save();
   if (window._firebaseReady && window._firebaseDB) {
@@ -15877,7 +15917,8 @@ function profileChangeAvatar() {
     const reader = new FileReader();
     reader.onload = function(ev) {
       const dataUrl = ev.target.result;
-      localStorage.setItem('_kspt_nonTg_avatar', dataUrl);
+      if (isTg) localStorage.setItem('_kspt_tg_custom_avatar', dataUrl);
+      else localStorage.setItem('_kspt_nonTg_avatar', dataUrl);
       save();
       if (window._firebaseReady && window._firebaseDB) {
         const uid = getMyUid();
@@ -15898,6 +15939,7 @@ function profileResetAvatar() {
   const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user;
   if (tgUser?.photo_url) {
     // Сбрасываем на TG-аватарку
+    localStorage.removeItem('_kspt_tg_custom_avatar');
     if (window._firebaseReady && window._firebaseDB) {
       const uid = getMyUid();
       if (uid && uid !== 'local') {
@@ -16112,11 +16154,10 @@ function searchFriends(query) {
     if (!matches.length) { results.innerHTML = `<div style="color:#555;font-size:12px;padding:4px;">${t('friends_not_found')}</div>`; return; }
 
     results.innerHTML = matches.map(([uid, p]) => `
-      <div style="display:flex;align-items:center;gap:8px;padding:6px;background:#1a1a1a;border-radius:8px;margin-bottom:4px;cursor:pointer;"
-           onclick="addFriendDirect('${uid}','${(p.name||'').replace(/'/g,"\\'")}','${p.photoUrl||'seri.png'}',${p.lastSeen||0})">
-        <img src="${p.photoUrl||'seri.png'}" onerror="this.src='seri.png'" style="width:30px;height:30px;border-radius:50%;object-fit:cover;">
-        <span style="font-size:13px;">${p.name}</span>
-        <span style="margin-left:auto;color:#00bcd4;font-size:20px;">+</span>
+      <div style="display:flex;align-items:center;gap:8px;padding:6px;background:#1a1a1a;border-radius:8px;margin-bottom:4px;">
+        <img src="${p.photoUrl||'seri.png'}" onerror="this.src='seri.png'" style="width:30px;height:30px;border-radius:50%;object-fit:cover;flex-shrink:0;cursor:pointer;" onclick="openFriendProfile('${uid}')">
+        <span style="font-size:13px;flex:1;cursor:pointer;" onclick="openFriendProfile('${uid}')">${p.name}</span>
+        <span style="color:#00bcd4;font-size:20px;cursor:pointer;padding:0 4px;" onclick="addFriendDirect('${uid}','${(p.name||'').replace(/'/g,"\\'")}','${p.photoUrl||'seri.png'}',${p.lastSeen||0})">+</span>
       </div>
     `).join('');
   });
@@ -16126,11 +16167,14 @@ function addFriendDirect(uid, name, avatar, lastSeen) {
   const myUid = getMyUid();
   if (uid === myUid) { showToast(t('friends_self')); return; }
   if (d.friends && d.friends[uid]) { showToast(t('friends_already')); return; }
-  if (!d.friends) d.friends = {};
-  d.friends[uid] = { name, avatar, lastSeen };
-  save();
-  showToast(t('friends_added'));
-  renderFriendsTab();
+  if (!window._firebaseReady || !window._firebaseDB) { showToast('Firebase not available'); return; }
+  // Отправляем запрос другому игроку
+  const myName = _getMyName();
+  const myAvatar = localStorage.getItem('_kspt_tg_custom_avatar') || localStorage.getItem('_kspt_nonTg_avatar') || window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url || 'seri.png';
+  window._firebaseRef(window._firebaseDB, `friendRequests/${uid}/${myUid}`).set({
+    from: myUid, fromName: myName, fromAvatar: myAvatar, ts: Date.now()
+  });
+  showToast(t('friends_request_sent'));
 }
 
 function openReactionPicker(targetUid) {
@@ -16205,6 +16249,53 @@ function _showReactionRain(emoji, fromName) {
 }
 
 let _reactionListenerActive = false;
+let _friendRequestListenerActive = false;
+
+function _checkFriendRequests() {
+  if (!window._firebaseReady || !window._firebaseDB) return;
+  const myUid = getMyUid();
+  if (!myUid || myUid === 'local') return;
+  if (_friendRequestListenerActive) return;
+  _friendRequestListenerActive = true;
+  window._firebaseRef(window._firebaseDB, `friendRequests/${myUid}`).on('child_added', snap => {
+    const item = snap?.val();
+    if (!item) return;
+    const reqUid = snap.key;
+    const toast = document.createElement('div');
+    toast.style.cssText = 'position:fixed;bottom:80px;left:50%;transform:translateX(-50%);background:#1a1a2e;border:1px solid #00bcd4;border-radius:14px;padding:14px 16px;z-index:99999;min-width:280px;max-width:320px;text-align:center;box-shadow:0 4px 20px rgba(0,0,0,0.6);';
+    toast.innerHTML = `
+      <div style="display:flex;align-items:center;gap:10px;margin-bottom:10px;">
+        <img src="${item.fromAvatar||'seri.png'}" onerror="this.src='seri.png'" style="width:36px;height:36px;border-radius:50%;object-fit:cover;">
+        <div style="font-size:13px;text-align:left;">${t('friends_request_from')} <b>${item.fromName||reqUid}</b></div>
+      </div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="_acceptFriendRequest('${reqUid}','${(item.fromName||'').replace(/'/g,"\\'")}','${(item.fromAvatar||'seri.png').replace(/'/g,"\\'")}',this.closest('div[style]'))" style="flex:1;padding:8px;background:#00e676;color:#000;font-weight:bold;border:none;border-radius:8px;cursor:pointer;font-size:20px;">✅</button>
+        <button onclick="_declineFriendRequest('${reqUid}',this.closest('div[style]'))" style="flex:1;padding:8px;background:#333;color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:20px;">❌</button>
+      </div>`;
+    document.body.appendChild(toast);
+  });
+}
+
+function _acceptFriendRequest(fromUid, name, avatar, toastEl) {
+  if (!d.friends) d.friends = {};
+  d.friends[fromUid] = { name, avatar, lastSeen: Date.now() };
+  save();
+  const myUid = getMyUid();
+  const myName = _getMyName();
+  const myAv = localStorage.getItem('_kspt_tg_custom_avatar') || localStorage.getItem('_kspt_nonTg_avatar') || window.Telegram?.WebApp?.initDataUnsafe?.user?.photo_url || 'seri.png';
+  window._firebaseRef(window._firebaseDB, `leaderboard/${fromUid}/friends/${myUid}`).set({ name: myName, avatar: myAv, lastSeen: Date.now() });
+  window._firebaseRef(window._firebaseDB, `friendRequests/${myUid}/${fromUid}`).remove();
+  if (toastEl) toastEl.remove();
+  showToast(t('friends_added'));
+  renderFriendsTab();
+}
+
+function _declineFriendRequest(fromUid, toastEl) {
+  const myUid = getMyUid();
+  window._firebaseRef(window._firebaseDB, `friendRequests/${myUid}/${fromUid}`).remove();
+  if (toastEl) toastEl.remove();
+  showToast(t('friends_declined'));
+}
 
 function _checkPendingReactions() {
   if (!window._firebaseReady || !window._firebaseDB) return;

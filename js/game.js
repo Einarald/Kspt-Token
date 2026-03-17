@@ -216,7 +216,21 @@ const translations = {
     'upgrade_energy': 'Upgrade Energy',
     'max_energy': 'Max: 10,000 | +500 Energy',
     'energy_regeneration': 'Energy regeneration multiplier',
-    'bet': 'Bet',
+    'bet': 'Plinko',
+    'plinko_title': 'Plinko Drop',
+    'plinko_desc': 'Drop the ball — win big or lose it all',
+    'plinko_amount': 'Stake (1–50 KSPT):',
+    'plinko_pick_color': 'Pick your color:',
+    'plinko_pick_mult': 'Pick multiplier:',
+    'plinko_play': 'DROP BALL 🔮',
+    'plinko_win': '🎉 WIN! +{0} KSPT',
+    'plinko_lose': '💀 Lost {0} KSPT',
+    'plinko_tries': '{0}/5 tries left',
+    'plinko_cooldown': 'Next try in {0}',
+    'plinko_no_tries': 'No tries left',
+    'plinko_full_cd': 'Full refill in {0}',
+    'plinko_not_enough': 'Not enough KSPT',
+    'plinko_invalid': 'Enter 1–50 KSPT',
     'enter_promo': 'Enter promo code',
     'multiplier': 'x{0} ({1}%)',
     'cooldown_ready': 'Cooldown: Ready',
@@ -235,6 +249,13 @@ const translations = {
 
     //Egg
     'easter_egg_box': 'Easter Egg',
+    'skin_eggi_name': 'Easter Egg',
+    'skin_viking_name': 'Vikings',
+    'skin_wheel_name': 'Wheel',
+    'skin_target_name': 'Target',
+    'skin_bird_name': 'Bird from Flappy',
+    'target_quest_title': 'Quest Master: complete 50 daily/weekly quests',
+    'target_quest_unlocked': '🎯 Target skin unlocked!',
     'easter_egg_desc': 'Swipe to scratch open!',
     'easter_egg_obtained': '🥚 Easter Egg obtained!',
     
@@ -586,6 +607,13 @@ const translations = {
 
     // Egg
     'easter_egg_box': 'Пасхальное яйцо',
+    'skin_eggi_name': 'Пасхальное яйцо',
+    'skin_viking_name': 'Викинги',
+    'skin_wheel_name': 'Колесо',
+    'skin_target_name': 'Мишень',
+    'skin_bird_name': 'Птица из Flappy',
+    'target_quest_title': 'Мастер квестов: выполни 50 квестов',
+    'target_quest_unlocked': '🎯 Скин Target разблокирован!',
     'easter_egg_desc': 'Свайпайте чтобы открыть!',
     'easter_egg_obtained': '🥚 Пасхальное яйцо получено!',
     
@@ -734,7 +762,21 @@ const translations = {
     'upgrade_energy': 'Улучшить энергию',
     'max_energy': 'Макс: 10,000 | +500 энергии',
     'energy_regeneration': 'Множитель регенерации энергии',
-    'bet': 'Ставка',
+    'bet': 'Плинко',
+    'plinko_title': 'Ставки Плинко',
+    'plinko_desc': 'Брось шарик — выиграй или потеряй всё',
+    'plinko_amount': 'Ставка (1–50 КСПТ):',
+    'plinko_pick_color': 'Выбери цвет:',
+    'plinko_pick_mult': 'Выбери множитель:',
+    'plinko_play': 'БРОСИТЬ ШАР 🔮',
+    'plinko_win': '🎉 ПОБЕДА! +{0} КСПТ',
+    'plinko_lose': '💀 Потеряно {0} КСПТ',
+    'plinko_tries': 'Попыток: {0}/5',
+    'plinko_cooldown': 'Следующая через {0}',
+    'plinko_no_tries': 'Нет попыток',
+    'plinko_full_cd': 'Полное восстановление через {0}',
+    'plinko_not_enough': 'Недостаточно КСПТ',
+    'plinko_invalid': 'Введите 1–50 КСПТ',
     'enter_promo': 'Введите промокод',
     'multiplier': 'x{0} ({1}%)',
     'cooldown_ready': 'Перезарядка: Готово',
@@ -1196,20 +1238,7 @@ const notifToggle = document.getElementById('toggleNotifications');
 
 // NEW FUNCTION: Update bet buttons text
 function updateBetButtonsText() {
-  const betButtons = [
-    {id: 'betButton1', mult: 1.5, chance: 30},
-    {id: 'betButton2', mult: 3, chance: 17},
-    {id: 'betButton3', mult: 5, chance: 8},
-    {id: 'betButton4', mult: 10, chance: 3},
-    {id: 'betButton5', mult: 50, chance: 1.1}
-  ];
-
-  betButtons.forEach(btn => {
-    const element = document.getElementById(btn.id);
-    if (element) {
-      element.textContent = `x${btn.mult} (${btn.chance}%)`;
-    }
-  });
+  // replaced by plinko
 }
 
 // NEW FUNCTION: Update skin shop texts with correct prices and incomes
@@ -1919,6 +1948,7 @@ if (!d.bombBox) d.bombBox = { obtained: false };
 if (!d.easterEgg) d.easterEgg = { obtained: false, swipes: 0 };
 if (!d.giftBox) d.giftBox = { obtained: false };
 if (!d.giftSentLog) d.giftSentLog = {};
+if (!d.plinko) d.plinko = { tries: 5, lastTryTs: 0 };
 if (!d.fortuneWheel) d.fortuneWheel = { spinsUsed: 0, lastResetTime: 0 };
 // Admin ban check — runs every load
 if (d.adminBanned) {
@@ -2088,7 +2118,12 @@ const SKIN_INCOME = {
   toilet: 0,
   capsulememe: 0,
   ufo: 120,
-  dragon: 250
+  dragon: 250,
+  eggi: 25,
+  viking: 5,
+  wheel: 15,
+  target: 30,
+  bird: 30
   };
 
 // Card data - UPDATED WITH EXACT VALUES
@@ -2531,7 +2566,12 @@ function getSkinImage(skinId, euroVar = 1, artemVar = 0) {
     'joystick': 'dzoi.png',
     'snake': 'zmej.png',
     'skin_8bit_coin': 'bit.png',
-    'skin_zombie_train': 'zomb.png'
+    'skin_zombie_train': 'zomb.png',
+    'eggi': 'eggi.png',
+    'viking': 'vikikng.png',
+    'wheel': 'wheel.png',
+    'target': 'target.png',
+    'bird': 'bird.png'
   };
   return skinImages[skinId] || 'kspt.png';
 }
@@ -2621,7 +2661,8 @@ if (d.skin === 'dragon') {
       'skin_joystick': 'dzoi.png',
       'skin_snake': 'zmej.png',
       'skin_8bit_coin': 'bit.png',
-      'skin_zombie_train': 'zomb.png'
+      'skin_zombie_train': 'zomb.png',
+      'bird': 'bird.png'
     };
     imgName = ekshopSkinMap[currentSkinId] || getSkinImage(d.skin, d.euroVar, d.artemVar);
   } else {
@@ -2974,6 +3015,44 @@ function handleTapSkinAnimation() {
       if (typeof _dragonUpdateParticles === 'function') _dragonUpdateParticles(coin.dataset.dragonStage === "1");
       break;
     }
+    case "eggi": {
+      let eStage = parseInt(coin.dataset.eggiStage || "0", 10);
+      eStage = (eStage + 1) % 4;
+      coin.dataset.eggiStage = eStage;
+      const eggFrames = ['eggi.png','egii1.png','eggi2.png','eggi3.png'];
+      coin.src = eggFrames[eStage];
+      break;
+    }
+    case "viking": {
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "viking1.png" : "vikikng.png";
+      break;
+    }
+    case "wheel": {
+      // 360° оборот за 0.5с
+      coin.style.transition = 'transform 0.5s ease';
+      const cur = parseInt(coin.dataset.wheelRot || "0", 10) + 360;
+      coin.dataset.wheelRot = cur;
+      coin.style.transform = `rotate(${cur}deg)`;
+      break;
+    }
+    case "target": {
+      // Лёгкое дёргание
+      coin.style.transition = 'transform 0.05s ease';
+      coin.style.transform = `translate(${(Math.random()-0.5)*4}px,${(Math.random()-0.5)*4}px)`;
+      setTimeout(() => { coin.style.transform = 'translate(0,0)'; }, 80);
+      let tStage = parseInt(coin.dataset.targetStage || "0", 10);
+      tStage = (tStage + 1) % 4;
+      coin.dataset.targetStage = tStage;
+      const tFrames = ['target.png','target1.png','target2.png','target3.png'];
+      coin.src = tFrames[tStage];
+      break;
+    }
+    case "bird": {
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "bird1.png" : "bird.png";
+      break;
+    }
     default:
       break;
   }  
@@ -3114,9 +3193,30 @@ case "brb":
   coin.src = coin.dataset.toggle === "1" ? "knopka1.png" : "knopka.png";
   break;
 
-  default:
-  break;
-  }  
+  case "eggi": {
+      let eS = parseInt(coin.dataset.eggiStage || "0", 10);
+      eS = (eS + 1) % 4;
+      coin.dataset.eggiStage = eS;
+      const ef = ['eggi.png','egii1.png','eggi2.png','eggi3.png'];
+      coin.src = ef[eS];
+      break;
+    }
+    case "bird": {
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "bird1.png" : "bird.png";
+      break;
+    }
+    case "target": {
+      let tS = parseInt(coin.dataset.targetStage || "0", 10);
+      tS = (tS + 1) % 4;
+      coin.dataset.targetStage = tS;
+      const tf = ['target.png','target1.png','target2.png','target3.png'];
+      coin.src = tf[tS];
+      break;
+    }
+    default:
+      break;
+  }
 }
 
 function updateSkinButtons() {
@@ -3140,7 +3240,10 @@ function updateSkinButtons() {
     "skinCardToilet": 'toilet',
     "skinCardCapsuleMeme": 'capsulememe',
     "skinCardUFO": 'ufo',
-    "skinCardDragon": 'dragon'
+    "skinCardDragon": 'dragon',
+    "skinCardEggi": 'eggi',
+    "skinCardViking": 'viking',
+    "skinCardTarget": 'target'
   };
   
   for (const [cardId, skinKey] of Object.entries(secretSkins)) {
@@ -3151,7 +3254,7 @@ function updateSkinButtons() {
     }
   }
   
-  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android",  "brb", "doge", "corrupted", "failed", "goldensafe", "bhole", "toilet", "capsulememe", "ufo", "dragon", "crypto_heart"];
+  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "wheel", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android", "brb", "doge", "corrupted", "failed", "goldensafe", "bhole", "toilet", "capsulememe", "ufo", "dragon", "crypto_heart", "eggi", "viking", "target"];
   
   skins.forEach(s => {
     const button = document.getElementById("skin-" + s);
@@ -3196,9 +3299,10 @@ function updateSkinButtons() {
         // 3. Логика для Заблокированных / Не купленных скинов
         const prices = {
             what: 1, burger: 10, joost: 30, dog: 80, diam: 100, tung: 240,
-            euro: 780, space: 1210, kostia: 0, pixe: 3215, onion: 10110,
+            euro: 780, space: 1210, wheel: 7470, kostia: 0, pixe: 3215, onion: 10110,
             cookie: 40780, metka: 0, seri: 0, mystic: 0, capsule: 0, artem: 0,
-            ruka: 172080, banditx: 542123, goldcoin: 1120000, brb: 5000000
+            ruka: 172080, banditx: 542123, goldcoin: 1120000, brb: 5000000,
+            eggi: 0, viking: 0, target: 0
         };
 
         if (s === "mystic") {
@@ -3227,6 +3331,18 @@ function updateSkinButtons() {
             button.textContent = d.skins[s] ? t('select') : t('locked_promo');
             button.className = d.skins[s] ? "" : "owned";
             button.onclick = d.skins[s] ? () => applySkin(s) : null;
+
+        } else if (s === "eggi" || s === "viking" || s === "target") {
+            const isOwned = (d.skins && d.skins[s]) || (d.secretSkins && d.secretSkins[s]);
+            if (d.skin === s) {
+                button.textContent = t('active');
+                button.className = "active";
+            } else if (isOwned) {
+                button.textContent = t('select');
+                button.className = "";
+                button.onclick = () => applySkin(s);
+            }
+            // если не получен — не трогаем (карточка hidden)
 
         } else if (s === "siulai") {
             button.textContent = d.skins[s] ? t('select') : t('locked');
@@ -3370,7 +3486,12 @@ function updateSkinPreviews() {
     'skin_zombie_train': 'zomb.png',
     'brb': 'knopka.png',
     'corrupted': 'corr.png',
-    'failed': 'fail.png'  
+    'failed': 'fail.png',
+    'wheel': 'wheel.png',
+    'target': 'target.png',
+    'eggi': 'eggi.png',
+    'viking': 'vikikng.png',
+    'bird': 'bird.png'
   };
   
    for (const [skin, img] of Object.entries(skinImageMap)) {
@@ -3392,6 +3513,8 @@ function updateSkinPreviews() {
       } else if (skin === 'siulai') {
         isOwned = d.skins && d.skins['siulai'] || d.puzzle2Done;
       } else if (skin === 'goldensafe' || skin === 'corrupted' || skin === 'failed') {
+        isOwned = (d.skins && d.skins[skin]) || (d.secretSkins && d.secretSkins[skin]);
+      } else if (skin === 'eggi' || skin === 'viking' || skin === 'target') {
         isOwned = (d.skins && d.skins[skin]) || (d.secretSkins && d.secretSkins[skin]);
       } else {
         isOwned = d.skins[skin] || (skin === 'default');
@@ -3446,10 +3569,16 @@ function updateBackground() {
       // 1. Пользователь не выбрал основной фон (d.bg === 'default')
       // 2. В EK Shop явно выбран фон (hasEkshopBgSelected)
       // 3. В EK Shop НЕ выбран скин (или выбран, но также явно выбран фон)
-      if (!userHasOwnBg && hasEkshopBgSelected && ekshopSelected.bg === 'bg_club') {
-        body.style.backgroundImage = "url('cosmops.png')";
-        body.style.backgroundColor = "transparent";
-        return;
+      if (!userHasOwnBg && hasEkshopBgSelected) {
+        if (ekshopSelected.bg === 'bg_club') {
+          body.style.backgroundImage = "url('cosmops.png')";
+          body.style.backgroundColor = "transparent";
+          return;
+        } else if (ekshopSelected.bg === 'bg_pixel_games') {
+          body.style.backgroundImage = "url('mine.png')";
+          body.style.backgroundColor = "transparent";
+          return;
+        }
       }
     } catch(e) {
       console.warn('EK Shop background check failed:', e);
@@ -3521,6 +3650,10 @@ function updateBackground() {
         break;
       case "bunny":
         body.style.backgroundImage = "url('bunn.png')";
+        body.style.backgroundColor = "transparent";
+        break;
+      case "bg_pixel_games":
+        body.style.backgroundImage = "url('mine.png')";
         body.style.backgroundColor = "transparent";
         break;
       case "alone":
@@ -5847,6 +5980,8 @@ function changeTokenIcon(firebaseId) {
 function renderTradeView() {
   const container = document.getElementById("marketContainer");
   if (!container) return;
+  // Сохраняем введённое значение перед перерисовкой
+  const _savedTradeAmount = document.getElementById('tradeAmount')?.value || tradeInputValue || '';
   
   let tokenData, tokenName, tokenIcon, sellButtonText, priceFormat;
   
@@ -5951,6 +6086,8 @@ function renderTradeView() {
     initMarketReferences();
     setupChartDrag();
     drawChart();
+    const _tradeInput = document.getElementById('tradeAmount');
+    if (_tradeInput && _savedTradeAmount) { _tradeInput.value = _savedTradeAmount; tradeInputValue = _savedTradeAmount; }
   }, 50);
   
   updateBuyCooldownInfo();
@@ -6946,7 +7083,7 @@ function updateNotificationBadges() {
   }
 
   // 4. Can afford a new skin
-  const skinPrices = { what: 1, burger: 10, joost: 30, dog: 80, diam: 100, tung: 240, euro: 780, space: 1210, pixe: 3215, onion: 10110, cookie: 40780, ruka: 172080, banditx: 542123, goldcoin: 1120000, brb: 5000000 };
+  const skinPrices = { what: 1, burger: 10, joost: 30, dog: 80, diam: 100, tung: 240, euro: 780, space: 1210, pixe: 3215, wheel: 7470, onion: 10110, cookie: 40780, ruka: 172080, banditx: 542123, goldcoin: 1120000, brb: 5000000 };
   const canBuySkin = Object.entries(skinPrices).some(([s, p]) => !d.skins[s] && d.tokens >= p);
   if (canBuySkin) mainCount++;
 
@@ -6999,7 +7136,7 @@ function updateNotificationBadges() {
     if (rate2 >= 400 && d.tokens >= price2 && spinsOk2) reasons.tech.push('🎡 Wheel available');
     if (window._freeWheelSpin) reasons.tech.push('🎡 Free spin!');
   }
-  const skinPrices2 = { what: 1, burger: 10, joost: 30, dog: 80, diam: 100, tung: 240, euro: 780, space: 1210, pixe: 3215, onion: 10110, cookie: 40780, ruka: 172080, banditx: 542123, goldcoin: 1120000, brb: 5000000 };
+  const skinPrices2 = { what: 1, burger: 10, joost: 30, dog: 80, diam: 100, tung: 240, euro: 780, space: 1210, pixe: 3215, wheel: 7470, onion: 10110, cookie: 40780, ruka: 172080, banditx: 542123, goldcoin: 1120000, brb: 5000000 };
   Object.entries(skinPrices2).forEach(([s, p]) => { if (!d.skins[s] && d.tokens >= p) reasons.main.push(`🎨 Can buy skin`); });
   if (reasons.main.length > 1) reasons.main = ['🎨 Can buy skin'];
   if (typeof gameTickets !== 'undefined' && gameTickets && (gameTickets.current || 0) >= 10) reasons.games.push('🎟️ Tickets full');
@@ -7105,6 +7242,7 @@ updateNotificationBadges();
   }, 100);
   } else if (id === 'tech') {
     updateFortuneWheelCard && updateFortuneWheelCard();
+    if (typeof renderPlinkoUI === 'function') renderPlinkoUI();
   } else if (id === 'offlineShop') {
     // Initialize cards tab on first open
     if (!document.getElementById('cards-content').innerHTML) {
@@ -7727,83 +7865,613 @@ function buyRegenMult() {
 }
 
 // ==========================================
-// BET FUNCTIONS
+// PLINKO SYSTEM
 // ==========================================
 
-function prepareBet(mult, chance) {
-  const input = document.getElementById("betAmount");
-  if (!input) return;
-  
-  let amount = parseFloat(input.value);
-  if (isNaN(amount) || amount < 1 || amount > 30) {
-    showToast("Enter amount 1-30 KSPT");
-    return;
+const PLINKO_COLORS = {
+  2:  ['#2196f3','#f44336'],
+  5:  ['#2196f3','#f44336','#4caf50','#ff9800','#9c27b0'],
+  10: ['#2196f3','#f44336','#4caf50','#ff9800','#9c27b0','#00bcd4','#ffeb3b','#e91e63','#8bc34a','#ff5722']
+};
+const PLINKO_COLOR_NAMES = {
+  2:  ['Blue','Red'],
+  5:  ['Blue','Red','Green','Orange','Purple'],
+  10: ['Blue','Red','Green','Orange','Purple','Cyan','Yellow','Pink','Lime','Deep Orange']
+};
+const PLINKO_COLOR_NAMES_RU = {
+  2:  ['Синий','Красный'],
+  5:  ['Синий','Красный','Зелёный','Оранжевый','Фиолетовый'],
+  10: ['Синий','Красный','Зелёный','Оранжевый','Фиолетовый','Голубой','Жёлтый','Розовый','Лайм','Тёмно-оранжевый']
+};
+const PLINKO_CD_MS = 3 * 3600 * 1000; // 3 часа = 1 попытка
+const PLINKO_MAX_TRIES = 5;
+
+let _plinkoSelectedMult = 2;
+let _plinkoSelectedColor = 0;
+let _plinkoWinOffset = 0;
+let _plinkoAnimId = null;   // ID текущего requestAnimationFrame
+let _plinkoGeneration = 0; // версия — старые loop() проверяют и останавливаются
+
+function _plinkoGetTries() {
+  if (!d.plinko) d.plinko = { tries: PLINKO_MAX_TRIES, lastTryTs: 0 };
+  // Восстанавливаем попытки на основе времени
+  const now = Date.now();
+  const elapsed = now - (d.plinko.lastTryTs || 0);
+  const restored = Math.floor(elapsed / PLINKO_CD_MS);
+  if (restored > 0 && d.plinko.tries < PLINKO_MAX_TRIES) {
+    d.plinko.tries = Math.min(PLINKO_MAX_TRIES, d.plinko.tries + restored);
+    d.plinko.lastTryTs = now - (elapsed % PLINKO_CD_MS);
+    save();
   }
-  
-  if (d.tokens < amount) {
-    showToast(t('not_enough_kspt'));
-    return;
-  }
-  
-  pendingBet = { amount: amount, mult: mult, chance: chance };
-  
-  const betText = document.getElementById("betText");
-  if (betText) {
-    betText.textContent = `Bet ${amount} KSPT for x${mult} (${chance}% chance)`;
-  }
-  
-  document.getElementById("betConfirm").style.display = "block";
+  return d.plinko.tries;
 }
 
-function setMaxBet() {
-  const input = document.getElementById("betAmount");
-  if (!input) return;
-  
-  let maxBet = Math.min(30, Math.floor(d.tokens));
-  input.value = maxBet;
+function _plinkoFormatTime(ms) {
+  const h = Math.floor(ms / 3600000);
+  const m = Math.floor((ms % 3600000) / 60000);
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
 }
 
-function confirmBet() {
-  if (!pendingBet) return;
-  
-  const { amount, mult, chance } = pendingBet;
-  
-  if (d.tokens < amount) {
-    showToast(t('not_enough_kspt'));
-    return;
+function renderPlinkoUI() {
+  const el = document.getElementById('plinkoCard');
+  if (!el) return;
+
+  const tries = _plinkoGetTries();
+  const now = Date.now();
+  const msUntilNext = tries < PLINKO_MAX_TRIES
+    ? Math.max(0, PLINKO_CD_MS - (now - (d.plinko.lastTryTs || 0)))
+    : 0;
+  const msUntilFull = tries < PLINKO_MAX_TRIES
+    ? Math.max(0, PLINKO_CD_MS * (PLINKO_MAX_TRIES - tries) - (now - (d.plinko.lastTryTs || 0)))
+    : 0;
+
+  const colors = PLINKO_COLORS[_plinkoSelectedMult];
+  const colorNames = (typeof getCurrentLang === 'function' && getCurrentLang() === 'ru')
+    ? PLINKO_COLOR_NAMES_RU[_plinkoSelectedMult]
+    : PLINKO_COLOR_NAMES[_plinkoSelectedMult];
+
+  el.innerHTML = `
+    <div style="text-align:center;margin-bottom:12px;">
+      <div style="font-size:20px;font-weight:bold;color:#00e5ff;letter-spacing:2px;text-shadow:0 0 12px #00bcd4;">
+        🔮 ${t('plinko_title')}
+      </div>
+      <div style="font-size:12px;color:#888;margin-top:2px;">${t('plinko_desc')}</div>
+    </div>
+
+    <!-- Tries display -->
+    <div style="background:#0d0d1a;border-radius:10px;padding:10px 12px;margin-bottom:12px;border:1px solid #1a1a3a;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:6px;">
+        <div style="font-size:12px;color:#aaa;">Tries</div>
+        <div style="font-size:13px;font-weight:bold;color:${tries>0?'#00e676':'#f44336'};">${tries} / ${PLINKO_MAX_TRIES}</div>
+      </div>
+      <div style="display:flex;gap:6px;margin-bottom:6px;">
+        ${Array.from({length:PLINKO_MAX_TRIES},(_,i)=>`
+          <div style="flex:1;height:6px;border-radius:3px;background:${i<tries?'#00e676':'#1a1a2a'};box-shadow:${i<tries?'0 0 5px #00e676':''};transition:all 0.3s;"></div>
+        `).join('')}
+      </div>
+      <div style="font-size:11px;color:#666;">
+        ${tries === PLINKO_MAX_TRIES
+          ? '<span style="color:#00e676;">● Full</span>'
+          : tries === 0
+            ? `<span style="color:#f44336;">● ${t('plinko_no_tries')}</span> · ${formatTemplate(t('plinko_cooldown'),[_plinkoFormatTime(msUntilNext)])}`
+            : `<span style="color:#ff9800;">● ${formatTemplate(t('plinko_tries'),[tries])}</span> · ${formatTemplate(t('plinko_cooldown'),[_plinkoFormatTime(msUntilNext)])}`}
+        ${tries < PLINKO_MAX_TRIES && msUntilFull > 0
+          ? ` · <span style="color:#444;">${formatTemplate(t('plinko_full_cd'),[_plinkoFormatTime(msUntilFull)])}</span>`
+          : ''}
+      </div>
+    </div>
+
+    <!-- Amount input -->
+    <div style="margin-bottom:10px;">
+      <div style="font-size:12px;color:#aaa;margin-bottom:4px;">${t('plinko_amount')}</div>
+      <input id="plinkoAmount" type="number" min="1" max="50" placeholder="1–50" readonly onfocus="showCustomKeyboard(this)"
+        style="display:block;width:100%;background:#0d0d1a;border:1px solid #1a1a3a;color:#fff;border-radius:8px;padding:10px 12px;font-size:18px;font-weight:bold;outline:none;box-sizing:border-box;">
+    </div>
+
+    <!-- Multiplier selector -->
+    <div style="margin-bottom:10px;">
+      <div style="font-size:12px;color:#aaa;margin-bottom:6px;">${t('plinko_pick_mult')}</div>
+      <div style="display:flex;gap:6px;">
+        ${[2,5,10].map(m=>`
+          <button onclick="_plinkoSetMult(${m})" id="plinkoMult${m}"
+            style="flex:1;padding:9px 0;border-radius:10px;font-weight:bold;font-size:15px;cursor:pointer;
+            border:2px solid ${_plinkoSelectedMult===m?'#00e5ff':'#1a1a3a'};
+            background:${_plinkoSelectedMult===m?'rgba(0,229,255,0.12)':'#0d0d1a'};
+            color:${_plinkoSelectedMult===m?'#00e5ff':'#666'};
+            transition:all 0.2s;">x${m}</button>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Color selector -->
+    <div style="margin-bottom:14px;">
+      <div style="font-size:12px;color:#aaa;margin-bottom:6px;">${t('plinko_pick_color')}</div>
+      <div style="display:flex;flex-wrap:wrap;gap:7px;">
+        ${colors.map((c,i)=>`
+          <button onclick="_plinkoSetColor(${i})" title="${colorNames[i]}"
+            style="width:36px;height:36px;border-radius:50%;background:${c};cursor:pointer;
+            border:3px solid ${_plinkoSelectedColor===i?'#fff':'transparent'};
+            box-shadow:${_plinkoSelectedColor===i?`0 0 10px ${c}`:'none'};
+            transition:all 0.2s;"></button>
+        `).join('')}
+      </div>
+    </div>
+
+    <!-- Urns preview -->
+    <div style="margin-bottom:14px;">
+      <div style="display:flex;gap:3px;justify-content:center;align-items:center;">
+        ${(()=>{
+          const mult = _plinkoSelectedMult;
+          const winSlots = 10 / mult;
+          const maxOffset = 10 - winSlots;
+          const offset = Math.min(_plinkoWinOffset, maxOffset);
+          return `
+            <button id="plinkoShiftLeft" onclick="_plinkoShiftWin(-1)" style="background:none;border:none;color:${offset>0?'#00bcd4':'#333'};font-size:18px;cursor:${offset>0?'pointer':'default'};padding:0 4px;line-height:1;">◀</button>
+            <div style="display:flex;gap:3px;">
+              ${Array.from({length:10},(_,i)=>{
+                const isWin = i >= offset && i < offset + winSlots;
+                const col = colors[_plinkoSelectedColor];
+                return `<div id="plinkoPreviewUrn${i}" style="width:26px;height:26px;border-radius:6px;background:${isWin?col:'#1a1a2a'};
+                  border:2px solid ${isWin?col:'#2a2a2a'};
+                  box-shadow:${isWin?`0 0 7px ${col}`:'none'};
+                  transition:all 0.3s;"></div>`;
+              }).join('')}
+            </div>
+            <button id="plinkoShiftRight" onclick="_plinkoShiftWin(1)" style="background:none;border:none;color:${offset<maxOffset?'#00bcd4':'#333'};font-size:18px;cursor:${offset<maxOffset?'pointer':'default'};padding:0 4px;line-height:1;">▶</button>
+          `;
+        })()}
+      </div>
+      <div style="text-align:center;font-size:10px;color:#555;margin-top:4px;">
+        ${10/_plinkoSelectedMult} win / ${10 - 10/_plinkoSelectedMult} lose &nbsp;•&nbsp; ${100/_plinkoSelectedMult}% chance
+      </div>
+    </div>
+
+    <!-- Drop button -->
+    <button onclick="plinkoPlay()"
+      style="width:100%;padding:13px;background:${tries>0?'linear-gradient(135deg,#00bcd4,#0097a7)':'#1a1a1a'};
+      color:${tries>0?'#000':'#444'};font-weight:bold;font-size:15px;border:none;border-radius:12px;cursor:${tries>0?'pointer':'not-allowed'};
+      letter-spacing:1px;box-shadow:${tries>0?'0 0 16px rgba(0,188,212,0.4)':'none'};transition:all 0.2s;">
+      ${tries > 0 ? t('plinko_play') : t('plinko_no_tries')}
+    </button>
+
+    <!-- Animation area / Preview -->
+    <div id="plinkoAnimArea" style="margin-top:10px;">
+      <canvas id="plinkoPreview" width="300" height="260"
+        style="border-radius:10px;display:block;margin:0 auto;"></canvas>
+    </div>
+  `;
+
+  // Рисуем статичный превью
+  const prev = document.getElementById('plinkoPreview');
+  if (prev) {
+    _plinkoDrawStatic(prev, colors, 10 / _plinkoSelectedMult, colors[_plinkoSelectedColor]);
   }
-  
+}
+
+function _plinkoSetMult(m) {
+  _plinkoSelectedMult = m;
+  _plinkoSelectedColor = 0;
+  _plinkoWinOffset = 0; // сброс позиции при смене множителя
+  renderPlinkoUI();
+}
+
+function _plinkoSetColor(i) {
+  _plinkoSelectedColor = i;
+  _plinkoRefreshPreviewOnly();
+}
+
+function _plinkoShiftWin(dir) {
+  const winSlots = 10 / _plinkoSelectedMult;
+  const maxOffset = 10 - winSlots;
+  _plinkoWinOffset = Math.max(0, Math.min(maxOffset, _plinkoWinOffset + dir));
+  _plinkoRefreshPreviewOnly();
+}
+
+function _plinkoRefreshPreviewOnly() {
+  // Обновляем только превью-канвас и кнопки цвета/позиции — не трогаем весь UI
+  const colors = PLINKO_COLORS[_plinkoSelectedMult];
+  const colorNames = (typeof getCurrentLang === 'function' && getCurrentLang() === 'ru')
+    ? PLINKO_COLOR_NAMES_RU[_plinkoSelectedMult]
+    : PLINKO_COLOR_NAMES[_plinkoSelectedMult];
+  const winSlots = 10 / _plinkoSelectedMult;
+  const offset = Math.min(_plinkoWinOffset, 10 - winSlots);
+  const maxOffset = 10 - winSlots;
+
+  // Обновляем цветовые кнопки
+  colors.forEach((c, i) => {
+    const btn = document.querySelector(`#plinkoCard button[title="${colorNames[i]}"]`);
+    if (btn) btn.style.border = `3px solid ${_plinkoSelectedColor === i ? '#fff' : 'transparent'}`;
+  });
+
+  // Обновляем урны превью
+  for (let i = 0; i < 10; i++) {
+    const urnEl = document.getElementById(`plinkoPreviewUrn${i}`);
+    if (!urnEl) { renderPlinkoUI(); return; } // fallback если элементов нет
+    const isWin = i >= offset && i < offset + winSlots;
+    const col = colors[_plinkoSelectedColor];
+    urnEl.style.background = isWin ? col : '#1a1a2a';
+    urnEl.style.border = `2px solid ${isWin ? col : '#2a2a2a'}`;
+    urnEl.style.boxShadow = isWin ? `0 0 7px ${col}` : 'none';
+  }
+
+  // Обновляем стрелки
+  const leftBtn = document.getElementById('plinkoShiftLeft');
+  const rightBtn = document.getElementById('plinkoShiftRight');
+  if (leftBtn) leftBtn.style.color = offset > 0 ? '#00bcd4' : '#333';
+  if (rightBtn) rightBtn.style.color = offset < maxOffset ? '#00bcd4' : '#333';
+
+  // Превью канвас
+  const prev = document.getElementById('plinkoPreview');
+  if (prev) _plinkoDrawStatic(prev, colors, winSlots, colors[_plinkoSelectedColor], offset);
+}
+
+function plinkoPlay() {
+  const tries = _plinkoGetTries();
+  if (tries <= 0) { showToast(t('plinko_no_tries')); return; }
+
+  const rawVal = document.getElementById('plinkoAmount')?.value;
+  if (!rawVal || rawVal.trim() === '') { showToast(t('plinko_invalid')); return; }
+  const amountRaw = parseFloat(rawVal);
+  if (isNaN(amountRaw) || amountRaw < 1 || amountRaw > 50) { showToast(t('plinko_invalid')); return; }
+  const amount = Math.floor(amountRaw);
+  if (d.tokens < amount) { showToast(t('plinko_not_enough')); return; }
+
+  // Списываем ставку и попытку
   d.tokens -= amount;
-  
-  const win = Math.random() * 100 < chance;
-  if (win) {
-    const won = amount * mult;
-    d.tokens += won;
-    
-    d.questBetWins = (d.questBetWins || 0) + 1;
-    checkQuestProgress('bet_win');
-    if (mult === 10 && !d.wonX10) {
-      d.wonX10 = true;
-      showToast(`WON x${mult} BET! ${won} KSPT! Prize skin unlocked!`);
-    } else {
-      showToast(`WON x${mult} BET! +${won} KSPT`);
-    }
-  } else {
-    showToast(`Lost ${amount} KSPT`);
+  d.plinko.tries = tries - 1;
+  if (d.plinko.tries === PLINKO_MAX_TRIES - 1) {
+    d.plinko.lastTryTs = Date.now(); // начинаем отсчёт с первой потраченной попытки
   }
-  
-  // Hide bet confirmation
-  document.getElementById("betConfirm").style.display = "none";
-  pendingBet = null;
-  
   save();
   ui();
+
+  // Передаём только mult и amount — победа определяется по реальной позиции шарика
+  const mult = _plinkoSelectedMult;
+  _plinkoAnimate(amount, mult);
 }
 
-function cancelBet() {
-  document.getElementById("betConfirm").style.display = "none";
-  pendingBet = null;
+function _plinkoDrawStatic(canvas, colors, winSlots, winColor, winOffset = 0) {
+  const ctx = canvas.getContext('2d');
+  const W = canvas.width, H = canvas.height;
+  const ROWS = 8, pegR = 4, colCount = 9;
+
+  // Фон
+  const bg = ctx.createLinearGradient(0, 0, 0, H);
+  bg.addColorStop(0, '#070712');
+  bg.addColorStop(1, '#0a0a1e');
+  ctx.fillStyle = bg;
+  ctx.fillRect(0, 0, W, H);
+
+  // Штыри
+  for (let row = 0; row < ROWS; row++) {
+    const cols = row % 2 === 0 ? colCount : colCount - 1;
+    const offsetX = row % 2 === 0 ? 0 : (W / colCount) / 2;
+    for (let col = 0; col < cols; col++) {
+      const px = offsetX + (col + 0.5) * (W / colCount);
+      const py = 36 + row * ((H - 60) / (ROWS - 1));
+      ctx.beginPath();
+      ctx.arc(px, py, pegR, 0, Math.PI * 2);
+      ctx.fillStyle = '#3a3a5a';
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(px - 1, py - 1, pegR * 0.4, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255,255,255,0.2)';
+      ctx.fill();
+    }
+  }
+
+  // Урны внизу
+  const bw = W / 10;
+  for (let i = 0; i < 10; i++) {
+    const isWin = i >= winOffset && i < winOffset + winSlots;
+    const col = isWin ? winColor : '#1a1a2e';
+    ctx.fillStyle = col;
+    ctx.beginPath();
+    ctx.roundRect(i * bw + 2, H - 20, bw - 4, 16, 4);
+    ctx.fill();
+    if (isWin) {
+      ctx.shadowColor = winColor;
+      ctx.shadowBlur = 10;
+      ctx.fill();
+      ctx.shadowBlur = 0;
+    }
+  }
 }
+
+function _plinkoAnimate(amount, mult) {
+  const area = document.getElementById('plinkoAnimArea');
+  if (!area) return;
+
+  // Останавливаем предыдущий цикл
+  if (_plinkoAnimId) { cancelAnimationFrame(_plinkoAnimId); _plinkoAnimId = null; }
+  _plinkoGeneration++;
+  const myGen = _plinkoGeneration;
+
+  // Захватываем цвет в момент броска — не меняется в процессе
+  const colors = PLINKO_COLORS[mult];
+  const winSlots = 10 / mult;
+  const winOffset = Math.min(_plinkoWinOffset, 10 - winSlots);
+  const winColor = colors[_plinkoSelectedColor];
+  // win и won определяются после приземления по реальной позиции
+  let win = false;
+  let won = 0;
+  const ROWS = 9;
+  const CANVAS_W = 300;
+  const CANVAS_H = 300;
+  const pegR = 5;
+  const colCount = 9;
+
+  area.innerHTML = `
+    <div style="position:relative;width:${CANVAS_W}px;margin:0 auto;">
+      <canvas id="plinkoCanvas" width="${CANVAS_W}" height="${CANVAS_H}"
+        style="border-radius:10px;display:block;"></canvas>
+    </div>
+    <div id="plinkoResult" style="text-align:center;margin-top:14px;font-size:0;opacity:0;transition:all 0.5s;"></div>
+  `;
+
+  const canvas = document.getElementById('plinkoCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // Штыри в шахматном порядке
+  const pegs = [];
+  for (let row = 0; row < ROWS; row++) {
+    const even = row % 2 === 0;
+    const cols = even ? colCount : colCount - 1;
+    const offsetX = even ? 0 : (CANVAS_W / colCount) / 2;
+    for (let col = 0; col < cols; col++) {
+      pegs.push({
+        x: offsetX + (col + 0.5) * (CANVAS_W / colCount),
+        y: 30 + row * ((CANVAS_H - 55) / (ROWS - 1))
+      });
+    }
+  }
+
+  const ballR = 8;
+  // Стартуем строго сверху по центру с небольшим случайным смещением
+  let bx = CANVAS_W / 2 + (Math.random() - 0.5) * 8;
+  let by = ballR + 2;
+  // Начальная скорость — минимальная, хаотичность добавляется от отскоков
+  let vx = (Math.random() - 0.5) * 1.5;
+  let vy = 0.8;
+  const gravity = 0.18;
+  const bounce = 0.38;
+  const wallBounce = 0.5;
+
+  let landed = false;
+  let landDelay = 50;
+  let currentFlash = null;
+  let flashTimer = 0;
+  let frameCount = 0;
+  const MAX_FRAMES = 360;
+
+  // Предварительно считаем путь шарика чтобы гарантировать нужный слот
+  // Делаем несколько пробных симуляций и выбираем ту что ближе к нужному слоту
+  function simulate(startVx) {
+    let sx = CANVAS_W / 2 + (Math.random() - 0.5) * 8;
+    let sy = ballR + 2;
+    let svx = startVx;
+    let svy = 0.8;
+    for (let f = 0; f < MAX_FRAMES; f++) {
+      svy += gravity;
+      sx += svx; sy += svy;
+      svx *= 0.98;
+      if (sx - ballR < 2) { sx = ballR + 2; svx = Math.abs(svx) * wallBounce; }
+      if (sx + ballR > CANVAS_W - 2) { sx = CANVAS_W - ballR - 2; svx = -Math.abs(svx) * wallBounce; }
+      for (const p of pegs) {
+        const dx = sx - p.x, dy = sy - p.y;
+        const dist = Math.sqrt(dx*dx + dy*dy);
+        if (dist < ballR + pegR + 0.5) {
+          const nx = dx/dist, ny = dy/dist;
+          const dot = svx*nx + svy*ny;
+          svx = (svx - 2*dot*nx) * bounce + (Math.random()-0.5)*0.6;
+          svy = Math.abs((svy - 2*dot*ny) * bounce) + 0.3;
+          sx = p.x + nx*(ballR+pegR+1); sy = p.y + ny*(ballR+pegR+1);
+          break;
+        }
+      }
+      if (sy + ballR >= CANVAS_H - 20) {
+        const simSlot = Math.max(0, Math.min(9, Math.floor(sx / (CANVAS_W/10))));
+        return simSlot;
+      }
+    }
+    return Math.max(0, Math.min(9, Math.floor(sx / (CANVAS_W/10))));
+  }
+
+  // Случайно выбираем куда летит шарик — честно, без предопределённого результата
+  vx = (Math.random() - 0.5) * 2.5;
+  // Немного случайности в начальной позиции
+  bx = CANVAS_W / 2 + (Math.random()-0.5)*8;
+
+  function drawScene() {
+    ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+    const bg = ctx.createLinearGradient(0, 0, 0, CANVAS_H);
+    bg.addColorStop(0, '#070712');
+    bg.addColorStop(1, '#0a0a1e');
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, CANVAS_W, CANVAS_H);
+
+    // Урны
+    const bw = CANVAS_W / 10;
+    for (let i = 0; i < 10; i++) {
+      const isWin = i >= winOffset && i < winOffset + winSlots;
+      ctx.fillStyle = isWin ? winColor : '#1a1a2e';
+      ctx.shadowColor = isWin ? winColor : 'transparent';
+      ctx.shadowBlur = isWin ? 8 : 0;
+      ctx.beginPath();
+      ctx.roundRect(i*bw+2, CANVAS_H-20, bw-4, 16, 4);
+      ctx.fill();
+    }
+    ctx.shadowBlur = 0;
+
+    // Штыри
+    pegs.forEach(p => {
+      const isFlash = currentFlash && currentFlash === p && flashTimer > 0;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, pegR, 0, Math.PI*2);
+      ctx.fillStyle = isFlash ? `rgba(255,255,255,${flashTimer/10})` : '#3a3a5a';
+      ctx.fill();
+      if (!isFlash) {
+        ctx.beginPath();
+        ctx.arc(p.x-1, p.y-1, pegR*0.35, 0, Math.PI*2);
+        ctx.fillStyle = 'rgba(255,255,255,0.18)';
+        ctx.fill();
+      }
+    });
+    if (flashTimer > 0) flashTimer--;
+
+    // Шлейф
+    const trailGrad = ctx.createRadialGradient(bx, by, 0, bx, by, ballR*3);
+    trailGrad.addColorStop(0, winColor+'55');
+    trailGrad.addColorStop(1, 'transparent');
+    ctx.beginPath();
+    ctx.arc(bx, by, ballR*3, 0, Math.PI*2);
+    ctx.fillStyle = trailGrad;
+    ctx.fill();
+
+    // Шарик — рисуем всегда clip внутри canvas чтобы не пропадал
+    const clampedBx = Math.max(ballR, Math.min(CANVAS_W-ballR, bx));
+    const clampedBy = Math.max(ballR, Math.min(CANVAS_H-ballR, by));
+    const ballGrad = ctx.createRadialGradient(clampedBx-2, clampedBy-2, 1, clampedBx, clampedBy, ballR);
+    ballGrad.addColorStop(0, '#ffffff');
+    ballGrad.addColorStop(0.3, winColor);
+    ballGrad.addColorStop(1, winColor+'66');
+    ctx.beginPath();
+    ctx.arc(clampedBx, clampedBy, ballR, 0, Math.PI*2);
+    ctx.fillStyle = ballGrad;
+    ctx.shadowColor = winColor;
+    ctx.shadowBlur = 18;
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    frameCount++;
+  }
+
+  function physicsStep() {
+    if (landed) return;
+    vy += gravity;
+    bx += vx;
+    by += vy;
+    vx *= 0.985; // лёгкое затухание
+
+    // Стенки
+    if (bx - ballR < 2) { bx = ballR+2; vx = Math.abs(vx)*wallBounce + 0.3; }
+    if (bx + ballR > CANVAS_W-2) { bx = CANVAS_W-ballR-2; vx = -(Math.abs(vx)*wallBounce + 0.3); }
+    // Потолок — не даём улететь вверх
+    if (by - ballR < 0) { by = ballR; vy = Math.abs(vy)*0.5; }
+
+    // Штыри
+    for (const p of pegs) {
+      const dx = bx - p.x, dy = by - p.y;
+      const dist = Math.sqrt(dx*dx + dy*dy);
+      if (dist < ballR + pegR + 0.5) {
+        const nx = dx/dist, ny = dy/dist;
+        const dot = vx*nx + vy*ny;
+        // Случайный разброс при отскоке — делает путь непредсказуемым
+        const randomKick = (Math.random()-0.5) * 1.2;
+        vx = (vx - 2*dot*nx)*bounce + randomKick;
+        vy = Math.abs((vy - 2*dot*ny)*bounce) + 0.4; // всегда вниз
+        bx = p.x + nx*(ballR+pegR+1.5);
+        by = p.y + ny*(ballR+pegR+1.5);
+        currentFlash = p;
+        flashTimer = 10;
+        break;
+      }
+    }
+
+    if (by + ballR >= CANVAS_H - 20) {
+      by = CANVAS_H - 20 - ballR;
+      vx *= 0.2; vy = 0;
+      landed = true;
+    }
+  }
+
+  function showResult() {
+    const finalSlot = Math.max(0, Math.min(9, Math.floor(bx / (CANVAS_W/10))));
+    // Определяем победу по РЕАЛЬНОЙ позиции шарика
+    win = finalSlot >= winOffset && finalSlot < winOffset + winSlots;
+    won = win ? amount * mult : 0;
+
+    const bw = CANVAS_W/10;
+    ctx.fillStyle = win ? winColor : '#f44336';
+    ctx.shadowColor = win ? winColor : '#f44336';
+    ctx.shadowBlur = 24;
+    ctx.beginPath();
+    ctx.roundRect(finalSlot*bw+2, CANVAS_H-20, bw-4, 16, 4);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    const res = document.getElementById('plinkoResult');
+    if (!res) return;
+    setTimeout(() => {
+      if (win) {
+        d.tokens += won;
+        d.questBetWins = (d.questBetWins||0)+1;
+        checkQuestProgress('bet_win');
+        if (mult===10 && !d.wonX10) d.wonX10=true;
+        res.textContent = formatTemplate(t('plinko_win'),[won]);
+        res.style.cssText = `text-align:center;font-size:22px;font-weight:bold;color:${winColor};text-shadow:0 0 18px ${winColor};opacity:1;`;
+      } else {
+        res.textContent = formatTemplate(t('plinko_lose'),[amount]);
+        res.style.cssText = 'text-align:center;font-size:20px;font-weight:bold;color:#f44336;text-shadow:0 0 10px #f44336;opacity:1;';
+      }
+      save(); ui();
+      setTimeout(() => {
+        // Только если это всё ещё наше поколение — не перебиваем новую игру
+        if (myGen === _plinkoGeneration) renderPlinkoUI();
+      }, 2500);
+    }, 300);
+  }
+
+  let resultShown = false;
+  const _startMs = performance.now();
+  const MAX_MS = 7000;
+
+  function loop(now) {
+    if (myGen !== _plinkoGeneration) return; // убит новым броском
+
+    const elapsed = now - _startMs;
+
+    // Физические шаги — фиксированный шаг 1/60с независимо от FPS
+    const stepsNeeded = Math.max(1, Math.min(3, Math.round((now - (_lastLoopTime||now)) / (1000/60))));
+    _lastLoopTime = now;
+    for (let step = 0; step < stepsNeeded; step++) {
+      physicsStep();
+      if (landed) break;
+    }
+    drawScene();
+
+    if (landed) {
+      landDelay--;
+      if (landDelay <= 0 && !resultShown) {
+        resultShown = true;
+        _plinkoAnimId = null;
+        showResult();
+        return;
+      }
+      _plinkoAnimId = requestAnimationFrame(loop);
+      return;
+    }
+
+    if (elapsed < MAX_MS) {
+      _plinkoAnimId = requestAnimationFrame(loop);
+    } else if (!resultShown) {
+      // Время вышло — форсируем
+      by = CANVAS_H - 20 - ballR; vy = 0; vx = 0;
+      landed = true;
+      _plinkoAnimId = requestAnimationFrame(loop);
+    }
+  }
+
+  let _lastLoopTime = null;
+  _plinkoAnimId = requestAnimationFrame(loop);
+}
+
+// Устаревшие функции — сохранены для совместимости
+function prepareBet(mult, chance) {}
+function setMaxBet() {}
+function confirmBet() {}
+function cancelBet() {}
 
 // ==========================================
 // PROMO CODE FUNCTIONS
@@ -7954,6 +8622,15 @@ function checkPromo() {
   // Запускаем интерфейс открытия золотой капсулы
   startGoldCapsuleSequence();
   return;
+
+  } else if (code === "serialvikings") {
+    if (!d.secretSkins) d.secretSkins = {};
+    d.secretSkins['viking'] = 1;
+    d.usedCodes.push(code);
+    save(); ui();
+    showToast('🪓 Viking skin unlocked!');
+    input.value = "";
+    return;
 
   } else if (code === "tap2x") {
     d.bonuses.tap2x = { active: true, end: Date.now() + 30 * 60 * 1000 };
@@ -9302,7 +9979,7 @@ function _adminApplyTapEvent(v) {
       ligting:"url('ligting.png')", fire:"url('fire.png')", ogon:"url('ogon.png')",
       king:"url('king.png')", castle:"url('castle.png')", admin:"url('admin.png')",
       meme:"url('meme.png')", hole:"url('hole.png')",
-      waterbomb:"url('waterbomb.png')", dirt:"url('dirt.png')", bank:"url('bank.png')", bunny:"url('bunn.png')",
+      waterbomb:"url('waterbomb.png')", dirt:"url('dirt.png')", bank:"url('bank.png')", bunny:"url('bunn.png')", bg_pixel_games:"url('mine.png')",
       elit:"url('elit.png')", alone:"url('one.png')", scary:"url('knife.png')"
     };
     document.body.style.backgroundImage = bgMap[v.bg] || 'none';
@@ -13188,7 +13865,7 @@ let wheelAudioCtx = null;
 
 function getWheelPrice() {
   const rate = getHourlyRate();
-  return Math.round(rate * 50 / 1000) * 1000;
+  return Math.round(rate * 40 / 1000) * 1000;
 }
 
 function updateFortuneWheelCard() {
@@ -13732,6 +14409,11 @@ window._firebaseRef(window._firebaseDB, 'leaderboard/' + getMyUid()).once('value
 setInterval(() => {
   if (window._firebaseReady) pushMyLeaderboardData();
 }, 10000);
+
+// Обновляем UI Plinko каждую минуту (для таймера попыток)
+setInterval(() => {
+  if (document.getElementById('plinkoCard')) renderPlinkoUI();
+}, 60000);
 
 // Push immediately on load (after firebase ready)
 setTimeout(() => {
@@ -15121,6 +15803,18 @@ function renderQuestsTab() {
   if (zEl) zEl.textContent = d.quests ? (d.quests.znetons || 0) : 0;
   renderQuestList('dailyQuestsContainer', d.quests.daily || [], 1);
   renderQuestList('weeklyQuestsContainer', d.quests.weekly || [], 5);
+  // Мастер-достижение: Target skin
+  const _tqEl = document.getElementById('targetSkinProgress');
+  if (_tqEl) {
+    const owned = d.secretSkins?.target || d.skins?.target;
+    if (owned) { _tqEl.style.display = 'none'; }
+    else {
+      const done = d.questDailyDone || 0;
+      const pct = Math.min(100, Math.floor(done/50*100));
+      _tqEl.innerHTML = `<div style="font-size:11px;color:#888;margin-bottom:4px;">🎯 Master Quest: Complete 50 daily quests → Target Skin (${done}/50)</div>
+        <div style="background:#333;border-radius:4px;height:6px;overflow:hidden;"><div style="width:${pct}%;background:#ff9800;height:100%;border-radius:4px;"></div></div>`;
+    }
+  }
 }
 
 function getQuestCheck(id) {
@@ -15217,7 +15911,14 @@ function claimQuest(type, idx) {
     d.questDailyDone = (d.questDailyDone || 0) + 1;
     checkQuestProgress('w_dq');
   }
-  showToast(`+${reward} жетон${reward > 1 ? 'ов' : ''}! 🎖️`);
+  // Проверяем достижение Target skin (50 квестов суммарно)
+  const totalDone = (d.questDailyDone || 0);
+  if (totalDone >= 50 && !d.skins?.target && !d.secretSkins?.target) {
+    if (!d.secretSkins) d.secretSkins = {};
+    d.secretSkins['target'] = 1;
+    setTimeout(() => showToast('🎯 Target skin unlocked! (50 quests done)'), 500);
+  }
+  showToast(`+${reward} token${reward > 1 ? 's' : ''}! 🎖️`);
   save();
   renderQuestsTab();
 }
@@ -15977,12 +16678,22 @@ function renderGameRecordsLB() {
 
   entries = entries.slice(0, 50);
 
+  // Добавляем себя если есть рекорд но не попал в список
+  const myUid = typeof getMyUid === 'function' ? getMyUid() : localStorage.getItem('_kspt_uid');
+  const myVal = game === 'ek'
+    ? (d.ekLifetime || 0)
+    : (d.gameRecords && d.gameRecords[game]) || 0;
+  if (myUid && myVal > 0 && !entries.find(e => String(e.uid) === String(myUid))) {
+    entries.push({ name: 'You', value: myVal, uid: myUid, photoUrl: '' });
+    if (game === 'race') entries.sort((a,b) => a.value - b.value);
+    else entries.sort((a,b) => b.value - a.value);
+    entries = entries.slice(0, 50);
+  }
+
   if (!entries.length) {
     el.innerHTML = '<div style="color:#555;text-align:center;padding:15px;">No records yet</div>';
     return;
   }
-
-  const myUid = typeof getMyUid === 'function' ? getMyUid() : localStorage.getItem('_kspt_uid');
 
   let html = `<div style="color:#666;font-size:11px;margin-bottom:6px;">${meta.label}</div>`;
   entries.forEach((e, i) => {
@@ -16453,7 +17164,7 @@ function renderProfileTab() {
 }
 
 // Скины которые считаются секретными по смыслу (не продаются, находятся особым способом)
-const SECRET_SKIN_IDS = new Set(['doge','kostia','metka','seri','artem','mystic','capsule','siulai','gkspt','cyber_android','dirty','crypto_heart','corrupted','failed','goldensafe','bhole','toilet','capsulememe','ufo','dragon']);
+const SECRET_SKIN_IDS = new Set(['doge','kostia','metka','seri','artem','mystic','capsule','siulai','gkspt','cyber_android','dirty','crypto_heart','corrupted','failed','goldensafe','bhole','toilet','capsulememe','ufo','dragon','eggi','viking']);
 
 function _getOwnedSkinsList() {
   const result = [];
@@ -16696,7 +17407,10 @@ function _renderFriendItem(uid, friend) {
       <img src="${friend.avatar || 'seri.png'}" onerror="this.src='seri.png'"
            class="friend-avatar ${isOnline ? 'friend-online' : ''}">
       <div style="flex:1;min-width:0;">
-        <div style="font-weight:bold;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${friend.name || uid}</div>
+        <div style="font-weight:bold;font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center;gap:4px;">
+          ${friend.name || uid}
+          ${friend.verified ? '<img src="gal.png" style="width:12px;height:12px;object-fit:contain;flex-shrink:0;" title="Verified">' : ''}
+        </div>
         ${lastSeen}
       </div>
       <div style="display:flex;gap:4px;flex-shrink:0;">
@@ -16924,7 +17638,7 @@ function _checkFriendRequests() {
 
 function _acceptFriendRequest(fromUid, name, avatar, toastId) {
   if (!d.friends) d.friends = {};
-  d.friends[fromUid] = { name, avatar, lastSeen: Date.now() };
+  d.friends[fromUid] = { name, avatar, lastSeen: Date.now(), verified: false };
   save();
   const myUid = getMyUid();
   const myName = _getMyName();
@@ -16980,6 +17694,8 @@ function openFriendProfile(uid) {
   window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).once('value').then(snap => {
     const p = snap?.val();
     if (!p) { showToast(t('friends_not_found')); return; }
+    // Обновляем verified в локальном списке друзей
+    if (d.friends && d.friends[uid]) d.friends[uid].verified = !!p.verified;
     _showPublicProfile(uid, p);
   });
 }

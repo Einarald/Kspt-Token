@@ -636,6 +636,8 @@ window.addEventListener('message', (event) => {
     <div style="font-weight:bold; margin:14px 0 8px; color:#ce93d8;">📆 Weekly Quest <span style="color:#ffd54f; font-size:12px;">(+5 <img src='zneton.png' style='width:14px;height:14px;vertical-align:middle;' onerror='this.src=\"kspt.png\"'> each)</span></div>
     <div id="weeklyQuestsContainer"></div>
 
+    <div id="targetSkinProgress" style="margin:10px 0;padding:8px 12px;background:#111;border-radius:8px;border:1px solid #ff980033;"></div>
+
     <!-- SAFES SECTION -->
     <div style="font-weight:bold; margin:20px 0 6px; color:#ffd54f; font-size:15px;">🔒 Safes</div>
 
@@ -1343,13 +1345,43 @@ window.addEventListener('message', (event) => {
     <div id="skin-sub-space" class="card-sub"></div> 
     <button id="skin-space" onclick="buySkin('space',1210)" data-lang-key="buy">BUY 1210 KSPT</button>
   </div>
-  
+
+  <!-- Secret skin cards (shown only when owned) -->
+  <div class="card" id="skinCardEggi" style="display:none">
+    <img id="skin-img-eggi" src="eggi.png" class="card-img">
+    <div class="card-title">Easter Egg</div>
+    <div class="card-sub">Secret Easter skin · 25 KSPT/h</div>
+    <button id="skin-eggi" onclick="applySkin('eggi')">Select</button>
+  </div>
+
+  <div class="card" id="skinCardViking" style="display:none">
+    <img id="skin-img-viking" src="vikikng.png" class="card-img">
+    <div class="card-title">Vikings ⚔️</div>
+    <div class="card-sub">Promo skin · 5 KSPT/h</div>
+    <button id="skin-viking" onclick="applySkin('viking')">Select</button>
+  </div>
+
+  <div class="card" id="skinCardTarget" style="display:none">
+    <img id="skin-img-target" src="target.png" class="card-img">
+    <div class="card-title">Target</div>
+    <div class="card-sub">Quest Master reward · 30 KSPT/h</div>
+    <button id="skin-target" onclick="applySkin('target')">Select</button>
+  </div>
+
   <div class="card">
     <img id="skin-img-pixe" src="dontwhat.png" class="card-img">
     <div class="card-title">Pixel Coin</div>
     <div class="card-sub" data-lang-key="toggle_animation">Toggle animation + visual style</div>
     <div id="skin-sub-pixe" class="card-sub"></div>
     <button id="skin-pixe" onclick="buySkin('pixe',3215)" data-lang-key="buy">BUY 3,215 KSPT</button>
+  </div>
+
+  <div class="card">
+    <img id="skin-img-wheel" src="dontwhat.png" class="card-img">
+    <div class="card-title">Wheel</div>
+    <div class="card-sub">Spin animation · ? KSPT/h</div>
+    <div id="skin-sub-wheel" class="card-sub"></div>
+    <button id="skin-wheel" onclick="buySkin('wheel',7470)" data-lang-key="buy">BUY 7,470 KSPT</button>
   </div>
 
   <div class="card">
@@ -1649,24 +1681,7 @@ window.addEventListener('message', (event) => {
     <button id="btnRegen" onclick="buyRegenMult()" data-lang-key="upgrade">Upgrade</button>
   </div>
 
-  <div class="card">
-    <div class="card-title" data-lang-key="bet">Bet</div>
-    <div class="input-group">
-      <input id="betAmount" type="number" placeholder="1–30" readonly onfocus="showCustomKeyboard(this)">
-      <button class="max-btn" onclick="setMaxBet()" data-lang-key="max">MAX</button>
-    </div>
-    
-    <button id="betButton1" onclick="prepareBet(1.5,30)">x1.5 (30%)</button>
-    <button id="betButton2" onclick="prepareBet(3,17)">x3 (17%)</button>
-    <button id="betButton3" onclick="prepareBet(5,8)">x5 (8%)</button>
-    <button id="betButton4" onclick="prepareBet(10,3)">x10 (3%)</button>
-    <button id="betButton5" onclick="prepareBet(50,1.1)" style="margin-top:5px; border:1px solid #ff9800; color:#ff9800">x50 (1.1%)</button>
-  </div>
-
-  <div id="betConfirm" class="card" style="display:none">
-    <div id="betText"></div>
-    <button class="confirm" onclick="confirmBet()" data-lang-key="confirm">Confirm</button>
-    <button class="cancel" onclick="cancelBet()" data-lang-key="cancel">Cancel</button>
+  <div class="card" id="plinkoCard" style="border:1px solid #00bcd433;background:linear-gradient(160deg,#050510,#0a0a1e);">
   </div>
 
 <!-- Fortune Wheel Card -->

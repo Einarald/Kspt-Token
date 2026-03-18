@@ -541,16 +541,38 @@ const linesEl = document.getElementById('lines');
 
         function generateNewBlocks() {
             currentBlocks = [];
+
+            // Фигуры которые реально помещаются на текущее поле
+            function canShapeFit(shape) {
+                for (let y = 0; y <= GRID_SIZE - shape.length; y++) {
+                    for (let x = 0; x <= GRID_SIZE - shape[0].length; x++) {
+                        if (canPlaceBlock(shape, x, y)) return true;
+                    }
+                }
+                return false;
+            }
+
+            const fittingShapes = BLOCK_SHAPES.filter(s => canShapeFit(s));
+
             for (let i = 0; i < 3; i++) {
-                const shape = BLOCK_SHAPES[Math.floor(Math.random() * BLOCK_SHAPES.length)];
-                const color = COLORS[Math.floor(Math.random() * COLORS.length)];
+                let shape, color;
+                // Для первой фигуры из трёх гарантируем что она влезет
+                // (если вообще есть хоть одна подходящая)
+                if (i === 0 && fittingShapes.length > 0) {
+                    shape = fittingShapes[Math.floor(Math.random() * fittingShapes.length)];
+                } else {
+                    shape = BLOCK_SHAPES[Math.floor(Math.random() * BLOCK_SHAPES.length)];
+                }
+                color = COLORS[Math.floor(Math.random() * COLORS.length)];
                 currentBlocks.push({ shape, color });
                 renderBlockPreview(i, shape, color);
             }
+
             selectedBlockIndex = -1;
             updateBlockSelection();
-            
-            // Check if any block can be placed
+
+            // Проверяем — если даже гарантированная фигура не влезла
+            // значит поле реально заполнено и игра честно завершается
             checkForPossibleMoves();
         }
 

@@ -176,6 +176,25 @@ canvas{ background:var(--space-blue); border:2px solid var(--accent); border-rad
     transition: transform 0.1s ease;
 }
 </style>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+(function(){
+  const cfg = {
+    apiKey: "AIzaSyCvvNiYR_bD7S8xReVZz9wwaP2tJwYya9k",
+    authDomain: "crypto-exchange-35c73.firebaseapp.com",
+    databaseURL: "https://crypto-exchange-35c73-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "crypto-exchange-35c73",
+    storageBucket: "crypto-exchange-35c73.firebasestorage.app",
+    messagingSenderId: "797502229447",
+    appId: "1:797502229447:web:4c01e79846d26a67b027e2"
+  };
+  try {
+    if (!firebase.apps.length) firebase.initializeApp(cfg);
+    window._slitherDB = firebase.database();
+  } catch(e) { console.warn('Slither Firebase init failed', e); }
+})();
+</script>
 </head>
 <body>
 <div class="game-container">
@@ -363,6 +382,7 @@ function safeConsumeTicket() {
 }
 
 function safeExitGame() {
+  _slLeaveOnline();
   try {
     if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.exitGame === 'function') {
       window.top.exitGame();
@@ -517,6 +537,40 @@ function generatePlayerSegments() {
 
 // ИИ черви
 let aiWorms = [];
+
+// ===== ОНЛАЙН =====
+const SLITHER_MAX_PLAYERS = 9; // максимум в одной комнате
+const SLITHER_SEND_INTERVAL = 200; // мс
+let _slOnline = false;
+let _slRoomId = null;
+let _slMyUid = null;
+let _slMyName = 'Player';
+let _slRemotePlayers = {};
+let _slSendTimer = null;
+let _slRoomRef = null;
+let _slPresenceRef = null;
+let _slDisconnectCleanup = null;
+
+// Получаем uid и имя из основной игры
+(function(){
+  try {
+    if (window.top && window.top !== window) {
+      const tgU = window.top.Telegram?.WebApp?.initDataUnsafe?.user;
+      if (tgU) {
+        _slMyName = tgU.first_name || tgU.username || 'Player';
+      } else {
+        const raw = localStorage.getItem('d');
+        if (raw) {
+          const dd = JSON.parse(raw);
+          _slMyName = dd?.profile?.name || dd?.name || 'Player';
+        }
+      }
+    }
+    _slMyUid = localStorage.getItem('_kspt_uid') || ('guest_' + Math.random().toString(36).slice(2,8));
+  } catch(e) {
+    _slMyUid = 'guest_' + Math.random().toString(36).slice(2,8);
+  }
+})();
 
 // Орбы (еда)
 let orbs = [];
@@ -679,7 +733,7 @@ function initGame() {
         maxLength: 100,
         baseSize: 10,
         segments: [],
-        color: '#00bcd4',
+        color: ['#00bcd4','#e91e63','#4caf50','#ff9800','#9c27b0','#f44336','#00e676','#2196f3','#ffeb3b','#ff5722'][Math.floor(Math.random()*10)],
         isBoosting: false,
         boostEnergy: 100,
         orbsCollected: 0,
@@ -838,6 +892,11 @@ function initGame() {
    __lastFrameTS = performance.now(); 
 
     animationId = requestAnimationFrame(gameLoop);
+
+    // Подключаемся к онлайн если Firebase доступен
+    if (window._slitherDB) {
+      _slJoinOnline();
+    }
 }
 
 /* ========== ОБНОВЛЕНИЕ ИГРЫ ========== */
@@ -851,8 +910,9 @@ function updateGame(dt = 16.6667) {
     const targetCameraX = player.x - VIEW_WIDTH / 2;
     const targetCameraY = player.y - VIEW_HEIGHT / 2;
 
-    cameraX += (targetCameraX - cameraX) * 0.1;
-    cameraY += (targetCameraY - cameraY) * 0.1;
+    const camLerp = 1 - Math.pow(1 - 0.1, frameScale);
+    cameraX += (targetCameraX - cameraX) * camLerp;
+    cameraY += (targetCameraY - cameraY) * camLerp;
 
     cameraX = Math.max(0, Math.min(cameraX, GAME_WIDTH - VIEW_WIDTH));
     cameraY = Math.max(0, Math.min(cameraY, GAME_HEIGHT - VIEW_HEIGHT));
@@ -868,7 +928,7 @@ function updateGame(dt = 16.6667) {
         while (angleDiff < -Math.PI) angleDiff += Math.PI * 2;
         
         // Максимальный поворот за кадр: 0.15 радиан (~8.5 градусов)
-        const maxTurn = 0.15;
+        const maxTurn = 0.15 * frameScale;
         angleDiff = Math.max(-maxTurn, Math.min(maxTurn, angleDiff));
         
         player.angle += angleDiff;
@@ -881,12 +941,12 @@ function updateGame(dt = 16.6667) {
     // Ускорение (буст)
     if (player.isBoosting && player.boostEnergy > 0 && player.length > 20) {
         player.speed = BOOST_SPEED;
-        player.boostEnergy = Math.max(0, player.boostEnergy - BOOST_COST);
-        player.length = Math.max(20, player.length - 0.1);
+        player.boostEnergy = Math.max(0, player.boostEnergy - BOOST_COST * frameScale);
+        player.length = Math.max(20, player.length - 0.1 * frameScale);
     } else {
         player.speed = PLAYER_SPEED;
         player.isBoosting = false;
-        player.boostEnergy = Math.min(100, player.boostEnergy + BOOST_RECOVERY);
+        player.boostEnergy = Math.min(100, player.boostEnergy + BOOST_RECOVERY * frameScale);
     }
     
     // Обновление позиции игрока
@@ -1480,6 +1540,22 @@ function checkWormCollisions() {
     }
 }
 
+function checkOnlineCollisions() {
+    if (!_slOnline || player.isDead) return;
+    for (const rp of Object.values(_slRemotePlayers)) {
+        if (!rp.alive || !rp.currentSegs || rp.currentSegs.length === 0) continue;
+        // Голова игрока врезается в тело онлайн-игрока
+        for (const seg of rp.currentSegs) {
+            const dist = distance(player.x, player.y, seg.x, seg.y);
+            if (dist < (seg.size || 10) + player.baseSize) {
+                _slSendDeath();
+                playerDie();
+                return;
+            }
+        }
+    }
+}
+
 function killWorm(worm, killer) {
     if (worm.isDead) return;
     
@@ -1557,10 +1633,12 @@ function playerDie() {
     if (player.isDead) return;
     
     player.isDead = true;
+    if (_slOnline) _slSendDeath();
     player.currentCombo = 0;
     
-    for (let i = 0; i < player.length / 3; i++) {
-        const segIndex = Math.floor(i * 3);
+    const maxPlayerOrbs = Math.min(100, Math.floor(player.length / 3));
+    for (let i = 0; i < maxPlayerOrbs; i++) {
+        const segIndex = Math.floor((i / maxPlayerOrbs) * player.segments.length);
         if (segIndex < player.segments.length) {
             const seg = player.segments[segIndex];
             orbs.push({
@@ -1682,7 +1760,9 @@ function updateUI() {
 
 function updateLeaderboard() {
     const allPlayers = [
-        { ...player, score: Math.floor(player.length) * 10 + player.kills * 100 }
+        { ...player,
+          name: _slOnline ? _slMyName : 'Player 1 (You)',
+          score: Math.floor(player.length) * 10 + player.kills * 100 }
     ];
     
     for (let ai of aiWorms) {
@@ -1692,6 +1772,20 @@ function updateLeaderboard() {
                 score: Math.floor(ai.length) * 10
             });
         }
+    }
+
+    // Добавляем онлайн-игроков
+    if (_slOnline) {
+      for (const rp of Object.values(_slRemotePlayers)) {
+        if (rp.alive) {
+          allPlayers.push({
+            id: rp.uid,
+            name: rp.name,
+            color: rp.color,
+            score: Math.floor(rp.length || 100) * 10
+          });
+        }
+      }
     }
     
     allPlayers.sort((a, b) => b.score - a.score);
@@ -1807,6 +1901,70 @@ function draw() {
         if (!ai.isDead) {
             drawWorm(ai, ai === largestWorm);
         }
+    }
+
+    // Рисование онлайн-игроков с интерполяцией
+    if (_slOnline) {
+      const nowMs = Date.now();
+      for (const rp of Object.values(_slRemotePlayers)) {
+        if (!rp.alive) continue;
+        const elapsed = nowMs - (rp.lastUpdateTime || nowMs);
+        const alpha = Math.min(1.0, elapsed / SLITHER_SEND_INTERVAL);
+
+        // Интерполируем позицию
+        rp.currentX = (rp.prevX || rp.targetX) + (rp.targetX - (rp.prevX || rp.targetX)) * alpha;
+        rp.currentY = (rp.prevY || rp.targetY) + (rp.targetY - (rp.prevY || rp.targetY)) * alpha;
+
+        // Интерполируем угол (кратчайший путь)
+        let dA = (rp.targetAngle || 0) - (rp.prevAngle || 0);
+        while (dA > Math.PI) dA -= Math.PI * 2;
+        while (dA < -Math.PI) dA += Math.PI * 2;
+        rp.currentAngle = (rp.prevAngle || 0) + dA * alpha;
+
+        // Интерполируем сегменты
+        const prevSegs = rp.prevSegs || [];
+        const targSegs = rp.targetSegs || [];
+        rp.currentSegs = targSegs.map((ts, i) => {
+          const ps = prevSegs[i];
+          if (!ps) return { x: ts[0], y: ts[1], size: ts[2] };
+          return {
+            x: ps[0] + (ts[0] - ps[0]) * alpha,
+            y: ps[1] + (ts[1] - ps[1]) * alpha,
+            size: ts[2]
+          };
+        });
+
+        // Строим фиктивный объект червя для drawWorm
+        const fakeWorm = {
+          x: rp.currentX,
+          y: rp.currentY,
+          angle: rp.currentAngle,
+          color: rp.color,
+          name: rp.name,
+          length: rp.length || 100,
+          segments: rp.currentSegs.length > 0
+            ? rp.currentSegs
+            : [{ x: rp.currentX, y: rp.currentY, size: 10 }],
+          isDead: false,
+          isInitialized: true,
+          id: -1 // не игрок
+        };
+        drawWorm(fakeWorm, false);
+
+        // Рисуем имя над головой
+        const sx = rp.currentX - cameraX;
+        const sy = rp.currentY - cameraY;
+        if (sx > -50 && sx < VIEW_WIDTH+50 && sy > -50 && sy < VIEW_HEIGHT+50) {
+          ctx.save();
+          ctx.font = 'bold 11px Arial';
+          ctx.fillStyle = '#fff';
+          ctx.textAlign = 'center';
+          ctx.shadowColor = 'rgba(0,0,0,0.8)';
+          ctx.shadowBlur = 4;
+          ctx.fillText(rp.name, sx, sy - 18);
+          ctx.restore();
+        }
+      }
     }
     
     // Рисование игрока
@@ -2222,6 +2380,194 @@ document.addEventListener('visibilitychange', function() {
         document.getElementById('pauseBtn').textContent = 'Resume';
     }
 });
+
+// ===== ОНЛАЙН: найти или создать комнату =====
+async function _slFindOrCreateRoom() {
+  if (!window._slitherDB) return null;
+  const db = window._slitherDB;
+  const roomsRef = db.ref('slither_rooms');
+
+  // Ищем комнату с местом (< MAX_PLAYERS игроков)
+  const snap = await roomsRef.orderByChild('playerCount').endAt(SLITHER_MAX_PLAYERS - 1).limitToFirst(5).once('value');
+  const rooms = snap.val() || {};
+
+  for (const [roomId, room] of Object.entries(rooms)) {
+    const count = Object.keys(room.players || {}).length;
+    if (count < SLITHER_MAX_PLAYERS) {
+      return roomId;
+    }
+  }
+
+  // Создаём новую комнату
+  const newRef = roomsRef.push();
+  await newRef.set({ playerCount: 0, createdAt: Date.now(), players: {} });
+  return newRef.key;
+}
+
+// ===== ОНЛАЙН: присоединиться к комнате =====
+async function _slJoinOnline() {
+  if (!window._slitherDB || !_slMyUid) return;
+
+  try {
+    _slRoomId = await _slFindOrCreateRoom();
+    if (!_slRoomId) return;
+
+    _slOnline = true;
+    _slRoomRef = window._slitherDB.ref(`slither_rooms/${_slRoomId}/players/${_slMyUid}`);
+
+    // При отключении — удалить себя
+    _slDisconnectCleanup = _slRoomRef.onDisconnect();
+    _slDisconnectCleanup.remove();
+
+    // Записываем себя
+    await _slRoomRef.set({
+      uid: _slMyUid,
+      name: _slMyName,
+      color: player.color,
+      x: player.x,
+      y: player.y,
+      angle: player.angle,
+      length: player.length,
+      alive: true,
+      t: Date.now()
+    });
+
+    // Обновляем счётчик
+    window._slitherDB.ref(`slither_rooms/${_slRoomId}/playerCount`).transaction(c => (c || 0) + 1);
+
+    // Слушаем других игроков
+    window._slitherDB.ref(`slither_rooms/${_slRoomId}/players`).on('child_added', _slOnPlayerAdded);
+    window._slitherDB.ref(`slither_rooms/${_slRoomId}/players`).on('child_changed', _slOnPlayerChanged);
+    window._slitherDB.ref(`slither_rooms/${_slRoomId}/players`).on('child_removed', _slOnPlayerRemoved);
+
+    // Слушаем орбы от умерших онлайн-игроков
+    window._slitherDB.ref(`slither_rooms/${_slRoomId}/death_orbs`).on('child_added', _slOnDeathOrbs);
+
+    // Запускаем отправку своего состояния
+    _slSendTimer = setInterval(_slSendState, SLITHER_SEND_INTERVAL);
+
+    console.log('[Slither Online] Joined room', _slRoomId);
+  } catch(e) {
+    console.warn('[Slither Online] Join failed', e);
+    _slOnline = false;
+  }
+}
+
+// ===== ОНЛАЙН: выйти из комнаты =====
+function _slLeaveOnline() {
+  if (!_slOnline || !_slRoomId) return;
+  try {
+    if (_slSendTimer) { clearInterval(_slSendTimer); _slSendTimer = null; }
+    if (_slRoomRef) { _slRoomRef.remove(); _slRoomRef = null; }
+    window._slitherDB.ref(`slither_rooms/${_slRoomId}/players`).off();
+    window._slitherDB.ref(`slither_rooms/${_slRoomId}/death_orbs`).off();
+    window._slitherDB.ref(`slither_rooms/${_slRoomId}/playerCount`).transaction(c => Math.max(0, (c||1)-1));
+    _slOnline = false;
+    _slRoomId = null;
+    _slRemotePlayers = {};
+  } catch(e) {}
+}
+
+function _slSendState() {
+  if (!_slOnline || !_slRoomRef || player.isDead) return;
+  // Упрощённые сегменты — каждый 4-й для экономии трафика
+  const segs = [];
+  for (let i = 0; i < player.segments.length; i += 4) {
+    const s = player.segments[i];
+    segs.push([Math.round(s.x), Math.round(s.y), Math.round(s.size)]);
+  }
+  _slRoomRef.set({
+    uid: _slMyUid,
+    name: _slMyName,
+    color: player.color,
+    x: Math.round(player.x * 10) / 10,
+    y: Math.round(player.y * 10) / 10,
+    angle: Math.round(player.angle * 1000) / 1000,
+    length: Math.round(player.length),
+    alive: true,
+    segs,
+    t: Date.now()
+  });
+}
+
+// Вызвать при смерти игрока — оставить орбы в Firebase
+function _slSendDeath() {
+  if (!_slOnline || !_slRoomId) return;
+  // Публикуем орбы от смерти
+  const deathOrbs = player.segments
+    .filter((_, i) => i % 3 === 0)
+    .slice(0, 80)
+    .map(s => ({ x: Math.round(s.x), y: Math.round(s.y), color: player.color }));
+  window._slitherDB.ref(`slither_rooms/${_slRoomId}/death_orbs`).push({
+    orbs: deathOrbs,
+    t: Date.now()
+  });
+  _slRoomRef.update({ alive: false });
+}
+
+function _slOnPlayerAdded(snap) {
+  const uid = snap.key;
+  const data = snap.val();
+  if (!data || uid === _slMyUid) return;
+  if (_slRemotePlayers[uid]) return; // уже есть
+  _slRemotePlayers[uid] = {
+    uid, name: data.name, color: data.color,
+    x: data.x, y: data.y, angle: data.angle, length: data.length,
+    prevX: data.x, prevY: data.y, prevAngle: data.angle,
+    targetX: data.x, targetY: data.y, targetAngle: data.angle,
+    segs: data.segs || [],
+    prevSegs: [],
+    targetSegs: [],
+    lastUpdateTime: Date.now(),
+    alive: data.alive !== false
+  };
+}
+
+function _slOnPlayerChanged(snap) {
+  const uid = snap.key;
+  const data = snap.val();
+  if (!data || uid === _slMyUid) return;
+  if (!_slRemotePlayers[uid]) { _slOnPlayerAdded(snap); return; }
+  const rp = _slRemotePlayers[uid];
+  // Сохраняем предыдущие позиции для интерполяции
+  rp.prevX = rp.currentX ?? rp.x;
+  rp.prevY = rp.currentY ?? rp.y;
+  rp.prevAngle = rp.currentAngle ?? rp.angle;
+  rp.prevSegs = rp.currentSegs || rp.segs || [];
+  rp.targetX = data.x;
+  rp.targetY = data.y;
+  rp.targetAngle = data.angle;
+  rp.targetSegs = data.segs || [];
+  rp.length = data.length;
+  rp.color = data.color;
+  rp.name = data.name;
+  rp.alive = data.alive !== false;
+  rp.lastUpdateTime = Date.now();
+}
+
+function _slOnPlayerRemoved(snap) {
+  delete _slRemotePlayers[snap.key];
+}
+
+function _slOnDeathOrbs(snap) {
+  const data = snap.val();
+  if (!data || !data.orbs) return;
+  const now = Date.now();
+  // Добавляем орбы от умершего онлайн-игрока локально
+  for (const o of data.orbs) {
+    orbs.push({
+      x: o.x + (Math.random()-0.5)*20,
+      y: o.y + (Math.random()-0.5)*20,
+      size: ORB_SIZE * 1.5,
+      color: o.color || '#ff9800',
+      glow: 1,
+      spawnTime: now,
+      fromDeath: true
+    });
+  }
+  // Удаляем запись чтобы не накапливалась
+  snap.ref.remove();
+}
 
 /* ========== ЗАПУСК ИГРЫ ========== */
 function startGame() {

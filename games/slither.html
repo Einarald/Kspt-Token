@@ -1003,8 +1003,9 @@ function updateGame(dt = 16.6667) {
     checkOrbCollisions();
     
     // Проверка столкновений между червями
+    // Не-хост не проверяет коллизии с локальными ботами — они не актуальны
     if (player.isInitialized && !player.isDead) {
-        checkWormCollisions();
+        if (!_slOnline || _slIsHost) checkWormCollisions();
     }
     
     // Проверка столкновений с астероидами
@@ -2563,7 +2564,6 @@ function _slLeaveOnline() {
 function _slCheckHost(snap) {
   if (!snap) return;
   const players = snap.val() || {};
-  // Хост = игрок с наименьшим joinedAt
   let earliest = Infinity;
   let hostUid = null;
   for (const [uid, p] of Object.entries(players)) {
@@ -2571,16 +2571,25 @@ function _slCheckHost(snap) {
     if (jt < earliest) { earliest = jt; hostUid = uid; }
   }
   const wasHost = _slIsHost;
-  _slIsHost = (hostUid === _slMyUid);
+  const nowHost = (hostUid === _slMyUid);
 
-  if (_slIsHost && !wasHost) {
-    // Стал хостом — запускаем отправку ботов
+  // Только если статус хоста изменился
+  if (nowHost === wasHost) return;
+  _slIsHost = nowHost;
+
+// Не-хост очищает локальных ботов чтобы они не мешали коллизиям
+  if (!_slIsHost && _slOnline) {
+    for (const ai of aiWorms) ai.isDead = true;
+  }
+
+  if (_slIsHost) {
     console.log('[Slither Online] I am host');
     if (_slBotSendTimer) clearInterval(_slBotSendTimer);
     _slBotSendTimer = setInterval(_slSendBots, SLITHER_SEND_INTERVAL);
-  } else if (!_slIsHost && wasHost) {
-    // Перестал быть хостом
+  } else {
     if (_slBotSendTimer) { clearInterval(_slBotSendTimer); _slBotSendTimer = null; }
+    // Очищаем локальных ботов — теперь получаем от хоста
+    _slRemoteBots = {};
   }
 }
 

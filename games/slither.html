@@ -2092,6 +2092,7 @@ function drawWorm(worm, isLargest) {
             continue;
         }
         
+        if (!isFinite(seg.x) || !isFinite(seg.y) || !isFinite(size) || size <= 0) continue;
         const gradient = ctx.createRadialGradient(seg.x, seg.y, 0, seg.x, seg.y, size);
         const color = worm.color;
         gradient.addColorStop(0, color);

@@ -1925,16 +1925,20 @@ function draw() {
         while (dA > Math.PI) dA -= Math.PI * 2;
         while (dA < -Math.PI) dA += Math.PI * 2;
         rb.currentAngle = (rb.currentAngle || 0) + dA * lerpSpeed;
+        // Интерполируем сегменты через lerp
         const normSeg = s => Array.isArray(s) ? s : [s[0],s[1],s[2]];
-        const pS = (rb.prevSegs||[]).map(normSeg);
         const tS = (rb.targetSegs||[]).map(normSeg);
-        rb.currentSegs = tS.map((ts,i) => {
-          const tx=Number(ts[0]),ty=Number(ts[1]),tsz=Number(ts[2]);
-          if(!isFinite(tx)||!isFinite(ty)||!isFinite(tsz)) return null;
-          const ps=pS[i];
-          if(!ps) return {x:tx,y:ty,size:tsz};
-          return {x:Number(ps[0])+(tx-Number(ps[0]))*alpha, y:Number(ps[1])+(ty-Number(ps[1]))*alpha, size:tsz};
-        }).filter(Boolean);
+        if (!rb.currentSegs || rb.currentSegs.length !== tS.length) {
+          rb.currentSegs = tS.map(ts => ({x:Number(ts[0]),y:Number(ts[1]),size:Number(ts[2])}));
+        } else {
+          rb.currentSegs = tS.map((ts,i) => {
+            const tx=Number(ts[0]),ty=Number(ts[1]),tsz=Number(ts[2]);
+            if(!isFinite(tx)||!isFinite(ty)||!isFinite(tsz)) return rb.currentSegs[i]||null;
+            const cs = rb.currentSegs[i];
+            if(!cs) return {x:tx,y:ty,size:tsz};
+            return {x:cs.x+(tx-cs.x)*lerpSpeed, y:cs.y+(ty-cs.y)*lerpSpeed, size:tsz};
+          }).filter(Boolean);
+        }
         const fakeBot = {
           x: rb.currentX, y: rb.currentY, angle: rb.currentAngle,
           color: rb.color||'#ff9800', name: rb.name||'Bot',
@@ -1968,25 +1972,20 @@ function draw() {
         while (dA < -Math.PI) dA += Math.PI * 2;
         rp.currentAngle = (rp.currentAngle || 0) + dA * lerpSpeed;
 
-        // Интерполируем сегменты
-        // Firebase может вернуть массив как объект {0:x,1:y,2:size} — нормализуем
+        // Интерполируем сегменты через lerp
         const normSeg = s => Array.isArray(s) ? s : [s[0], s[1], s[2]];
-        const prevSegs = (rp.prevSegs || []).map(normSeg);
         const targSegs = (rp.targetSegs || []).map(normSeg);
-
-        rp.currentSegs = targSegs.map((ts, i) => {
-          const tx = Number(ts[0]), ty = Number(ts[1]), tsz = Number(ts[2]);
-          if (!isFinite(tx) || !isFinite(ty) || !isFinite(tsz)) return null;
-          const ps = prevSegs[i];
-          if (!ps) return { x: tx, y: ty, size: tsz };
-          const px = Number(ps[0]), py = Number(ps[1]);
-          if (!isFinite(px) || !isFinite(py)) return { x: tx, y: ty, size: tsz };
-          return {
-            x: px + (tx - px) * alpha,
-            y: py + (ty - py) * alpha,
-            size: tsz
-          };
-        }).filter(s => s !== null);
+        if (!rp.currentSegs || rp.currentSegs.length !== targSegs.length) {
+          rp.currentSegs = targSegs.map(ts => ({x:Number(ts[0]),y:Number(ts[1]),size:Number(ts[2])}));
+        } else {
+          rp.currentSegs = targSegs.map((ts, i) => {
+            const tx=Number(ts[0]),ty=Number(ts[1]),tsz=Number(ts[2]);
+            if(!isFinite(tx)||!isFinite(ty)||!isFinite(tsz)) return rp.currentSegs[i]||null;
+            const cs = rp.currentSegs[i];
+            if(!cs) return {x:tx,y:ty,size:tsz};
+            return {x:cs.x+(tx-cs.x)*lerpSpeed, y:cs.y+(ty-cs.y)*lerpSpeed, size:tsz};
+          }).filter(Boolean);
+        }
 
         // Строим фиктивный объект червя для drawWorm
         const fakeWorm = {

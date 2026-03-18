@@ -550,6 +550,9 @@ let _slSendTimer = null;
 let _slRoomRef = null;
 let _slPresenceRef = null;
 let _slDisconnectCleanup = null;
+let _slIsHost = false;        // я хост?
+let _slBotSendTimer = null;   // таймер отправки ботов
+let _slRemoteBots = {};       // боты от хоста { botId -> rpData }
 
 // Получаем uid и имя из основной игры
 (function(){
@@ -893,9 +896,12 @@ function initGame() {
 
     animationId = requestAnimationFrame(gameLoop);
 
-    // Подключаемся к онлайн если Firebase доступен
+    // Переподключаемся к онлайн
     if (window._slitherDB) {
-      _slJoinOnline();
+      // Сначала корректно выходим из старой сессии
+      _slLeaveOnline();
+      // Небольшая пауза чтобы Firebase успел обработать отключение
+      setTimeout(_slJoinOnline, 500);
     }
 }
 
@@ -976,7 +982,8 @@ function updateGame(dt = 16.6667) {
     }
     
     // Обновление ИИ червей с улучшенной логикой
-    updateAI(frameScale);
+    // Не-хост не обновляет AI — боты приходят от хоста
+    if (!_slOnline || _slIsHost) updateAI(frameScale);
     
     // Удаление старых орбов от смерти (через 30 секунд)
     const now = Date.now();
@@ -1002,6 +1009,7 @@ function updateGame(dt = 16.6667) {
     
     // Проверка столкновений с астероидами
     checkAsteroidCollisions();
+    checkOnlineCollisions();
     
     // Обновление частиц
     updateParticles();
@@ -1896,11 +1904,49 @@ function draw() {
     // Кэшируем самого большого червя один раз
     const largestWorm = getLargestWorm();
     
-    // Рисование ИИ червей
-    for (let ai of aiWorms) {
-        if (!ai.isDead) {
-            drawWorm(ai, ai === largestWorm);
-        }
+    // Рисование ИИ червей — только хост рисует локальных
+    if (!_slOnline || _slIsHost) {
+      for (let ai of aiWorms) {
+        if (!ai.isDead) drawWorm(ai, ai === largestWorm);
+      }
+    }
+
+    // Не-хост рисует ботов от хоста (с интерполяцией как удалённых игроков)
+    if (_slOnline && !_slIsHost) {
+      const nowMs = Date.now();
+      for (const rb of Object.values(_slRemoteBots)) {
+        if (!rb.alive || rb.targetX == null) continue;
+        const elapsed = nowMs - (rb.lastUpdateTime || nowMs);
+        const alpha = Math.min(1.0, elapsed / SLITHER_SEND_INTERVAL);
+        const fromX = rb.prevX ?? rb.targetX;
+        const fromY = rb.prevY ?? rb.targetY;
+        rb.currentX = fromX + (rb.targetX - fromX) * alpha;
+        rb.currentY = fromY + (rb.targetY - fromY) * alpha;
+        if (!isFinite(rb.currentX) || !isFinite(rb.currentY)) continue;
+        const fromAngle = rb.prevAngle ?? rb.targetAngle ?? 0;
+        let dA = (rb.targetAngle || 0) - fromAngle;
+        while (dA > Math.PI) dA -= Math.PI * 2;
+        while (dA < -Math.PI) dA += Math.PI * 2;
+        rb.currentAngle = fromAngle + dA * alpha;
+        const normSeg = s => Array.isArray(s) ? s : [s[0],s[1],s[2]];
+        const pS = (rb.prevSegs||[]).map(normSeg);
+        const tS = (rb.targetSegs||[]).map(normSeg);
+        rb.currentSegs = tS.map((ts,i) => {
+          const tx=Number(ts[0]),ty=Number(ts[1]),tsz=Number(ts[2]);
+          if(!isFinite(tx)||!isFinite(ty)||!isFinite(tsz)) return null;
+          const ps=pS[i];
+          if(!ps) return {x:tx,y:ty,size:tsz};
+          return {x:Number(ps[0])+(tx-Number(ps[0]))*alpha, y:Number(ps[1])+(ty-Number(ps[1]))*alpha, size:tsz};
+        }).filter(Boolean);
+        const fakeBot = {
+          x: rb.currentX, y: rb.currentY, angle: rb.currentAngle,
+          color: rb.color||'#ff9800', name: rb.name||'Bot',
+          length: rb.length||100,
+          segments: rb.currentSegs.length > 0 ? rb.currentSegs : [{x:rb.currentX,y:rb.currentY,size:10}],
+          isDead: false, isInitialized: true, id: -2
+        };
+        drawWorm(fakeBot, false);
+      }
     }
 
     // Рисование онлайн-игроков с интерполяцией
@@ -1908,46 +1954,63 @@ function draw() {
       const nowMs = Date.now();
       for (const rp of Object.values(_slRemotePlayers)) {
         if (!rp.alive) continue;
+
+        // Защита — если targetX/Y не установлены, пропускаем
+        if (rp.targetX == null || rp.targetY == null) continue;
+
         const elapsed = nowMs - (rp.lastUpdateTime || nowMs);
         const alpha = Math.min(1.0, elapsed / SLITHER_SEND_INTERVAL);
 
-        // Интерполируем позицию
-        rp.currentX = (rp.prevX || rp.targetX) + (rp.targetX - (rp.prevX || rp.targetX)) * alpha;
-        rp.currentY = (rp.prevY || rp.targetY) + (rp.targetY - (rp.prevY || rp.targetY)) * alpha;
+        const fromX = (rp.prevX != null) ? rp.prevX : rp.targetX;
+        const fromY = (rp.prevY != null) ? rp.prevY : rp.targetY;
+
+        rp.currentX = fromX + (rp.targetX - fromX) * alpha;
+        rp.currentY = fromY + (rp.targetY - fromY) * alpha;
+
+        // Защита от NaN
+        if (!isFinite(rp.currentX) || !isFinite(rp.currentY)) continue;
 
         // Интерполируем угол (кратчайший путь)
-        let dA = (rp.targetAngle || 0) - (rp.prevAngle || 0);
+        const fromAngle = (rp.prevAngle != null) ? rp.prevAngle : (rp.targetAngle || 0);
+        let dA = (rp.targetAngle || 0) - fromAngle;
         while (dA > Math.PI) dA -= Math.PI * 2;
         while (dA < -Math.PI) dA += Math.PI * 2;
-        rp.currentAngle = (rp.prevAngle || 0) + dA * alpha;
+        rp.currentAngle = fromAngle + dA * alpha;
 
         // Интерполируем сегменты
-        const prevSegs = rp.prevSegs || [];
-        const targSegs = rp.targetSegs || [];
+        // Firebase может вернуть массив как объект {0:x,1:y,2:size} — нормализуем
+        const normSeg = s => Array.isArray(s) ? s : [s[0], s[1], s[2]];
+        const prevSegs = (rp.prevSegs || []).map(normSeg);
+        const targSegs = (rp.targetSegs || []).map(normSeg);
+
         rp.currentSegs = targSegs.map((ts, i) => {
+          const tx = Number(ts[0]), ty = Number(ts[1]), tsz = Number(ts[2]);
+          if (!isFinite(tx) || !isFinite(ty) || !isFinite(tsz)) return null;
           const ps = prevSegs[i];
-          if (!ps) return { x: ts[0], y: ts[1], size: ts[2] };
+          if (!ps) return { x: tx, y: ty, size: tsz };
+          const px = Number(ps[0]), py = Number(ps[1]);
+          if (!isFinite(px) || !isFinite(py)) return { x: tx, y: ty, size: tsz };
           return {
-            x: ps[0] + (ts[0] - ps[0]) * alpha,
-            y: ps[1] + (ts[1] - ps[1]) * alpha,
-            size: ts[2]
+            x: px + (tx - px) * alpha,
+            y: py + (ty - py) * alpha,
+            size: tsz
           };
-        });
+        }).filter(s => s !== null);
 
         // Строим фиктивный объект червя для drawWorm
         const fakeWorm = {
           x: rp.currentX,
           y: rp.currentY,
           angle: rp.currentAngle,
-          color: rp.color,
-          name: rp.name,
+          color: rp.color || '#00bcd4',
+          name: rp.name || '?',
           length: rp.length || 100,
           segments: rp.currentSegs.length > 0
             ? rp.currentSegs
             : [{ x: rp.currentX, y: rp.currentY, size: 10 }],
           isDead: false,
           isInitialized: true,
-          id: -1 // не игрок
+          id: -1
         };
         drawWorm(fakeWorm, false);
 
@@ -2388,18 +2451,35 @@ async function _slFindOrCreateRoom() {
   const db = window._slitherDB;
   const roomsRef = db.ref('slither_rooms');
 
-  // Ищем комнату с местом (< MAX_PLAYERS игроков)
-  const snap = await roomsRef.orderByChild('playerCount').endAt(SLITHER_MAX_PLAYERS - 1).limitToFirst(5).once('value');
+  // Читаем все комнаты и ищем по реальному числу игроков в players{}
+  const snap = await roomsRef.once('value');
   const rooms = snap.val() || {};
+  const sorted = Object.entries(rooms).sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0));
 
-  for (const [roomId, room] of Object.entries(rooms)) {
+  for (const [roomId, room] of sorted) {
     const count = Object.keys(room.players || {}).length;
-    if (count < SLITHER_MAX_PLAYERS) {
+    const age = Date.now() - (room.createdAt || 0);
+    if (count < SLITHER_MAX_PLAYERS && age < 10 * 60 * 1000) {
       return roomId;
     }
   }
 
-  // Создаём новую комнату
+  // Случайная задержка 0-800мс перед созданием — защита от race condition
+  await new Promise(r => setTimeout(r, Math.random() * 800));
+
+  // Перечитываем ещё раз после задержки — вдруг кто-то уже создал комнату
+  const snap2 = await roomsRef.once('value');
+  const rooms2 = snap2.val() || {};
+  const sorted2 = Object.entries(rooms2).sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0));
+  for (const [roomId, room] of sorted2) {
+    const count = Object.keys(room.players || {}).length;
+    const age = Date.now() - (room.createdAt || 0);
+    if (count < SLITHER_MAX_PLAYERS && age < 10 * 60 * 1000) {
+      return roomId;
+    }
+  }
+
+  // Только теперь создаём новую комнату
   const newRef = roomsRef.push();
   await newRef.set({ playerCount: 0, createdAt: Date.now(), players: {} });
   return newRef.key;
@@ -2430,6 +2510,7 @@ async function _slJoinOnline() {
       angle: player.angle,
       length: player.length,
       alive: true,
+      joinedAt: Date.now(),
       t: Date.now()
     });
 
@@ -2444,8 +2525,14 @@ async function _slJoinOnline() {
     // Слушаем орбы от умерших онлайн-игроков
     window._slitherDB.ref(`slither_rooms/${_slRoomId}/death_orbs`).on('child_added', _slOnDeathOrbs);
 
+    // Слушаем ботов от хоста
+    window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).on('value', _slOnBotsUpdate);
+
     // Запускаем отправку своего состояния
     _slSendTimer = setInterval(_slSendState, SLITHER_SEND_INTERVAL);
+
+    // Определяем хоста — следим за списком игроков
+    window._slitherDB.ref(`slither_rooms/${_slRoomId}/players`).on('value', _slCheckHost);
 
     console.log('[Slither Online] Joined room', _slRoomId);
   } catch(e) {
@@ -2459,14 +2546,68 @@ function _slLeaveOnline() {
   if (!_slOnline || !_slRoomId) return;
   try {
     if (_slSendTimer) { clearInterval(_slSendTimer); _slSendTimer = null; }
+    if (_slBotSendTimer) { clearInterval(_slBotSendTimer); _slBotSendTimer = null; }
+    if (_slIsHost) window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).remove();
+    _slIsHost = false;
+    _slRemoteBots = {};
     if (_slRoomRef) { _slRoomRef.remove(); _slRoomRef = null; }
     window._slitherDB.ref(`slither_rooms/${_slRoomId}/players`).off();
+    window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).off();
     window._slitherDB.ref(`slither_rooms/${_slRoomId}/death_orbs`).off();
-    window._slitherDB.ref(`slither_rooms/${_slRoomId}/playerCount`).transaction(c => Math.max(0, (c||1)-1));
     _slOnline = false;
     _slRoomId = null;
     _slRemotePlayers = {};
   } catch(e) {}
+}
+
+function _slCheckHost(snap) {
+  if (!snap) return;
+  const players = snap.val() || {};
+  // Хост = игрок с наименьшим joinedAt
+  let earliest = Infinity;
+  let hostUid = null;
+  for (const [uid, p] of Object.entries(players)) {
+    const jt = p.joinedAt || p.t || 0;
+    if (jt < earliest) { earliest = jt; hostUid = uid; }
+  }
+  const wasHost = _slIsHost;
+  _slIsHost = (hostUid === _slMyUid);
+
+  if (_slIsHost && !wasHost) {
+    // Стал хостом — запускаем отправку ботов
+    console.log('[Slither Online] I am host');
+    if (_slBotSendTimer) clearInterval(_slBotSendTimer);
+    _slBotSendTimer = setInterval(_slSendBots, SLITHER_SEND_INTERVAL);
+  } else if (!_slIsHost && wasHost) {
+    // Перестал быть хостом
+    if (_slBotSendTimer) { clearInterval(_slBotSendTimer); _slBotSendTimer = null; }
+  }
+}
+
+function _slSendBots() {
+  if (!_slIsHost || !_slRoomId || !window._slitherDB) return;
+  const botsData = {};
+  for (const ai of aiWorms) {
+    if (ai.isDead) continue;
+    const segs = [];
+    for (let i = 0; i < ai.segments.length; i += 4) {
+      const s = ai.segments[i];
+      segs.push([Math.round(s.x), Math.round(s.y), Math.round(s.size)]);
+    }
+    botsData['bot_' + ai.id] = {
+      id: ai.id,
+      name: ai.name,
+      color: ai.color,
+      x: Math.round(ai.x * 10) / 10,
+      y: Math.round(ai.y * 10) / 10,
+      angle: Math.round(ai.angle * 1000) / 1000,
+      length: Math.round(ai.length),
+      alive: true,
+      segs,
+      t: Date.now()
+    };
+  }
+  window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).set(botsData);
 }
 
 function _slSendState() {
@@ -2489,6 +2630,45 @@ function _slSendState() {
     segs,
     t: Date.now()
   });
+}
+
+// Обработка Ботов
+function _slOnBotsUpdate(snap) {
+  if (_slIsHost) return; // хост управляет ботами локально
+  const data = snap.val() || {};
+  const now = Date.now();
+
+  // Обновляем remoteBots для интерполяции
+  for (const [botId, bot] of Object.entries(data)) {
+    if (!bot || !bot.alive) { delete _slRemoteBots[botId]; continue; }
+    if (!_slRemoteBots[botId]) {
+      _slRemoteBots[botId] = {
+        targetX: bot.x, targetY: bot.y, targetAngle: bot.angle,
+        prevX: bot.x, prevY: bot.y, prevAngle: bot.angle,
+        targetSegs: bot.segs || [], prevSegs: [],
+        color: bot.color, name: bot.name, length: bot.length,
+        alive: true, lastUpdateTime: now
+      };
+    } else {
+      const rb = _slRemoteBots[botId];
+      rb.prevX = rb.currentX ?? rb.targetX;
+      rb.prevY = rb.currentY ?? rb.targetY;
+      rb.prevAngle = rb.currentAngle ?? rb.targetAngle;
+      rb.prevSegs = rb.currentSegs || rb.targetSegs || [];
+      rb.targetX = bot.x; rb.targetY = bot.y;
+      rb.targetAngle = bot.angle;
+      rb.targetSegs = bot.segs || [];
+      rb.length = bot.length;
+      rb.color = bot.color;
+      rb.name = bot.name;
+      rb.alive = bot.alive;
+      rb.lastUpdateTime = now;
+    }
+  }
+  // Удаляем ботов которых больше нет
+  for (const botId of Object.keys(_slRemoteBots)) {
+    if (!data[botId]) delete _slRemoteBots[botId];
+  }
 }
 
 // Вызвать при смерти игрока — оставить орбы в Firebase

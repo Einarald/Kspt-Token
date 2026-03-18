@@ -954,6 +954,13 @@ function updateGame(dt = 16.6667) {
         player.isBoosting = false;
         player.boostEnergy = Math.min(100, player.boostEnergy + BOOST_RECOVERY * frameScale);
     }
+    // Визуальная индикация заряда на кнопке
+    const boostBtn = document.getElementById('boostBtn');
+    if (boostBtn) {
+        const pct = Math.floor(player.boostEnergy);
+        boostBtn.textContent = player.boostEnergy < 10 ? `⚡ ${pct}%` : 'TURBO';
+        boostBtn.style.opacity = 0.4 + (player.boostEnergy / 100) * 0.6;
+    }
     
     // Обновление позиции игрока
     player.x += Math.cos(player.angle) * player.speed * frameScale;
@@ -1671,20 +1678,46 @@ function playerDie() {
 
 function endGame() {
     gameRunning = false;
-    
+
     const timeSurvived = Math.floor((Date.now() - startTime) / 1000);
     try { (window.parent||window.top).postMessage({ type:'kspt_game_record', game:'slither', value: timeSurvived }, '*'); } catch(e){}
-    
+
     finalLengthEl.textContent = Math.floor(player.maxLength);
     finalOrbsEl.textContent = player.orbsCollected;
     finalComboEl.textContent = player.bestCombo;
     finalTimeEl.textContent = `${timeSurvived}s`;
     finalKillsEl.textContent = player.kills;
     earnedKSPTEl.textContent = totalEarnedKSPT.toFixed(2);
-    earnedEKElem.textContent = sessionEK; // Показываем EK
-    
+    earnedEKElem.textContent = sessionEK;
+
     gameOverScreen.style.display = 'block';
-    
+
+    // Если хост онлайн — НЕ останавливаем gameLoop
+    // Боты должны продолжать двигаться для других игроков
+    if (_slIsHost && _slOnline) {
+        // gameLoop продолжает работать, только updateGame пропускает игровую логику
+        // (уже работает через if (!gameRunning || gamePaused) return в updateGame)
+        // Но updateAI и _slSendBots продолжают через отдельный таймер
+        if (!_slBotSendTimer) {
+            _slBotSendTimer = setInterval(_slSendBots, SLITHER_SEND_INTERVAL);
+        }
+        // Продолжаем рисовать для красивого экрана
+        if (!animationId) {
+            animationId = requestAnimationFrame(function loop(ts) {
+                if (!_slIsHost || !_slOnline) { animationId = null; return; }
+                // Обновляем только AI и отрисовку — без игровой логики игрока
+                const now = performance.now();
+                const dt = Math.min(now - (__lastFrameTS || now), 100);
+                __lastFrameTS = now;
+                const frameScale = dt / 16.6667;
+                updateAI(frameScale);
+                draw();
+                animationId = requestAnimationFrame(loop);
+            });
+        }
+        return;
+    }
+
     if (animationId) {
         cancelAnimationFrame(animationId);
         animationId = null;
@@ -2515,8 +2548,7 @@ async function _slJoinOnline() {
     // Слушаем орбы от умерших онлайн-игроков
     window._slitherDB.ref(`slither_rooms/${_slRoomId}/death_orbs`).on('child_added', _slOnDeathOrbs);
 
-    // Слушаем ботов от хоста
-    window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).on('value', _slOnBotsUpdate);
+    // Слушаем ботов от хоста — только если ты не хост (подпишемся позже в _slCheckHost)
 
     // Запускаем отправку своего состояния
     _slSendTimer = setInterval(_slSendState, SLITHER_SEND_INTERVAL);
@@ -2553,32 +2585,81 @@ function _slLeaveOnline() {
 function _slCheckHost(snap) {
   if (!snap) return;
   const players = snap.val() || {};
+  const playerCount = Object.keys(players).length;
+
+  // Определяем хоста — игрок с наименьшим joinedAt
   let earliest = Infinity;
   let hostUid = null;
   for (const [uid, p] of Object.entries(players)) {
     const jt = p.joinedAt || p.t || 0;
     if (jt < earliest) { earliest = jt; hostUid = uid; }
   }
+
   const wasHost = _slIsHost;
   const nowHost = (hostUid === _slMyUid);
+  const wasOnline = _slOnline;
+  const nowOnline = playerCount >= 2;
 
-  // Только если статус хоста изменился
-  if (nowHost === wasHost) return;
+  // Обновляем флаги
   _slIsHost = nowHost;
+  _slOnline = nowOnline;
 
-// Не-хост очищает локальных ботов чтобы они не мешали коллизиям
-  if (!_slIsHost && _slOnline) {
-    // Не убиваем ботов — они продолжают жить у хоста и приходят через Firebase
+  // === Переход: был онлайн → стал один ===
+  if (wasOnline && !nowOnline) {
+    if (_slBotSendTimer) { clearInterval(_slBotSendTimer); _slBotSendTimer = null; }
+    if (_slRoomId && window._slitherDB)
+      window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).off();
+    _slRemotePlayers = {};
+    _slRemoteBots = {};
+    // Пересоздаём сегменты ботов чтобы коллизии работали
+    for (const ai of aiWorms) {
+      if (ai.isDead) continue;
+      ai.segments = [];
+      for (let j = 0; j < Math.floor(ai.length); j++) {
+        ai.segments.push({
+          x: ai.x - Math.cos(ai.angle) * j * 1.5,
+          y: ai.y - Math.sin(ai.angle) * j * 1.5,
+          size: Math.max(5, ai.baseSize - j * 0.02)
+        });
+      }
+    }
+    return;
   }
 
-  if (_slIsHost) {
-    console.log('[Slither Online] I am host');
+  // === Один игрок — ничего не делаем ===
+  if (!nowOnline) return;
+
+  // === Онлайн: статус хоста не изменился — выходим ===
+  if (nowHost === wasHost && wasOnline === nowOnline) return;
+
+  if (nowHost) {
+    // Стал хостом
+    console.log('[Slither Online] I am host, playerCount=' + playerCount);
+    if (_slRoomId && window._slitherDB)
+      window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).off();
+    _slRemoteBots = {};
+    // Пересоздаём сегменты если были заморожены
+    for (const ai of aiWorms) {
+      if (ai.isDead) continue;
+      ai.segments = [];
+      for (let j = 0; j < Math.floor(ai.length); j++) {
+        ai.segments.push({
+          x: ai.x - Math.cos(ai.angle) * j * 1.5,
+          y: ai.y - Math.sin(ai.angle) * j * 1.5,
+          size: Math.max(5, ai.baseSize - j * 0.02)
+        });
+      }
+    }
     if (_slBotSendTimer) clearInterval(_slBotSendTimer);
     _slBotSendTimer = setInterval(_slSendBots, SLITHER_SEND_INTERVAL);
   } else {
+    // Стал не-хостом
+    console.log('[Slither Online] I am guest, playerCount=' + playerCount);
     if (_slBotSendTimer) { clearInterval(_slBotSendTimer); _slBotSendTimer = null; }
-    // Очищаем локальных ботов — теперь получаем от хоста
-    _slRemoteBots = {};
+    if (_slRoomId && window._slitherDB) {
+      window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).off();
+      window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).on('value', _slOnBotsUpdate);
+    }
   }
 }
 
@@ -2609,7 +2690,8 @@ function _slSendBots() {
 }
 
 function _slSendState() {
-  if (!_slOnline || !_slRoomRef || player.isDead) return;
+  if (!_slOnline || !_slRoomRef) return;
+  // Даже если умер — сообщаем своё положение чтобы другие не замирали
   // Упрощённые сегменты — каждый 4-й для экономии трафика
   const segs = [];
   for (let i = 0; i < player.segments.length; i += 4) {

@@ -7887,6 +7887,7 @@ const PLINKO_CD_MS = 3 * 3600 * 1000; // 3 часа = 1 попытка
 const PLINKO_MAX_TRIES = 5;
 
 let _plinkoSelectedMult = 2;
+function _plinkoWinSlots(mult) { return mult === 2 ? 5 : mult === 5 ? 3 : mult === 10 ? 2 : Math.round(10 / mult); }
 let _plinkoSelectedColor = 0;
 let _plinkoWinOffset = 0;
 let _plinkoAnimId = null;   // ID текущего requestAnimationFrame
@@ -7915,6 +7916,7 @@ function _plinkoFormatTime(ms) {
 
 function renderPlinkoUI() {
   const el = document.getElementById('plinkoCard');
+  const _savedAmount = document.getElementById('plinkoAmount')?.value || '';
   if (!el) return;
 
   const tries = _plinkoGetTries();
@@ -7965,7 +7967,7 @@ function renderPlinkoUI() {
     <!-- Amount input -->
     <div style="margin-bottom:10px;">
       <div style="font-size:12px;color:#aaa;margin-bottom:4px;">${t('plinko_amount')}</div>
-      <input id="plinkoAmount" type="number" min="1" max="50" placeholder="1–50" readonly onfocus="showCustomKeyboard(this)"
+      <input id="plinkoAmount" type="number" min="1" max="50" placeholder="1–50" readonly onfocus="showCustomKeyboard(this)" value="${_savedAmount}"
         style="display:block;width:100%;background:#0d0d1a;border:1px solid #1a1a3a;color:#fff;border-radius:8px;padding:10px 12px;font-size:18px;font-weight:bold;outline:none;box-sizing:border-box;">
     </div>
 
@@ -8003,7 +8005,7 @@ function renderPlinkoUI() {
       <div style="display:flex;gap:3px;justify-content:center;align-items:center;">
         ${(()=>{
           const mult = _plinkoSelectedMult;
-          const winSlots = 10 / mult;
+          const winSlots = _plinkoWinSlots(mult);
           const maxOffset = 10 - winSlots;
           const offset = Math.min(_plinkoWinOffset, maxOffset);
           return `
@@ -8023,7 +8025,7 @@ function renderPlinkoUI() {
         })()}
       </div>
       <div style="text-align:center;font-size:10px;color:#555;margin-top:4px;">
-        ${10/_plinkoSelectedMult} win / ${10 - 10/_plinkoSelectedMult} lose &nbsp;•&nbsp; ${100/_plinkoSelectedMult}% chance
+        ${_plinkoWinSlots(_plinkoSelectedMult)} win / ${10 - _plinkoWinSlots(_plinkoSelectedMult)} lose &nbsp;•&nbsp; ${_plinkoWinSlots(_plinkoSelectedMult)*10}% chance
       </div>
     </div>
 
@@ -8062,7 +8064,7 @@ function _plinkoSetColor(i) {
 }
 
 function _plinkoShiftWin(dir) {
-  const winSlots = 10 / _plinkoSelectedMult;
+  const winSlots = _plinkoWinSlots(_plinkoSelectedMult);
   const maxOffset = 10 - winSlots;
   _plinkoWinOffset = Math.max(0, Math.min(maxOffset, _plinkoWinOffset + dir));
   _plinkoRefreshPreviewOnly();
@@ -8074,7 +8076,7 @@ function _plinkoRefreshPreviewOnly() {
   const colorNames = (typeof getCurrentLang === 'function' && getCurrentLang() === 'ru')
     ? PLINKO_COLOR_NAMES_RU[_plinkoSelectedMult]
     : PLINKO_COLOR_NAMES[_plinkoSelectedMult];
-  const winSlots = 10 / _plinkoSelectedMult;
+  const winSlots = _plinkoWinSlots(_plinkoSelectedMult);
   const offset = Math.min(_plinkoWinOffset, 10 - winSlots);
   const maxOffset = 10 - winSlots;
 
@@ -8190,7 +8192,7 @@ function _plinkoAnimate(amount, mult) {
 
   // Захватываем цвет в момент броска — не меняется в процессе
   const colors = PLINKO_COLORS[mult];
-  const winSlots = 10 / mult;
+  const winSlots = _plinkoWinSlots(mult);
   const winOffset = Math.min(_plinkoWinOffset, 10 - winSlots);
   const winColor = colors[_plinkoSelectedColor];
   // win и won определяются после приземления по реальной позиции
@@ -15434,6 +15436,8 @@ function startGame(gameName) {
     iframe.src = 'games/pingpong.html';
   } else if (gameName === 'flappy') {
     iframe.src = 'games/flappy.html';
+  } else if (gameName === 'robot') {
+    iframe.src = 'games/robot.html';
   } else {
     console.warn('Unknown game:', gameName);
     return;
@@ -15667,9 +15671,9 @@ function _startFirebaseSync() {
 // QUESTS SYSTEM
 // ==========================================
 
-const QUEST_GAME_NAMES = ['Snake Game', 'Ping-Pong', 'BlocksFast', 'Slither: KSPT Mode', 'Ghost Train', 'KSPT Races', 'Flappy Bird', 'Space Asteroids'];
-const QUEST_GAME_IDS   = ['snake',      'pingpong',  'blocksfast', 'slither',            'train',       'race',       'flappy',      'asteroids'];
-const QUEST_GAME_ICONS = ['snake.png',  'pong.png',  'tetris.png', 'slither.png',        'train.png',   'race.png',   'flappy.png',  'aster.png'];
+const QUEST_GAME_NAMES = ['Snake Game', 'Ping-Pong', 'BlocksFast', 'Slither: KSPT Mode', 'Ghost Train', 'KSPT Races', 'Flappy Bird', 'Space Asteroids', 'Robot Runner'];
+const QUEST_GAME_IDS   = ['snake',      'pingpong',  'blocksfast', 'slither',            'train',       'race',       'flappy',      'asteroids',       'robot'];
+const QUEST_GAME_ICONS = ['snake.png',  'pong.png',  'tetris.png', 'slither.png',        'train.png',   'race.png',   'flappy.png',  'aster.png',       'irob.png'];
 try { initQuestsData(); } catch(e) { console.warn('quests init error', e); }
 
 function getQuestCryptoPool() {
@@ -15746,7 +15750,7 @@ function generateQuests() {
   const ticketWeekly = weekly.find(q => q.id === 'w_tgame');
   if (ticketWeekly && ticketWeekly.gameId) d.quests._weeklyGameId = ticketWeekly.gameId;
   const cryptoDaily = daily.find(q => q.id === 'buy_crypto');
-  if (cryptoDaily && cryptoDaily.cryptoId) d.quests._cryptoQuestId = cryptoDaily.cryptoId;
+  d.quests._cryptoQuestId = (cryptoDaily && cryptoDaily.cryptoId) ? cryptoDaily.cryptoId : null;
 
   // Убираем функцию check перед сохранением (она не сериализуется)
   const strip = q => ({ id: q.id, title: q.title, icon: q.icon, target: q.target, claimed: false });
@@ -15758,8 +15762,15 @@ function initQuestsData() {
   const now = Date.now();
 
   if (!d.quests.dailyExpire || isNaN(d.quests.dailyExpire) || now >= d.quests.dailyExpire) {
-    const generated = generateQuests();
-    d.quests.daily = generated.daily;
+    const generatedDaily = getDailyQuestTemplates();
+    const shuffledDaily = generatedDaily.sort(() => 0.5 - Math.random());
+    const dailyPicked = shuffledDaily.slice(0, 2);
+    const cryptoDaily = dailyPicked.find(q => q.id === 'buy_crypto');
+    if (cryptoDaily && cryptoDaily.cryptoId) d.quests._cryptoQuestId = cryptoDaily.cryptoId;
+    const ticketDaily = dailyPicked.find(q => q.id === 'ticket_game');
+    if (ticketDaily && ticketDaily.gameId) d.quests._ticketGameId = ticketDaily.gameId;
+    const stripFn = q => ({ id: q.id, title: q.title, icon: q.icon, target: q.target, claimed: false });
+    d.quests.daily = dailyPicked.map(stripFn);
     const prevDaily = d.quests.dailyExpire && !isNaN(d.quests.dailyExpire) ? d.quests.dailyExpire : now;
     d.quests.dailyExpire = prevDaily + 24 * 3600 * 1000;
     d.questTapCount = 0;
@@ -15775,11 +15786,14 @@ function initQuestsData() {
   }
 
   if (!d.quests.weeklyExpire || isNaN(d.quests.weeklyExpire) || now >= d.quests.weeklyExpire) {
-    const generated = generateQuests();
-    d.quests.weekly = generated.weekly;
+    const allWeekly = getWeeklyQuestTemplates();
+    const weeklyPicked = [allWeekly[Math.floor(Math.random() * allWeekly.length)]];
+    const ticketWeekly = weeklyPicked.find(q => q.id === 'w_tgame');
+    if (ticketWeekly && ticketWeekly.gameId) d.quests._weeklyGameId = ticketWeekly.gameId;
+    const stripFn2 = q => ({ id: q.id, title: q.title, icon: q.icon, target: q.target, claimed: false });
+    d.quests.weekly = weeklyPicked.map(stripFn2);
     const prevWeekly = d.quests.weeklyExpire && !isNaN(d.quests.weeklyExpire) ? d.quests.weeklyExpire : now;
     d.quests.weeklyExpire = prevWeekly + 7 * 24 * 3600 * 1000;
-    d.questDailyDone = 0;
     d.questExchangeVolume = 0;
     d.wQuestOnlineSecs = 0;
     d.wQuestCapsuleOpened = 0;
@@ -16608,6 +16622,7 @@ const GAME_RECORD_LABELS = {
   train:     { label: 'Coins collected',unit: '',    icon: 'train.png'   },
   race:      { label: 'Best lap time',  unit: 's',   icon: 'race.png'    },
   asteroids: { label: 'Best score',     unit: 'pts', icon: 'aster.png'   },
+  robot:     { label: 'Best distance',  unit: 'm',   icon: 'irob.png'    },
   ek:        { label: 'EK collected',   unit: 'EK',  icon: 'ek.png'      }
 };
 
@@ -16867,16 +16882,16 @@ const PROFILE_REACTIONS = [
   '👎','🤮','💩'
 ];
 
-const PROFILE_GAMES = ['snake','pingpong','blocksfast','slither','train','race','flappy','asteroids'];
+const PROFILE_GAMES = ['snake','pingpong','blocksfast','slither','train','race','flappy','asteroids','robot'];
 const PROFILE_GAME_NAMES = {
   snake:'Snake', pingpong:'Ping-Pong', blocksfast:'BlocksFast',
   slither:'Slither', train:'Ghost Train', race:'KSPT Races',
-  flappy:'Flappy Bird', asteroids:'Space Asteroids'
+  flappy:'Flappy Bird', asteroids:'Space Asteroids', robot:'Robot Runner'
 };
 const PROFILE_GAME_ICONS = {
   snake:'snake.png', pingpong:'pong.png', blocksfast:'tetris.png',
   slither:'slither.png', train:'train.png', race:'race.png',
-  flappy:'flappy.png', asteroids:'aster.png'
+  flappy:'flappy.png', asteroids:'aster.png', robot:'irob.png'
 };
 
 let _profileCurrentTab = 'profile';

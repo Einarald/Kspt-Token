@@ -176,25 +176,6 @@ canvas{ background:var(--space-blue); border:2px solid var(--accent); border-rad
     transition: transform 0.1s ease;
 }
 </style>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
-<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
-<script>
-(function(){
-  const cfg = {
-    apiKey: "AIzaSyCvvNiYR_bD7S8xReVZz9wwaP2tJwYya9k",
-    authDomain: "crypto-exchange-35c73.firebaseapp.com",
-    databaseURL: "https://crypto-exchange-35c73-default-rtdb.europe-west1.firebasedatabase.app",
-    projectId: "crypto-exchange-35c73",
-    storageBucket: "crypto-exchange-35c73.firebasestorage.app",
-    messagingSenderId: "797502229447",
-    appId: "1:797502229447:web:4c01e79846d26a67b027e2"
-  };
-  try {
-    if (!firebase.apps.length) firebase.initializeApp(cfg);
-    window._slitherDB = firebase.database();
-  } catch(e) { console.warn('Slither Firebase init failed', e); }
-})();
-</script>
 </head>
 <body>
 <div class="game-container">
@@ -382,7 +363,6 @@ function safeConsumeTicket() {
 }
 
 function safeExitGame() {
-  _slLeaveOnline();
   try {
     if (window.top && window.top !== window && isSameOrigin(window.top) && typeof window.top.exitGame === 'function') {
       window.top.exitGame();
@@ -537,43 +517,6 @@ function generatePlayerSegments() {
 
 // ИИ черви
 let aiWorms = [];
-
-// ===== ОНЛАЙН =====
-const SLITHER_MAX_PLAYERS = 9; // максимум в одной комнате
-const SLITHER_SEND_INTERVAL = 200; // мс
-let _slOnline = false;
-let _slRoomId = null;
-let _slMyUid = null;
-let _slMyName = 'Player';
-let _slRemotePlayers = {};
-let _slSendTimer = null;
-let _slRoomRef = null;
-let _slPresenceRef = null;
-let _slDisconnectCleanup = null;
-let _slIsHost = false;        // я хост?
-let _slBotSendTimer = null;   // таймер отправки ботов
-let _slRemoteBots = {};       // боты от хоста { botId -> rpData }
-
-// Получаем uid и имя из основной игры
-(function(){
-  try {
-    if (window.top && window.top !== window) {
-      const tgU = window.top.Telegram?.WebApp?.initDataUnsafe?.user;
-      if (tgU) {
-        _slMyName = tgU.first_name || tgU.username || 'Player';
-      } else {
-        const raw = localStorage.getItem('d');
-        if (raw) {
-          const dd = JSON.parse(raw);
-          _slMyName = dd?.profile?.name || dd?.name || 'Player';
-        }
-      }
-    }
-    _slMyUid = localStorage.getItem('_kspt_uid') || ('guest_' + Math.random().toString(36).slice(2,8));
-  } catch(e) {
-    _slMyUid = 'guest_' + Math.random().toString(36).slice(2,8);
-  }
-})();
 
 // Орбы (еда)
 let orbs = [];
@@ -895,14 +838,6 @@ function initGame() {
    __lastFrameTS = performance.now(); 
 
     animationId = requestAnimationFrame(gameLoop);
-
-    // Переподключаемся к онлайн
-    if (window._slitherDB) {
-      // Сначала корректно выходим из старой сессии
-      _slLeaveOnline();
-      // Небольшая пауза чтобы Firebase успел обработать отключение
-      setTimeout(_slJoinOnline, 500);
-    }
 }
 
 /* ========== ОБНОВЛЕНИЕ ИГРЫ ========== */
@@ -954,13 +889,6 @@ function updateGame(dt = 16.6667) {
         player.isBoosting = false;
         player.boostEnergy = Math.min(100, player.boostEnergy + BOOST_RECOVERY * frameScale);
     }
-    // Визуальная индикация заряда на кнопке
-    const boostBtn = document.getElementById('boostBtn');
-    if (boostBtn) {
-        const pct = Math.floor(player.boostEnergy);
-        boostBtn.textContent = player.boostEnergy < 10 ? `⚡ ${pct}%` : 'TURBO';
-        boostBtn.style.opacity = 0.4 + (player.boostEnergy / 100) * 0.6;
-    }
     
     // Обновление позиции игрока
     player.x += Math.cos(player.angle) * player.speed * frameScale;
@@ -989,8 +917,7 @@ function updateGame(dt = 16.6667) {
     }
     
     // Обновление ИИ червей с улучшенной логикой
-    // Не-хост не обновляет AI — боты приходят от хоста
-    if (!_slOnline || _slIsHost) updateAI(frameScale);
+    updateAI(frameScale);
     
     // Удаление старых орбов от смерти (через 30 секунд)
     const now = Date.now();
@@ -1010,14 +937,12 @@ function updateGame(dt = 16.6667) {
     checkOrbCollisions();
     
     // Проверка столкновений между червями
-    // Не-хост не проверяет коллизии с локальными ботами — они не актуальны
     if (player.isInitialized && !player.isDead) {
-        if (!_slOnline || _slIsHost) checkWormCollisions();
+        checkWormCollisions();
     }
     
     // Проверка столкновений с астероидами
     checkAsteroidCollisions();
-    checkOnlineCollisions();
     
     // Обновление частиц
     updateParticles();
@@ -1556,22 +1481,6 @@ function checkWormCollisions() {
     }
 }
 
-function checkOnlineCollisions() {
-    if (!_slOnline || player.isDead) return;
-    for (const rp of Object.values(_slRemotePlayers)) {
-        if (!rp.alive || !rp.currentSegs || rp.currentSegs.length === 0) continue;
-        // Голова игрока врезается в тело онлайн-игрока
-        for (const seg of rp.currentSegs) {
-            const dist = distance(player.x, player.y, seg.x, seg.y);
-            if (dist < (seg.size || 10) + player.baseSize) {
-                _slSendDeath();
-                playerDie();
-                return;
-            }
-        }
-    }
-}
-
 function killWorm(worm, killer) {
     if (worm.isDead) return;
     
@@ -1649,12 +1558,10 @@ function playerDie() {
     if (player.isDead) return;
     
     player.isDead = true;
-    if (_slOnline) _slSendDeath();
     player.currentCombo = 0;
     
-    const maxPlayerOrbs = Math.min(100, Math.floor(player.length / 3));
-    for (let i = 0; i < maxPlayerOrbs; i++) {
-        const segIndex = Math.floor((i / maxPlayerOrbs) * player.segments.length);
+    for (let i = 0; i < player.length / 3; i++) {
+        const segIndex = Math.floor(i * 3);
         if (segIndex < player.segments.length) {
             const seg = player.segments[segIndex];
             orbs.push({
@@ -1678,46 +1585,20 @@ function playerDie() {
 
 function endGame() {
     gameRunning = false;
-
+    
     const timeSurvived = Math.floor((Date.now() - startTime) / 1000);
     try { (window.parent||window.top).postMessage({ type:'kspt_game_record', game:'slither', value: timeSurvived }, '*'); } catch(e){}
-
+    
     finalLengthEl.textContent = Math.floor(player.maxLength);
     finalOrbsEl.textContent = player.orbsCollected;
     finalComboEl.textContent = player.bestCombo;
     finalTimeEl.textContent = `${timeSurvived}s`;
     finalKillsEl.textContent = player.kills;
     earnedKSPTEl.textContent = totalEarnedKSPT.toFixed(2);
-    earnedEKElem.textContent = sessionEK;
-
+    earnedEKElem.textContent = sessionEK; // Показываем EK
+    
     gameOverScreen.style.display = 'block';
-
-    // Если хост онлайн — НЕ останавливаем gameLoop
-    // Боты должны продолжать двигаться для других игроков
-    if (_slIsHost && _slOnline) {
-        // gameLoop продолжает работать, только updateGame пропускает игровую логику
-        // (уже работает через if (!gameRunning || gamePaused) return в updateGame)
-        // Но updateAI и _slSendBots продолжают через отдельный таймер
-        if (!_slBotSendTimer) {
-            _slBotSendTimer = setInterval(_slSendBots, SLITHER_SEND_INTERVAL);
-        }
-        // Продолжаем рисовать для красивого экрана
-        if (!animationId) {
-            animationId = requestAnimationFrame(function loop(ts) {
-                if (!_slIsHost || !_slOnline) { animationId = null; return; }
-                // Обновляем только AI и отрисовку — без игровой логики игрока
-                const now = performance.now();
-                const dt = Math.min(now - (__lastFrameTS || now), 100);
-                __lastFrameTS = now;
-                const frameScale = dt / 16.6667;
-                updateAI(frameScale);
-                draw();
-                animationId = requestAnimationFrame(loop);
-            });
-        }
-        return;
-    }
-
+    
     if (animationId) {
         cancelAnimationFrame(animationId);
         animationId = null;
@@ -1802,9 +1683,7 @@ function updateUI() {
 
 function updateLeaderboard() {
     const allPlayers = [
-        { ...player,
-          name: _slOnline ? _slMyName : 'Player 1 (You)',
-          score: Math.floor(player.length) * 10 + player.kills * 100 }
+        { ...player, score: Math.floor(player.length) * 10 + player.kills * 100 }
     ];
     
     for (let ai of aiWorms) {
@@ -1814,20 +1693,6 @@ function updateLeaderboard() {
                 score: Math.floor(ai.length) * 10
             });
         }
-    }
-
-    // Добавляем онлайн-игроков
-    if (_slOnline) {
-      for (const rp of Object.values(_slRemotePlayers)) {
-        if (rp.alive) {
-          allPlayers.push({
-            id: rp.uid,
-            name: rp.name,
-            color: rp.color,
-            score: Math.floor(rp.length || 100) * 10
-          });
-        }
-      }
     }
     
     allPlayers.sort((a, b) => b.score - a.score);
@@ -1938,123 +1803,11 @@ function draw() {
     // Кэшируем самого большого червя один раз
     const largestWorm = getLargestWorm();
     
-    // Рисование ИИ червей — только хост рисует локальных
-    if (!_slOnline || _slIsHost) {
-      for (let ai of aiWorms) {
-        if (!ai.isDead) drawWorm(ai, ai === largestWorm);
-      }
-    }
-
-    // Не-хост рисует ботов от хоста (плавный lerp)
-    if (_slOnline && !_slIsHost) {
-      for (const rb of Object.values(_slRemoteBots)) {
-        if (!rb.alive || rb.targetX == null) continue;
-        if (rb.currentX == null) { rb.currentX = rb.targetX; rb.currentY = rb.targetY; rb.currentAngle = rb.targetAngle || 0; }
-        const lerpSpeed = 0.2;
-        rb.currentX += (rb.targetX - rb.currentX) * lerpSpeed;
-        rb.currentY += (rb.targetY - rb.currentY) * lerpSpeed;
-        if (!isFinite(rb.currentX) || !isFinite(rb.currentY)) continue;
-        let dA = (rb.targetAngle || 0) - (rb.currentAngle || 0);
-        while (dA > Math.PI) dA -= Math.PI * 2;
-        while (dA < -Math.PI) dA += Math.PI * 2;
-        rb.currentAngle = (rb.currentAngle || 0) + dA * lerpSpeed;
-        // Локальная генерация хвоста без мигания
-        if (!rb.segments) rb.segments = [];
-        const rbTargetLen = Math.max(1, Math.floor(rb.length || 10));
-        while (rb.segments.length < rbTargetLen) {
-          const last = rb.segments[rb.segments.length - 1] || {x: rb.currentX, y: rb.currentY};
-          rb.segments.push({x: last.x, y: last.y, size: Math.max(8, 10 - rb.segments.length * 0.02)});
+    // Рисование ИИ червей
+    for (let ai of aiWorms) {
+        if (!ai.isDead) {
+            drawWorm(ai, ai === largestWorm);
         }
-        if (rb.segments.length > rbTargetLen) rb.segments.length = rbTargetLen;
-        let rbPrevX = rb.currentX, rbPrevY = rb.currentY;
-        for (let j = 0; j < rb.segments.length; j++) {
-          const seg = rb.segments[j];
-          const dx = rbPrevX - seg.x, dy = rbPrevY - seg.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist > 1.5) { seg.x += (dx / dist) * (dist - 1.5); seg.y += (dy / dist) * (dist - 1.5); }
-          rbPrevX = seg.x; rbPrevY = seg.y;
-        }
-        const fakeBot = {
-          x: rb.currentX, y: rb.currentY, angle: rb.currentAngle,
-          color: rb.color||'#ff9800', name: rb.name||'Bot',
-          length: rb.length||100,
-          segments: rb.segments.length > 0 ? rb.segments : [{x:rb.currentX,y:rb.currentY,size:10}],
-          isDead: false, isInitialized: true, id: -2
-        };
-        drawWorm(fakeBot, false);
-      }
-    }
-
-    // Рисование онлайн-игроков с интерполяцией (lerp каждый кадр к цели)
-    if (_slOnline) {
-      for (const rp of Object.values(_slRemotePlayers)) {
-        if (!rp.alive) continue;
-        if (rp.targetX == null || rp.targetY == null) continue;
-
-        // Инициализируем currentX/Y при первом появлении
-        if (rp.currentX == null) { rp.currentX = rp.targetX; rp.currentY = rp.targetY; rp.currentAngle = rp.targetAngle || 0; }
-
-        // Плавный lerp к целевой позиции каждый кадр (0.2 = скорость сглаживания)
-        const lerpSpeed = 0.2;
-        rp.currentX += (rp.targetX - rp.currentX) * lerpSpeed;
-        rp.currentY += (rp.targetY - rp.currentY) * lerpSpeed;
-
-        if (!isFinite(rp.currentX) || !isFinite(rp.currentY)) continue;
-
-        // Угол — кратчайший путь
-        let dA = (rp.targetAngle || 0) - (rp.currentAngle || 0);
-        while (dA > Math.PI) dA -= Math.PI * 2;
-        while (dA < -Math.PI) dA += Math.PI * 2;
-        rp.currentAngle = (rp.currentAngle || 0) + dA * lerpSpeed;
-
-        // Локальная генерация хвоста без мигания
-        if (!rp.segments) rp.segments = [];
-        const rpTargetLen = Math.max(1, Math.floor(rp.length || 10));
-        while (rp.segments.length < rpTargetLen) {
-          const last = rp.segments[rp.segments.length - 1] || {x: rp.currentX, y: rp.currentY};
-          rp.segments.push({x: last.x, y: last.y, size: Math.max(8, 10 - rp.segments.length * 0.02)});
-        }
-        if (rp.segments.length > rpTargetLen) rp.segments.length = rpTargetLen;
-        let rpPrevX = rp.currentX, rpPrevY = rp.currentY;
-        for (let j = 0; j < rp.segments.length; j++) {
-          const seg = rp.segments[j];
-          const dx = rpPrevX - seg.x, dy = rpPrevY - seg.y;
-          const dist = Math.hypot(dx, dy);
-          if (dist > 1.5) { seg.x += (dx / dist) * (dist - 1.5); seg.y += (dy / dist) * (dist - 1.5); }
-          rpPrevX = seg.x; rpPrevY = seg.y;
-        }
-
-        // Строим фиктивный объект червя для drawWorm
-        const fakeWorm = {
-          x: rp.currentX,
-          y: rp.currentY,
-          angle: rp.currentAngle,
-          color: rp.color || '#00bcd4',
-          name: rp.name || '?',
-          length: rp.length || 100,
-          segments: rp.segments.length > 0
-            ? rp.segments
-            : [{ x: rp.currentX, y: rp.currentY, size: 10 }],
-          isDead: false,
-          isInitialized: true,
-          id: -1
-        };
-        drawWorm(fakeWorm, false);
-
-        // Рисуем имя над головой
-        const sx = rp.currentX - cameraX;
-        const sy = rp.currentY - cameraY;
-        if (sx > -50 && sx < VIEW_WIDTH+50 && sy > -50 && sy < VIEW_HEIGHT+50) {
-          ctx.save();
-          ctx.font = 'bold 11px Arial';
-          ctx.fillStyle = '#fff';
-          ctx.textAlign = 'center';
-          ctx.shadowColor = 'rgba(0,0,0,0.8)';
-          ctx.shadowBlur = 4;
-          ctx.fillText(rp.name, sx, sy - 18);
-          ctx.restore();
-        }
-      }
     }
     
     // Рисование игрока
@@ -2182,7 +1935,6 @@ function drawWorm(worm, isLargest) {
             continue;
         }
         
-        if (!isFinite(seg.x) || !isFinite(seg.y) || !isFinite(size) || size <= 0) continue;
         const gradient = ctx.createRadialGradient(seg.x, seg.y, 0, seg.x, seg.y, size);
         const color = worm.color;
         gradient.addColorStop(0, color);
@@ -2471,356 +2223,6 @@ document.addEventListener('visibilitychange', function() {
         document.getElementById('pauseBtn').textContent = 'Resume';
     }
 });
-
-// ===== ОНЛАЙН: найти или создать комнату =====
-async function _slFindOrCreateRoom() {
-  if (!window._slitherDB) return null;
-  const db = window._slitherDB;
-  const roomsRef = db.ref('slither_rooms');
-
-  // Читаем все комнаты и ищем по реальному числу игроков в players{}
-  const snap = await roomsRef.once('value');
-  const rooms = snap.val() || {};
-  const sorted = Object.entries(rooms).sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0));
-
-  for (const [roomId, room] of sorted) {
-    const count = Object.keys(room.players || {}).length;
-    const age = Date.now() - (room.createdAt || 0);
-    if (count < SLITHER_MAX_PLAYERS && age < 10 * 60 * 1000) {
-      return roomId;
-    }
-  }
-
-  // Случайная задержка 0-800мс перед созданием — защита от race condition
-  await new Promise(r => setTimeout(r, Math.random() * 800));
-
-  // Перечитываем ещё раз после задержки — вдруг кто-то уже создал комнату
-  const snap2 = await roomsRef.once('value');
-  const rooms2 = snap2.val() || {};
-  const sorted2 = Object.entries(rooms2).sort((a, b) => (a[1].createdAt || 0) - (b[1].createdAt || 0));
-  for (const [roomId, room] of sorted2) {
-    const count = Object.keys(room.players || {}).length;
-    const age = Date.now() - (room.createdAt || 0);
-    if (count < SLITHER_MAX_PLAYERS && age < 10 * 60 * 1000) {
-      return roomId;
-    }
-  }
-
-  // Только теперь создаём новую комнату
-  const newRef = roomsRef.push();
-  await newRef.set({ playerCount: 0, createdAt: Date.now(), players: {} });
-  return newRef.key;
-}
-
-// ===== ОНЛАЙН: присоединиться к комнате =====
-async function _slJoinOnline() {
-  if (!window._slitherDB || !_slMyUid) return;
-
-  try {
-    _slRoomId = await _slFindOrCreateRoom();
-    if (!_slRoomId) return;
-
-    _slOnline = true;
-    _slRoomRef = window._slitherDB.ref(`slither_rooms/${_slRoomId}/players/${_slMyUid}`);
-
-    // При отключении — удалить себя
-    _slDisconnectCleanup = _slRoomRef.onDisconnect();
-    _slDisconnectCleanup.remove();
-
-    // Записываем себя
-    await _slRoomRef.set({
-      uid: _slMyUid,
-      name: _slMyName,
-      color: player.color,
-      x: player.x,
-      y: player.y,
-      angle: player.angle,
-      length: player.length,
-      alive: true,
-      joinedAt: Date.now(),
-      t: Date.now()
-    });
-
-    // Обновляем счётчик
-    window._slitherDB.ref(`slither_rooms/${_slRoomId}/playerCount`).transaction(c => (c || 0) + 1);
-
-    // Слушаем других игроков
-    window._slitherDB.ref(`slither_rooms/${_slRoomId}/players`).on('child_added', _slOnPlayerAdded);
-    window._slitherDB.ref(`slither_rooms/${_slRoomId}/players`).on('child_changed', _slOnPlayerChanged);
-    window._slitherDB.ref(`slither_rooms/${_slRoomId}/players`).on('child_removed', _slOnPlayerRemoved);
-
-    // Слушаем орбы от умерших онлайн-игроков
-    window._slitherDB.ref(`slither_rooms/${_slRoomId}/death_orbs`).on('child_added', _slOnDeathOrbs);
-
-    // Слушаем ботов от хоста — только если ты не хост (подпишемся позже в _slCheckHost)
-
-    // Запускаем отправку своего состояния
-    _slSendTimer = setInterval(_slSendState, SLITHER_SEND_INTERVAL);
-
-    // Определяем хоста — следим за списком игроков
-    window._slitherDB.ref(`slither_rooms/${_slRoomId}/players`).on('value', _slCheckHost);
-
-    console.log('[Slither Online] Joined room', _slRoomId);
-  } catch(e) {
-    console.warn('[Slither Online] Join failed', e);
-    _slOnline = false;
-  }
-}
-
-// ===== ОНЛАЙН: выйти из комнаты =====
-function _slLeaveOnline() {
-  if (!_slOnline || !_slRoomId) return;
-  try {
-    if (_slSendTimer) { clearInterval(_slSendTimer); _slSendTimer = null; }
-    if (_slBotSendTimer) { clearInterval(_slBotSendTimer); _slBotSendTimer = null; }
-    if (_slIsHost) window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).remove();
-    _slIsHost = false;
-    _slRemoteBots = {};
-    if (_slRoomRef) { _slRoomRef.remove(); _slRoomRef = null; }
-    window._slitherDB.ref(`slither_rooms/${_slRoomId}/players`).off();
-    window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).off();
-    window._slitherDB.ref(`slither_rooms/${_slRoomId}/death_orbs`).off();
-    _slOnline = false;
-    _slRoomId = null;
-    _slRemotePlayers = {};
-  } catch(e) {}
-}
-
-function _slCheckHost(snap) {
-  if (!snap) return;
-  const players = snap.val() || {};
-  const playerCount = Object.keys(players).length;
-
-  // Определяем хоста — игрок с наименьшим joinedAt
-  let earliest = Infinity;
-  let hostUid = null;
-  for (const [uid, p] of Object.entries(players)) {
-    const jt = p.joinedAt || p.t || 0;
-    if (jt < earliest) { earliest = jt; hostUid = uid; }
-  }
-
-  const wasHost = _slIsHost;
-  const nowHost = (hostUid === _slMyUid);
-  const wasOnline = _slOnline;
-  const nowOnline = playerCount >= 2;
-
-  // Обновляем флаги
-  _slIsHost = nowHost;
-  _slOnline = nowOnline;
-
-  // === Переход: был онлайн → стал один ===
-  if (wasOnline && !nowOnline) {
-    if (_slBotSendTimer) { clearInterval(_slBotSendTimer); _slBotSendTimer = null; }
-    if (_slRoomId && window._slitherDB)
-      window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).off();
-    _slRemotePlayers = {};
-    _slRemoteBots = {};
-    // Пересоздаём сегменты ботов чтобы коллизии работали
-    for (const ai of aiWorms) {
-      if (ai.isDead) continue;
-      ai.segments = [];
-      for (let j = 0; j < Math.floor(ai.length); j++) {
-        ai.segments.push({
-          x: ai.x - Math.cos(ai.angle) * j * 1.5,
-          y: ai.y - Math.sin(ai.angle) * j * 1.5,
-          size: Math.max(5, ai.baseSize - j * 0.02)
-        });
-      }
-    }
-    return;
-  }
-
-  // === Один игрок — ничего не делаем ===
-  if (!nowOnline) return;
-
-  // === Онлайн: статус хоста не изменился — выходим ===
-  if (nowHost === wasHost && wasOnline === nowOnline) return;
-
-  if (nowHost) {
-    // Стал хостом
-    console.log('[Slither Online] I am host, playerCount=' + playerCount);
-    if (_slRoomId && window._slitherDB)
-      window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).off();
-    _slRemoteBots = {};
-    // Пересоздаём сегменты если были заморожены
-    for (const ai of aiWorms) {
-      if (ai.isDead) continue;
-      ai.segments = [];
-      for (let j = 0; j < Math.floor(ai.length); j++) {
-        ai.segments.push({
-          x: ai.x - Math.cos(ai.angle) * j * 1.5,
-          y: ai.y - Math.sin(ai.angle) * j * 1.5,
-          size: Math.max(5, ai.baseSize - j * 0.02)
-        });
-      }
-    }
-    if (_slBotSendTimer) clearInterval(_slBotSendTimer);
-    _slBotSendTimer = setInterval(_slSendBots, SLITHER_SEND_INTERVAL);
-  } else {
-    // Стал не-хостом
-    console.log('[Slither Online] I am guest, playerCount=' + playerCount);
-    if (_slBotSendTimer) { clearInterval(_slBotSendTimer); _slBotSendTimer = null; }
-    if (_slRoomId && window._slitherDB) {
-      window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).off();
-      window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).on('value', _slOnBotsUpdate);
-    }
-  }
-}
-
-function _slSendBots() {
-  if (!_slIsHost || !_slRoomId || !window._slitherDB) return;
-  const botsData = {};
-  for (const ai of aiWorms) {
-    if (ai.isDead) continue;
-    botsData['bot_' + ai.id] = {
-      id: ai.id,
-      name: ai.name,
-      color: ai.color,
-      x: Math.round(ai.x * 10) / 10,
-      y: Math.round(ai.y * 10) / 10,
-      angle: Math.round(ai.angle * 1000) / 1000,
-      length: Math.round(ai.length),
-      alive: true,
-      isBoosting: ai.isBoosting || false,
-      t: Date.now()
-    };
-  }
-  window._slitherDB.ref(`slither_rooms/${_slRoomId}/bots`).set(botsData);
-}
-
-function _slSendState() {
-  if (!_slOnline || !_slRoomRef) return;
-  _slRoomRef.set({
-    uid: _slMyUid,
-    name: _slMyName,
-    color: player.color,
-    x: Math.round(player.x * 10) / 10,
-    y: Math.round(player.y * 10) / 10,
-    angle: Math.round(player.angle * 1000) / 1000,
-    length: Math.round(player.length),
-    alive: true,
-    isBoosting: player.isBoosting || false,
-    t: Date.now()
-  });
-}
-
-// Обработка Ботов
-function _slOnBotsUpdate(snap) {
-  if (_slIsHost) return; // хост управляет ботами локально
-  const data = snap.val() || {};
-  const now = Date.now();
-
-  // Обновляем remoteBots для интерполяции
-  for (const [botId, bot] of Object.entries(data)) {
-    if (!bot || !bot.alive) { delete _slRemoteBots[botId]; continue; }
-    if (!_slRemoteBots[botId]) {
-      _slRemoteBots[botId] = {
-        targetX: bot.x, targetY: bot.y, targetAngle: bot.angle,
-        prevX: bot.x, prevY: bot.y, prevAngle: bot.angle,
-        targetSegs: bot.segs || [], prevSegs: [],
-        color: bot.color, name: bot.name, length: bot.length,
-        alive: true, lastUpdateTime: now
-      };
-    } else {
-      const rb = _slRemoteBots[botId];
-      rb.prevX = rb.currentX ?? rb.targetX;
-      rb.prevY = rb.currentY ?? rb.targetY;
-      rb.prevAngle = rb.currentAngle ?? rb.targetAngle;
-      rb.prevSegs = rb.currentSegs || rb.targetSegs || [];
-      rb.targetX = bot.x; rb.targetY = bot.y;
-      rb.targetAngle = bot.angle;
-      rb.targetSegs = bot.segs || [];
-      rb.length = bot.length;
-      rb.color = bot.color;
-      rb.name = bot.name;
-      rb.alive = bot.alive;
-      rb.lastUpdateTime = now;
-    }
-  }
-  // Удаляем ботов которых больше нет
-  for (const botId of Object.keys(_slRemoteBots)) {
-    if (!data[botId]) delete _slRemoteBots[botId];
-  }
-}
-
-// Вызвать при смерти игрока — оставить орбы в Firebase
-function _slSendDeath() {
-  if (!_slOnline || !_slRoomId) return;
-  // Публикуем орбы от смерти
-  const deathOrbs = player.segments
-    .filter((_, i) => i % 3 === 0)
-    .slice(0, 80)
-    .map(s => ({ x: Math.round(s.x), y: Math.round(s.y), color: player.color }));
-  window._slitherDB.ref(`slither_rooms/${_slRoomId}/death_orbs`).push({
-    orbs: deathOrbs,
-    t: Date.now()
-  });
-  _slRoomRef.update({ alive: false });
-}
-
-function _slOnPlayerAdded(snap) {
-  const uid = snap.key;
-  const data = snap.val();
-  if (!data || uid === _slMyUid) return;
-  if (_slRemotePlayers[uid]) return; // уже есть
-  _slRemotePlayers[uid] = {
-    uid, name: data.name, color: data.color,
-    x: data.x, y: data.y, angle: data.angle, length: data.length,
-    prevX: data.x, prevY: data.y, prevAngle: data.angle,
-    targetX: data.x, targetY: data.y, targetAngle: data.angle,
-    segs: data.segs || [],
-    prevSegs: [],
-    targetSegs: [],
-    lastUpdateTime: Date.now(),
-    alive: data.alive !== false
-  };
-}
-
-function _slOnPlayerChanged(snap) {
-  const uid = snap.key;
-  const data = snap.val();
-  if (!data || uid === _slMyUid) return;
-  if (!_slRemotePlayers[uid]) { _slOnPlayerAdded(snap); return; }
-  const rp = _slRemotePlayers[uid];
-  // Сохраняем предыдущие позиции для интерполяции
-  rp.prevX = rp.currentX ?? rp.x;
-  rp.prevY = rp.currentY ?? rp.y;
-  rp.prevAngle = rp.currentAngle ?? rp.angle;
-  rp.prevSegs = rp.currentSegs || rp.segs || [];
-  rp.targetX = data.x;
-  rp.targetY = data.y;
-  rp.targetAngle = data.angle;
-  rp.targetSegs = data.segs || [];
-  rp.length = data.length;
-  rp.color = data.color;
-  rp.name = data.name;
-  rp.alive = data.alive !== false;
-  rp.lastUpdateTime = Date.now();
-}
-
-function _slOnPlayerRemoved(snap) {
-  delete _slRemotePlayers[snap.key];
-}
-
-function _slOnDeathOrbs(snap) {
-  const data = snap.val();
-  if (!data || !data.orbs) return;
-  const now = Date.now();
-  // Добавляем орбы от умершего онлайн-игрока локально
-  for (const o of data.orbs) {
-    orbs.push({
-      x: o.x + (Math.random()-0.5)*20,
-      y: o.y + (Math.random()-0.5)*20,
-      size: ORB_SIZE * 1.5,
-      color: o.color || '#ff9800',
-      glow: 1,
-      spawnTime: now,
-      fromDeath: true
-    });
-  }
-  // Удаляем запись чтобы не накапливалась
-  snap.ref.remove();
-}
 
 /* ========== ЗАПУСК ИГРЫ ========== */
 function startGame() {

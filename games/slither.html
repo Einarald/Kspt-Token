@@ -1912,23 +1912,19 @@ function draw() {
       }
     }
 
-    // Не-хост рисует ботов от хоста (с интерполяцией как удалённых игроков)
+    // Не-хост рисует ботов от хоста (плавный lerp)
     if (_slOnline && !_slIsHost) {
-      const nowMs = Date.now();
       for (const rb of Object.values(_slRemoteBots)) {
         if (!rb.alive || rb.targetX == null) continue;
-        const elapsed = nowMs - (rb.lastUpdateTime || nowMs);
-        const alpha = Math.min(1.0, elapsed / SLITHER_SEND_INTERVAL);
-        const fromX = rb.prevX ?? rb.targetX;
-        const fromY = rb.prevY ?? rb.targetY;
-        rb.currentX = fromX + (rb.targetX - fromX) * alpha;
-        rb.currentY = fromY + (rb.targetY - fromY) * alpha;
+        if (rb.currentX == null) { rb.currentX = rb.targetX; rb.currentY = rb.targetY; rb.currentAngle = rb.targetAngle || 0; }
+        const lerpSpeed = 0.2;
+        rb.currentX += (rb.targetX - rb.currentX) * lerpSpeed;
+        rb.currentY += (rb.targetY - rb.currentY) * lerpSpeed;
         if (!isFinite(rb.currentX) || !isFinite(rb.currentY)) continue;
-        const fromAngle = rb.prevAngle ?? rb.targetAngle ?? 0;
-        let dA = (rb.targetAngle || 0) - fromAngle;
+        let dA = (rb.targetAngle || 0) - (rb.currentAngle || 0);
         while (dA > Math.PI) dA -= Math.PI * 2;
         while (dA < -Math.PI) dA += Math.PI * 2;
-        rb.currentAngle = fromAngle + dA * alpha;
+        rb.currentAngle = (rb.currentAngle || 0) + dA * lerpSpeed;
         const normSeg = s => Array.isArray(s) ? s : [s[0],s[1],s[2]];
         const pS = (rb.prevSegs||[]).map(normSeg);
         const tS = (rb.targetSegs||[]).map(normSeg);
@@ -1950,33 +1946,27 @@ function draw() {
       }
     }
 
-    // Рисование онлайн-игроков с интерполяцией
+    // Рисование онлайн-игроков с интерполяцией (lerp каждый кадр к цели)
     if (_slOnline) {
-      const nowMs = Date.now();
       for (const rp of Object.values(_slRemotePlayers)) {
         if (!rp.alive) continue;
-
-        // Защита — если targetX/Y не установлены, пропускаем
         if (rp.targetX == null || rp.targetY == null) continue;
 
-        const elapsed = nowMs - (rp.lastUpdateTime || nowMs);
-        const alpha = Math.min(1.0, elapsed / SLITHER_SEND_INTERVAL);
+        // Инициализируем currentX/Y при первом появлении
+        if (rp.currentX == null) { rp.currentX = rp.targetX; rp.currentY = rp.targetY; rp.currentAngle = rp.targetAngle || 0; }
 
-        const fromX = (rp.prevX != null) ? rp.prevX : rp.targetX;
-        const fromY = (rp.prevY != null) ? rp.prevY : rp.targetY;
+        // Плавный lerp к целевой позиции каждый кадр (0.2 = скорость сглаживания)
+        const lerpSpeed = 0.2;
+        rp.currentX += (rp.targetX - rp.currentX) * lerpSpeed;
+        rp.currentY += (rp.targetY - rp.currentY) * lerpSpeed;
 
-        rp.currentX = fromX + (rp.targetX - fromX) * alpha;
-        rp.currentY = fromY + (rp.targetY - fromY) * alpha;
-
-        // Защита от NaN
         if (!isFinite(rp.currentX) || !isFinite(rp.currentY)) continue;
 
-        // Интерполируем угол (кратчайший путь)
-        const fromAngle = (rp.prevAngle != null) ? rp.prevAngle : (rp.targetAngle || 0);
-        let dA = (rp.targetAngle || 0) - fromAngle;
+        // Угол — кратчайший путь
+        let dA = (rp.targetAngle || 0) - (rp.currentAngle || 0);
         while (dA > Math.PI) dA -= Math.PI * 2;
         while (dA < -Math.PI) dA += Math.PI * 2;
-        rp.currentAngle = fromAngle + dA * alpha;
+        rp.currentAngle = (rp.currentAngle || 0) + dA * lerpSpeed;
 
         // Интерполируем сегменты
         // Firebase может вернуть массив как объект {0:x,1:y,2:size} — нормализуем
@@ -2579,7 +2569,7 @@ function _slCheckHost(snap) {
 
 // Не-хост очищает локальных ботов чтобы они не мешали коллизиям
   if (!_slIsHost && _slOnline) {
-    for (const ai of aiWorms) ai.isDead = true;
+    // Не убиваем ботов — они продолжают жить у хоста и приходят через Firebase
   }
 
   if (_slIsHost) {

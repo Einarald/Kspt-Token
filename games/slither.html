@@ -1958,25 +1958,27 @@ function draw() {
         while (dA > Math.PI) dA -= Math.PI * 2;
         while (dA < -Math.PI) dA += Math.PI * 2;
         rb.currentAngle = (rb.currentAngle || 0) + dA * lerpSpeed;
-        // Интерполируем сегменты через lerp
-        const normSeg = s => Array.isArray(s) ? s : [s[0],s[1],s[2]];
-        const tS = (rb.targetSegs||[]).map(normSeg);
-        if (!rb.currentSegs || rb.currentSegs.length !== tS.length) {
-          rb.currentSegs = tS.map(ts => ({x:Number(ts[0]),y:Number(ts[1]),size:Number(ts[2])}));
-        } else {
-          rb.currentSegs = tS.map((ts,i) => {
-            const tx=Number(ts[0]),ty=Number(ts[1]),tsz=Number(ts[2]);
-            if(!isFinite(tx)||!isFinite(ty)||!isFinite(tsz)) return rb.currentSegs[i]||null;
-            const cs = rb.currentSegs[i];
-            if(!cs) return {x:tx,y:ty,size:tsz};
-            return {x:cs.x+(tx-cs.x)*lerpSpeed, y:cs.y+(ty-cs.y)*lerpSpeed, size:tsz};
-          }).filter(Boolean);
+        // Локальная генерация хвоста без мигания
+        if (!rb.segments) rb.segments = [];
+        const rbTargetLen = Math.max(1, Math.floor(rb.length || 10));
+        while (rb.segments.length < rbTargetLen) {
+          const last = rb.segments[rb.segments.length - 1] || {x: rb.currentX, y: rb.currentY};
+          rb.segments.push({x: last.x, y: last.y, size: Math.max(8, 10 - rb.segments.length * 0.02)});
+        }
+        if (rb.segments.length > rbTargetLen) rb.segments.length = rbTargetLen;
+        let rbPrevX = rb.currentX, rbPrevY = rb.currentY;
+        for (let j = 0; j < rb.segments.length; j++) {
+          const seg = rb.segments[j];
+          const dx = rbPrevX - seg.x, dy = rbPrevY - seg.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist > 1.5) { seg.x += (dx / dist) * (dist - 1.5); seg.y += (dy / dist) * (dist - 1.5); }
+          rbPrevX = seg.x; rbPrevY = seg.y;
         }
         const fakeBot = {
           x: rb.currentX, y: rb.currentY, angle: rb.currentAngle,
           color: rb.color||'#ff9800', name: rb.name||'Bot',
           length: rb.length||100,
-          segments: rb.currentSegs.length > 0 ? rb.currentSegs : [{x:rb.currentX,y:rb.currentY,size:10}],
+          segments: rb.segments.length > 0 ? rb.segments : [{x:rb.currentX,y:rb.currentY,size:10}],
           isDead: false, isInitialized: true, id: -2
         };
         drawWorm(fakeBot, false);
@@ -2005,19 +2007,21 @@ function draw() {
         while (dA < -Math.PI) dA += Math.PI * 2;
         rp.currentAngle = (rp.currentAngle || 0) + dA * lerpSpeed;
 
-        // Интерполируем сегменты через lerp
-        const normSeg = s => Array.isArray(s) ? s : [s[0], s[1], s[2]];
-        const targSegs = (rp.targetSegs || []).map(normSeg);
-        if (!rp.currentSegs || rp.currentSegs.length !== targSegs.length) {
-          rp.currentSegs = targSegs.map(ts => ({x:Number(ts[0]),y:Number(ts[1]),size:Number(ts[2])}));
-        } else {
-          rp.currentSegs = targSegs.map((ts, i) => {
-            const tx=Number(ts[0]),ty=Number(ts[1]),tsz=Number(ts[2]);
-            if(!isFinite(tx)||!isFinite(ty)||!isFinite(tsz)) return rp.currentSegs[i]||null;
-            const cs = rp.currentSegs[i];
-            if(!cs) return {x:tx,y:ty,size:tsz};
-            return {x:cs.x+(tx-cs.x)*lerpSpeed, y:cs.y+(ty-cs.y)*lerpSpeed, size:tsz};
-          }).filter(Boolean);
+        // Локальная генерация хвоста без мигания
+        if (!rp.segments) rp.segments = [];
+        const rpTargetLen = Math.max(1, Math.floor(rp.length || 10));
+        while (rp.segments.length < rpTargetLen) {
+          const last = rp.segments[rp.segments.length - 1] || {x: rp.currentX, y: rp.currentY};
+          rp.segments.push({x: last.x, y: last.y, size: Math.max(8, 10 - rp.segments.length * 0.02)});
+        }
+        if (rp.segments.length > rpTargetLen) rp.segments.length = rpTargetLen;
+        let rpPrevX = rp.currentX, rpPrevY = rp.currentY;
+        for (let j = 0; j < rp.segments.length; j++) {
+          const seg = rp.segments[j];
+          const dx = rpPrevX - seg.x, dy = rpPrevY - seg.y;
+          const dist = Math.hypot(dx, dy);
+          if (dist > 1.5) { seg.x += (dx / dist) * (dist - 1.5); seg.y += (dy / dist) * (dist - 1.5); }
+          rpPrevX = seg.x; rpPrevY = seg.y;
         }
 
         // Строим фиктивный объект червя для drawWorm
@@ -2028,8 +2032,8 @@ function draw() {
           color: rp.color || '#00bcd4',
           name: rp.name || '?',
           length: rp.length || 100,
-          segments: rp.currentSegs.length > 0
-            ? rp.currentSegs
+          segments: rp.segments.length > 0
+            ? rp.segments
             : [{ x: rp.currentX, y: rp.currentY, size: 10 }],
           isDead: false,
           isInitialized: true,
@@ -2668,11 +2672,6 @@ function _slSendBots() {
   const botsData = {};
   for (const ai of aiWorms) {
     if (ai.isDead) continue;
-    const segs = [];
-    for (let i = 0; i < ai.segments.length; i += 4) {
-      const s = ai.segments[i];
-      segs.push([Math.round(s.x), Math.round(s.y), Math.round(s.size)]);
-    }
     botsData['bot_' + ai.id] = {
       id: ai.id,
       name: ai.name,
@@ -2682,7 +2681,7 @@ function _slSendBots() {
       angle: Math.round(ai.angle * 1000) / 1000,
       length: Math.round(ai.length),
       alive: true,
-      segs,
+      isBoosting: ai.isBoosting || false,
       t: Date.now()
     };
   }
@@ -2691,13 +2690,6 @@ function _slSendBots() {
 
 function _slSendState() {
   if (!_slOnline || !_slRoomRef) return;
-  // Даже если умер — сообщаем своё положение чтобы другие не замирали
-  // Упрощённые сегменты — каждый 4-й для экономии трафика
-  const segs = [];
-  for (let i = 0; i < player.segments.length; i += 4) {
-    const s = player.segments[i];
-    segs.push([Math.round(s.x), Math.round(s.y), Math.round(s.size)]);
-  }
   _slRoomRef.set({
     uid: _slMyUid,
     name: _slMyName,
@@ -2707,7 +2699,7 @@ function _slSendState() {
     angle: Math.round(player.angle * 1000) / 1000,
     length: Math.round(player.length),
     alive: true,
-    segs,
+    isBoosting: player.isBoosting || false,
     t: Date.now()
   });
 }

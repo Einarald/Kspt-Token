@@ -300,13 +300,21 @@ const gnd=new THREE.Mesh(new THREE.PlaneGeometry(SZ*CL*3,SZ*CL*3),new THREE.Mesh
 gnd.rotation.x=-Math.PI/2;gnd.position.y=-0.07;scene.add(gnd);
 // grid removed
 
-/* tile meshes */
-const tileGeo=new THREE.BoxGeometry(CL*0.93,0.2,CL*0.93);
-const neutGeo=new THREE.BoxGeometry(CL*0.985,0.07,CL*0.985);
-const neutMat=new THREE.MeshLambertMaterial({color:0xeef0ea});
-const tileMesh=new Array(SZ*SZ).fill(null);
+/* ── INSTANCED TILE SYSTEM ──────────────────────────── */
+// Y-levels clearly separated to eliminate Z-fighting:
+//   ground plane : y = -0.07  (THREE.Mesh gnd)
+//   neutral tiles: y =  0.00  (InstancedMesh, h=0.07)
+//   owned tiles  : y =  0.18  (InstancedMesh per owner, h=0.20)
+//   trail line   : y =  0.55  (updated in spawnLine/pushTrailPoint)
+const NEUT_Y  = 0.00;   // neutral instanced mesh centre
+const OWNED_Y = 0.18;   // owned instanced mesh centre
+
+const neutGeo = new THREE.BoxGeometry(CL*0.985, 0.07, CL*0.985);
+const tileGeo = new THREE.BoxGeometry(CL*0.93,  0.20, CL*0.93);
+const neutMat = new THREE.MeshLambertMaterial({color:0xeef0ea});
+
+const entColorMap={};   // id -> THREE color int, set when entity spawns
 const matCache={};
-const entColorMap={};  // id -> THREE color int, set when entity spawns
 
 function getMat(owner){
   if(!matCache[owner]){
@@ -317,42 +325,159 @@ function getMat(owner){
   return matCache[owner];
 }
 
-// neutMeshMap[i] = neutral mesh for cell i (hidden when cell is owned)
-const neutMeshMap = new Array(SZ*SZ).fill(null);
-let neutMeshes=[];  // kept for bulk removal only
+// One InstancedMesh for neutral tiles (rebuilt each initGame)
+let _neutInst = null;
+// Per-owner InstancedMesh map  owner-id -> {inst, indexMap: cellIndex->instanceIdx, dirty}
+const _ownedInst = {};   // rebuilt / updated per owner
+// cellIndex -> instanceIdx in its owner's InstancedMesh (-1 = not shown)
+const _cellInstIdx = new Int32Array(SZ*SZ).fill(-1);
+const _dummy = new THREE.Object3D();
 
-function buildNeutral(){
-  for(const m of neutMeshes)scene.remove(m);
-  neutMeshes=[];
-  neutMeshMap.fill(null);
+function _buildNeutInst(){
+  if(_neutInst){_neutInst.geometry.dispose();_neutInst.material.dispose();scene.remove(_neutInst);_neutInst=null;}
+  // Count playable cells
+  let cnt=0;
+  for(let i=0;i<SZ*SZ;i++)if(shape[i])cnt++;
+  if(cnt===0)return;
+  _neutInst=new THREE.InstancedMesh(neutGeo,neutMat,cnt);
+  _neutInst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  _neutInst.frustumCulled=false;
+  let idx=0;
   for(let gy=0;gy<SZ;gy++)for(let gx=0;gx<SZ;gx++){
     if(!shape[mi(gx,gy)])continue;
     const{wx,wz}=g2w(gx,gy);
-    const m=new THREE.Mesh(neutGeo,neutMat);
-    m.position.set(wx,0.035,wz);
-    scene.add(m);
-    neutMeshes.push(m);
-    neutMeshMap[mi(gx,gy)]=m;
+    _dummy.position.set(wx,NEUT_Y,wz);_dummy.updateMatrix();
+    _neutInst.setMatrixAt(idx,_dummy.matrix);
+    idx++;
   }
+  _neutInst.instanceMatrix.needsUpdate=true;
+  scene.add(_neutInst);
+}
+
+// Neutral visibility per cell (hide when owned)
+// We track a per-cell instanceIdx in the neutral InstancedMesh
+const _neutCellInstIdx = new Int32Array(SZ*SZ).fill(-1);
+function _buildNeutInstIdx(){
+  _neutCellInstIdx.fill(-1);
+  let idx=0;
+  for(let gy=0;gy<SZ;gy++)for(let gx=0;gx<SZ;gx++){
+    if(!shape[mi(gx,gy)])continue;
+    _neutCellInstIdx[mi(gx,gy)]=idx++;
+  }
+}
+
+const _HIDDEN_SCALE=new THREE.Matrix4().makeScale(0,0,0); // zero-scale = invisible
+
+// ── Dirty flags — set during batch ops, flushed once after ──────────
+const _neutDirty={v:false};
+const _ownedDirty={}; // owner -> true
+
+function _flushTileUpdates(){
+  if(_neutDirty.v){_neutInst&&(_neutInst.instanceMatrix.needsUpdate=true);_neutDirty.v=false;}
+  for(const owner of Object.keys(_ownedDirty)){
+    if(_ownedInst[owner])_ownedInst[owner].inst.instanceMatrix.needsUpdate=true;
+    delete _ownedDirty[owner];
+  }
+}
+
+function _hideNeutCell(gx,gy){
+  if(!_neutInst)return;
+  const idx=_neutCellInstIdx[mi(gx,gy)];
+  if(idx<0)return;
+  _neutInst.setMatrixAt(idx,_HIDDEN_SCALE);
+  _neutDirty.v=true;
+}
+function _showNeutCell(gx,gy){
+  if(!_neutInst)return;
+  const idx=_neutCellInstIdx[mi(gx,gy)];
+  if(idx<0)return;
+  const{wx,wz}=g2w(gx,gy);
+  _dummy.position.set(wx,NEUT_Y,wz);_dummy.scale.setScalar(1);_dummy.updateMatrix();
+  _neutInst.setMatrixAt(idx,_dummy.matrix);
+  _neutDirty.v=true;
+}
+
+// Per-owner InstancedMesh — one mesh per entity (max 10), each cell toggles visibility
+function _getOrCreateOwnedInst(owner){
+  if(_ownedInst[owner]) return _ownedInst[owner];
+  const inst=new THREE.InstancedMesh(tileGeo,getMat(owner),SZ*SZ);
+  inst.instanceMatrix.setUsage(THREE.DynamicDrawUsage);
+  inst.frustumCulled=false;
+  inst.count=0; // start empty — instances added lazily
+  scene.add(inst);
+  _ownedInst[owner]={inst,cellToInst:new Int32Array(SZ*SZ).fill(-1),instToCell:[],nextIdx:0};
+  return _ownedInst[owner];
+}
+
+function _disposeOwnedInst(owner){
+  if(!_ownedInst[owner])return;
+  const{inst}=_ownedInst[owner];
+  inst.geometry.dispose();inst.material.dispose();scene.remove(inst);
+  delete _ownedInst[owner];
 }
 
 function paintCell(gx,gy,owner){
   if(!ok(gx,gy)||!shape[mi(gx,gy)])return;
-  const i=mi(gx,gy);ownerMap[i]=owner;
-  // Hide the neutral tile beneath to prevent Z-fighting
-  if(neutMeshMap[i]) neutMeshMap[i].visible=false;
-  if(!tileMesh[i]){
-    const{wx,wz}=g2w(gx,gy);
-    const m=new THREE.Mesh(tileGeo,getMat(owner));
-    m.position.set(wx,0.1,wz);scene.add(m);tileMesh[i]=m;
-  }else{tileMesh[i].material=getMat(owner);tileMesh[i].visible=true;}
+  const i=mi(gx,gy);
+  const prev=ownerMap[i];
+  if(prev===owner)return; // already this owner — skip entirely
+  ownerMap[i]=owner;
+
+  // Hide neutral tile
+  _hideNeutCell(gx,gy);
+
+  // Remove from previous owner's instanced mesh
+  if(prev>=0&&_ownedInst[prev]){
+    const od=_ownedInst[prev];
+    const ii=od.cellToInst[i];
+    if(ii>=0){od.inst.setMatrixAt(ii,_HIDDEN_SCALE);_ownedDirty[prev]=true;od.cellToInst[i]=-1;}
+  }
+
+  // Add/show in new owner's instanced mesh
+  const od=_getOrCreateOwnedInst(owner);
+  let ii=od.cellToInst[i];
+  if(ii<0){
+    ii=od.nextIdx++;
+    od.cellToInst[i]=ii;
+    od.instToCell[ii]=i;
+    if(ii>=od.inst.count) od.inst.count=ii+1;
+  }
+  const{wx,wz}=g2w(gx,gy);
+  _dummy.position.set(wx,OWNED_Y,wz);_dummy.scale.setScalar(1);_dummy.updateMatrix();
+  od.inst.setMatrixAt(ii,_dummy.matrix);
+  _ownedDirty[owner]=true;
 }
+
 function eraseCell(gx,gy){
   if(!ok(gx,gy))return;
-  const i=mi(gx,gy);ownerMap[i]=-1;
-  if(tileMesh[i]) tileMesh[i].visible=false;
-  // Restore neutral tile
-  if(neutMeshMap[i]) neutMeshMap[i].visible=true;
+  const i=mi(gx,gy);
+  const prev=ownerMap[i];
+  if(prev<0)return; // already neutral
+  ownerMap[i]=-1;
+  if(_ownedInst[prev]){
+    const od=_ownedInst[prev];
+    const ii=od.cellToInst[i];
+    if(ii>=0){od.inst.setMatrixAt(ii,_HIDDEN_SCALE);_ownedDirty[prev]=true;od.cellToInst[i]=-1;}
+  }
+  _showNeutCell(gx,gy);
+}
+
+// Legacy stubs (kept for compatibility — no longer used)
+const tileMesh=new Array(SZ*SZ).fill(null);
+const neutMeshMap=new Array(SZ*SZ).fill(null);
+let neutMeshes=[];
+
+function buildNeutral(){
+  // Clean up any old per-cell meshes from previous run
+  for(const m of neutMeshes)scene.remove(m);
+  neutMeshes=[];
+  neutMeshMap.fill(null);
+  tileMesh.fill(null);
+  // Clean up owned instanced meshes from previous run
+  for(const owner of Object.keys(_ownedInst)) _disposeOwnedInst(Number(owner));
+  _cellInstIdx.fill(-1);
+  _buildNeutInst();
+  _buildNeutInstIdx();
 }
 
 let wallMeshes=[];
@@ -483,57 +608,91 @@ function updateCrowns(){
     }
   }
 }
-const TRAIL_MAX=600; // max points in trail line buffer
+const TRAIL_MAX=600; // max points in trail path buffer
+const TRAIL_Y=0.55;  // Y-level for trail — above owned tiles (0.18)
+const TRAIL_WIDTH=0.28; // half-width of the ribbon strip
+
+// Each entity gets a ribbon mesh (PlaneGeometry quads built from path segments)
 function spawnLine(e){
-  if(e.line){scene.remove(e.line);e.line=null;}
-  // allocate a big buffer upfront, fill with current pos
-  const buf=new Float32Array(TRAIL_MAX*3);
-  buf[0]=e.wx;buf[1]=0.44;buf[2]=e.wz;
-  const geo=new THREE.BufferGeometry();
-  const attr=new THREE.BufferAttribute(buf,3);
-  attr.setUsage(THREE.DynamicDrawUsage);
-  geo.setAttribute('position',attr);
-  geo.setDrawRange(0,0);
-  const mat=new THREE.LineBasicMaterial({color:e.clr,linewidth:20,transparent:true,opacity:0.7});
-  const line=new THREE.Line(geo,mat);
-  line.frustumCulled=false;
-  scene.add(line);
-  e.line=line;
+  if(e.line){
+    scene.remove(e.line);
+    if(e.line.geometry)e.line.geometry.dispose();
+    if(e.line.material)e.line.material.dispose();
+    e.line=null;
+  }
+  // We store the raw path points; the ribbon geometry is rebuilt when path changes
   e.pts=[];
-  e._lineBuf=buf;
+  e._lineBuf=null;   // not used for ribbon but kept for API compat
   e._lineCount=0;
+  e._trailPts=[];    // [{x,z}] world positions along the path
+  // Create the mesh with a placeholder geometry
+  const geo=new THREE.BufferGeometry();
+  const mat=new THREE.MeshBasicMaterial({color:e.clr,side:THREE.DoubleSide,transparent:true,opacity:0.45,depthWrite:false});
+  const mesh=new THREE.Mesh(geo,mat);
+  mesh.frustumCulled=false;
+  scene.add(mesh);
+  e.line=mesh;
 }
+
+function _rebuildRibbon(e){
+  if(!e.line)return;
+  const pts=e._trailPts;
+  const n=pts.length;
+  if(n<2){
+    e.line.geometry.dispose();
+    e.line.geometry=new THREE.BufferGeometry();
+    return;
+  }
+  // Build a ribbon: for each segment between pts[i] and pts[i+1],
+  // extrude TRAIL_WIDTH perpendicular to the segment direction
+  const verts=[];
+  const idx=[];
+  for(let i=0;i<n;i++){
+    const prev=pts[Math.max(0,i-1)];
+    const next=pts[Math.min(n-1,i+1)];
+    // Tangent along path
+    const tx=next.x-prev.x, tz=next.z-prev.z;
+    const len=Math.sqrt(tx*tx+tz*tz)||1;
+    // Perpendicular (normal in XZ plane)
+    const nx=-tz/len, nz=tx/len;
+    verts.push(
+      pts[i].x+nx*TRAIL_WIDTH, TRAIL_Y, pts[i].z+nz*TRAIL_WIDTH,
+      pts[i].x-nx*TRAIL_WIDTH, TRAIL_Y, pts[i].z-nz*TRAIL_WIDTH
+    );
+    if(i>0){
+      const b=(i-1)*2;
+      idx.push(b,b+1,b+2, b+1,b+3,b+2);
+    }
+  }
+  const geo=new THREE.BufferGeometry();
+  geo.setAttribute('position',new THREE.Float32BufferAttribute(verts,3));
+  geo.setIndex(idx);
+  e.line.geometry.dispose();
+  e.line.geometry=geo;
+}
+
 function pushTrailPoint(e){
   if(!e.line)return;
-  const buf=e._lineBuf;
-  let cnt=e._lineCount;
-  if(cnt>=TRAIL_MAX){
-    buf.copyWithin(0,3);
-    const i=(TRAIL_MAX-1)*3;
-    buf[i]=e.wx;buf[i+1]=0.44;buf[i+2]=e.wz;
-  } else {
-    const i=cnt*3;
-    buf[i]=e.wx;buf[i+1]=0.44;buf[i+2]=e.wz;
-    cnt++;
-  }
-  e._lineCount=cnt;
-  e.line.geometry.attributes.position.needsUpdate=true;
-  e.line.geometry.setDrawRange(0,Math.min(e._lineCount,TRAIL_MAX));
+  if(!e._trailPts)e._trailPts=[];
+  e._trailPts.push({x:e.wx,z:e.wz});
+  if(e._trailPts.length>TRAIL_MAX)e._trailPts.shift();
+  e._lineCount=e._trailPts.length;
+  _rebuildRibbon(e);
 }
 function refreshLine(e){
-  if(!e.line||e._lineCount<1)return;
-  const buf=e._lineBuf;
-  const i=(Math.min(e._lineCount,TRAIL_MAX)-1)*3;
-  buf[i]=e.wx;buf[i+1]=0.44;buf[i+2]=e.wz;
-  e.line.geometry.attributes.position.needsUpdate=true;
+  if(!e.line||!e._trailPts||e._trailPts.length<1)return;
+  // Update last point to current position (smooth tip)
+  e._trailPts[e._trailPts.length-1]={x:e.wx,z:e.wz};
+  _rebuildRibbon(e);
 }
 function clearTrail(e){
   e.trail=[];e.trSet.clear();
-  e._wasHome=true;  // next exit will anchor the line start immediately
+  e._wasHome=true;
+  e._trailPts=[];
+  e._lineCount=0;
   if(e.line){
-    e._lineCount=0;
-    e.line.geometry.setDrawRange(0,0);
-    e.line.geometry.attributes.position.needsUpdate=true;
+    e.line.geometry.dispose();
+    e.line.geometry=new THREE.BufferGeometry();
   }
 }
 function giveZone(e,r){
@@ -542,6 +701,7 @@ function giveZone(e,r){
     if(!play(gx,gy))continue;
     e.ter.add(`${gx},${gy}`);paintCell(gx,gy,e.id);
   }
+  _flushTileUpdates();
 }
 // Organic territory: flood-fill outward from center with random walk weighting
 function giveZoneFill(e,r){
@@ -564,12 +724,21 @@ function giveZoneFill(e,r){
       if(!visited.has(k)&&play(nx,ny)){visited.add(k);q.push({gx:nx,gy:ny});}
     }
   }
+  _flushTileUpdates();
 }
 
 /* ── FLOOD FILL CAPTURE ─────────────────────────────── */
 function captureLoop(e){
   if(e.trSet.size<3)return 0;
-  // barrier = trail + own territory — together they form the closed ring
+
+  // First: sync e.ter with ownerMap — remove cells that were stolen by others.
+  // This stops the bot from treating enemy-occupied cells as "already mine" in the barrier.
+  for(const k of [...e.ter]){
+    const[gx,gy]=k.split(',').map(Number);
+    if(ownerMap[mi(gx,gy)]!==e.id) e.ter.delete(k);
+  }
+
+  // barrier = trail + own territory (now accurate)
   const barrier=new Set([...e.trSet,...e.ter]);
   const outside=new Set(),q=[];
   function seed(gx,gy){const k=`${gx},${gy}`;if(!barrier.has(k)&&!outside.has(k)){outside.add(k);q.push(gx,gy);}}
@@ -587,11 +756,18 @@ function captureLoop(e){
     if(!shape[mi(gx,gy)])continue;
     const k=`${gx},${gy}`;
     if(outside.has(k))continue;
-    // Paint ALL enclosed cells (including trail + any orphan owned cells inside)
-    if(!e.ter.has(k)){e.ter.add(k);paintCell(gx,gy,e.id);cap++;}
-    else{paintCell(gx,gy,e.id);}  // re-paint in case it was another owner's color
+    // Paint all enclosed cells regardless of current owner — that's the honest capture
+    if(ownerMap[mi(gx,gy)]!==e.id){
+      e.ter.add(k);
+      paintCell(gx,gy,e.id);
+      cap++;
+    } else {
+      e.ter.add(k); // already ours — just ensure ter is consistent
+    }
   }
+  _flushTileUpdates();
   clearTrail(e);
+  invalidateMinimapTer();
   return cap;
 }
 
@@ -600,6 +776,8 @@ function killEnt(e,killer){
   if(e.isDead)return;e.isDead=true;
   for(const k of e.ter){const[gx,gy]=k.split(',').map(Number);eraseCell(gx,gy);}
   e.ter.clear();clearTrail(e);
+  _flushTileUpdates();  // single GPU upload for the whole erase batch
+  invalidateMinimapTer();
   if(e.cube){scene.remove(e.cube);e.cube=null;}
   if(e.line){scene.remove(e.line);e.line=null;}
   if(!killer)return;
@@ -619,47 +797,50 @@ function killEnt(e,killer){
 function stepEnt(e, dt){
   if(e.isDead)return;
 
-  // FPS-independent scale: normalise to 60fps baseline
   const s=dt*60;
 
-  // For player: only move if joystick is active — no AFK drift
-  if(e.id===0&&!joyActive) return;
+  // Candidate next position (clamped to world bounds)
+  const nx=Math.max(-LIM,Math.min(LIM, e.wx+Math.cos(e.angle)*e.spd*s));
+  const nz=Math.max(-LIM,Math.min(LIM, e.wz+Math.sin(e.angle)*e.spd*s));
 
-  const nx=e.wx+Math.cos(e.angle)*e.spd*s;
-  const nz=e.wz+Math.sin(e.angle)*e.spd*s;
-
-  // Clamp within world bounds
-  e.wx=Math.max(-LIM,Math.min(LIM,nx));
-  e.wz=Math.max(-LIM,Math.min(LIM,nz));
-
-  // Bounce on wall hit
-  if(nx<-LIM||nx>LIM||nz<-LIM||nz>LIM){
-    e.angle=Math.atan2(-Math.sin(e.angle),-Math.cos(e.angle))+(Math.random()-0.5)*0.4;
-    if(e.id===0) clearTrail(e); // player stops trail on bounce; bots keep theirs
+  // Soft redirect on world-boundary wall hit
+  if(nx<=- LIM||nx>=LIM||nz<=-LIM||nz>=LIM){
+    const toC=Math.atan2(-e.wz,-e.wx);
+    let df=toC-e.angle;while(df>Math.PI)df-=Math.PI*2;while(df<-Math.PI)df+=Math.PI*2;
+    e.angle+=df*0.25;
   }
 
-  if(e.cube){
-    e.cube.position.set(e.wx,0.35,e.wz);
-    // Plane faces forward: rotation.y = -(angle) because +X is forward in model space
-    e.cube.rotation.y = -e.angle;
-  }
-
-  const{gx,gy}=w2g(e.wx,e.wz);
-
-  if(!play(gx,gy)){
-    // Push entity back toward map centre — prevents getting stuck in water
+  // ── WATER / SHORE COLLISION ──────────────────────────
+  const{gx:ngx,gy:ngy}=w2g(nx,nz);
+  if(!play(ngx,ngy)){
+    // Full move is into water — try axis-separated sliding
+    const{gx:gxX,gy:gyX}=w2g(nx, e.wz);
+    const{gx:gxZ,gy:gyZ}=w2g(e.wx, nz);
+    const canX=play(gxX,gyX);
+    const canZ=play(gxZ,gyZ);
+    if(canX)     { e.wx=nx; }
+    else if(canZ){ e.wz=nz; }
+    else {
+      // Fully cornered — reverse direction so entity escapes immediately
+      e.angle+=Math.PI+(Math.random()-0.5)*0.5;
+    }
+    // Nudge angle toward map centre
     const toCenter=Math.atan2(-e.wz,-e.wx);
-    e.angle=toCenter+(Math.random()-0.5)*0.5;
-    // Step back along new angle
-    e.wx+=Math.cos(e.angle)*e.spd*s*2;
-    e.wz+=Math.sin(e.angle)*e.spd*s*2;
-    e.wx=Math.max(-LIM,Math.min(LIM,e.wx));
-    e.wz=Math.max(-LIM,Math.min(LIM,e.wz));
-    clearTrail(e);
-    if(e.id!==0){e.ais='retreat';e.ait=2;} // force retreat state for bots
+    let df=toCenter-e.angle;while(df>Math.PI)df-=Math.PI*2;while(df<-Math.PI)df+=Math.PI*2;
+    e.angle+=df*0.15;
+    if(e.cube){e.cube.position.set(e.wx,0.35,e.wz);e.cube.rotation.y=-e.angle;}
     return;
   }
 
+  // Move is valid — apply
+  e.wx=nx; e.wz=nz;
+
+  if(e.cube){
+    e.cube.position.set(e.wx,0.35,e.wz);
+    e.cube.rotation.y=-e.angle;
+  }
+
+  const{gx,gy}=w2g(e.wx,e.wz);
   const ck=`${gx},${gy}`;
   const home=e.ter.has(ck);
 
@@ -682,25 +863,30 @@ function stepEnt(e, dt){
     }
     e.lgx=gx;e.lgy=gy;
   } else {
-    // First frame outside territory: push starting point immediately
+    // Outside territory — build trail
+
+    // First frame outside: init _trailPts
     if(e._wasHome){
       e._wasHome=false;
-      if(e.line&&e._lineCount===0){
-        const buf=e._lineBuf;
-        buf[0]=e.wx;buf[1]=0.44;buf[2]=e.wz;
-        e._lineCount=1;
-        e.line.geometry.setDrawRange(0,1);
-        e.line.geometry.attributes.position.needsUpdate=true;
-      }
+      if(!e._trailPts)e._trailPts=[];
+      e._trailPts=[];
+      e._lastTrailWx=e.wx; e._lastTrailWz=e.wz;
     }
 
-    // Always refresh tip every frame
-    refreshLine(e);
+    // Add world-position point every frame (not grid-locked) for smooth ribbon
+    if(!e._trailPts)e._trailPts=[];
+    const MIN_DIST=0.05; // minimum distance between ribbon points
+    const lastPt=e._trailPts[e._trailPts.length-1];
+    if(!lastPt||Math.hypot(e.wx-lastPt.x,e.wz-lastPt.z)>=MIN_DIST){
+      e._trailPts.push({x:e.wx,z:e.wz});
+      if(e._trailPts.length>TRAIL_MAX)e._trailPts.shift();
+      _rebuildRibbon(e);
+    }
 
+    // Grid-based trail tracking for collision/capture logic (unchanged)
     if(gx!==e.lgx||gy!==e.lgy){
       e.lgx=gx;e.lgy=gy;
       if(e.trSet.has(ck)){
-        // Grace zone
         const hitIdx=e.trail.findIndex(t=>t.gx===gx&&t.gy===gy);
         const safeHead = e.trail.length < 7;
         const safeTip  = hitIdx >= e.trail.length - 4;
@@ -712,7 +898,6 @@ function stepEnt(e, dt){
         else{reviveBot(e);return;}
       }
       e.trail.push({gx,gy});e.trSet.add(ck);
-      pushTrailPoint(e);
     }
   }
 }
@@ -726,38 +911,84 @@ function updateTrailTip(e){
 }
 
 function reviveBot(b){
-  // Self-trail collision: just clear trail and steer away — don't wipe territory
+  // Self-trail collision: clear trail, don't wipe territory
   clearTrail(b);
-  b.angle+=Math.PI*0.5*(Math.random()<0.5?1:-1); // turn 90°
-  b.ais='retreat'; b.ait=1.5;
-  // Update home anchor to current position so retreat target is reachable
+
   const{gx,gy}=w2g(b.wx,b.wz);
-  if(play(gx,gy)){b.sgx=gx;b.sgy=gy;}
+
+  // Find a safe interior cell of own territory to retreat toward
+  // Prefer cells well away from the map edge
+  const SAFE_MARGIN=18; // cells from map edge considered safe
+  const cx=SZ/2, cy=SZ/2;
+  let bestCell=null, bestScore=-1;
+  let sampled=0;
+  for(const k of b.ter){
+    const[tx,ty]=k.split(',').map(Number);
+    // Distance from map edge (lower = more dangerous)
+    const edgeDist=Math.min(tx,ty,SZ-1-tx,SZ-1-ty);
+    if(edgeDist<4) continue; // skip cells right on edge
+    // Prefer cells closer to map centre and away from current position
+    const distFromCurrent=Math.abs(tx-gx)+Math.abs(ty-gy);
+    const score=edgeDist*2+distFromCurrent*0.5;
+    if(score>bestScore){bestScore=score;bestCell={gx:tx,gy:ty};}
+    if(++sampled>80)break;
+  }
+
+  if(bestCell){
+    // Steer toward safe interior cell
+    const{wx:tx,wz:tz}=g2w(bestCell.gx,bestCell.gy);
+    b.angle=Math.atan2(tz-b.wz,tx-b.wx)+(Math.random()-0.5)*0.3;
+    b.sgx=bestCell.gx; b.sgy=bestCell.gy;
+  } else {
+    // No territory: steer toward map centre, away from edge
+    const toCenter=Math.atan2(cy*CL-b.wz-SZ/2*CL, cx*CL-b.wx-SZ/2*CL);
+    b.angle=toCenter+(Math.random()-0.5)*0.4;
+    if(play(gx,gy)){b.sgx=gx;b.sgy=gy;}
+  }
+
+  // Enter cautious expand mode — bot will develop territory gradually, not hug walls
+  b.ais='retreat'; b.ait=2.0+Math.random()*1.5;
 }
 
 /* ── COLLISIONS ─────────────────────────────────────── */
+// Sub-stepping: interpolate entity positions between last and current frame
+// to prevent fast-moving entities tunneling through thin trails
+const _prevPos=new Map(); // entity id -> {wx,wz}
+
 function checkCollisions(){
   const all=[player,...bots];
+
+  // Sample up to SUB_STEPS interpolated positions per entity per frame
+  const SUB_STEPS=3;
+
   for(const e of all){
     if(e.isDead)continue;
-    const{gx,gy}=w2g(e.wx,e.wz);const ck=`${gx},${gy}`;
-    for(const o of all){
-      if(o.id===e.id||o.isDead)continue;
-      // e steps on o's trail → O dies (e is the killer)
-      if(o.trSet.has(ck)&&!o.ter.has(ck)){
-        if(o.id===0){
-          // Bot (e) stepped on player trail → player dies (unless shielded)
-          if(player.shield>0){
-            killEnt(e,player); // reflect: bot dies instead
-            continue;
+    const prev=_prevPos.get(e.id)||{wx:e.wx,wz:e.wz};
+
+    for(let step=1;step<=SUB_STEPS;step++){
+      const t=step/SUB_STEPS;
+      const sx=prev.wx+(e.wx-prev.wx)*t;
+      const sz=prev.wz+(e.wz-prev.wz)*t;
+      const{gx,gy}=w2g(sx,sz);
+      const ck=`${gx},${gy}`;
+
+      for(const o of all){
+        if(o.id===e.id||o.isDead)continue;
+        // e passes through o's trail → o dies
+        if(o.trSet.has(ck)&&!o.ter.has(ck)){
+          if(o.id===0){
+            if(player.shield>0){killEnt(e,player);break;}
+            doGameOver();return;
           }
-          doGameOver();return;
+          killEnt(o,e);
+          break;
         }
-        // Player or bot stepped on a bot's trail → that bot dies
-        killEnt(o,e);
-        continue;
       }
+      if(!G.running)return; // game may have ended inside the loop above
     }
+
+    // Store current position as "previous" for next frame
+    _prevPos.set(e.id,{wx:e.wx,wz:e.wz});
   }
 }
 
@@ -805,53 +1036,132 @@ function updateBot(b,dt){
   // ── COMPUTE DESIRED ANGLE ──────────────────────────
   let des=b.angle;
   let hunting=false;
+  let fleeing=false;
 
-  // ── AGGRESSIVE: hunt player always when close, trail or not ───
-  if(b.type==='aggressive'&&!player.isDead){
+  // ── DANGER ASSESSMENT — am I exposed with a long trail? ──────────────
+  // The longer my trail, the more scared I should be of nearby threats
+  const myTrailLen=b.trSet.size;
+  const inDanger=myTrailLen>4; // exposed outside territory
+  const veryExposed=myTrailLen>14; // very long trail = high risk
+
+  // Find closest threat to ME (any entity heading toward my trail base)
+  let closestThreatDist=9999, closestThreatAngle=0;
+  if(inDanger){
+    const all2=[player,...bots];
+    for(const o of all2){
+      if(o.id===b.id||o.isDead)continue;
+      const dx=o.wx-b.wx,dz=o.wz-b.wz;
+      const dist=Math.sqrt(dx*dx+dz*dz);
+      if(dist<closestThreatDist){closestThreatDist=dist;closestThreatAngle=Math.atan2(dz,dx);}
+    }
+  }
+
+  // ── FEAR: if exposed and threatened — prioritise retreat sharply ──────
+  if(inDanger&&closestThreatDist<b.vis*CL*(veryExposed?1.4:0.9)){
+    // Steer away from threat AND toward nearest territory edge
+    const fleeAngle=closestThreatAngle+Math.PI;
+    // Find nearest own territory cell to retreat into
+    const nb=nearestTerCell(b,Math.round(b.wx/CL+SZ/2),Math.round(b.wz/CL+SZ/2));
+    if(nb){
+      const{wx:hx,wz:hz}=g2w(nb.gx,nb.gy);
+      const homeAngle=Math.atan2(hz-b.wz,hx-b.wx);
+      // Blend flee + home: more weight on home the longer the trail
+      const homeBias=Math.min(0.85,0.4+myTrailLen*0.025);
+      des=fleeAngle*(1-homeBias)+homeAngle*homeBias;
+    } else {
+      des=fleeAngle;
+    }
+    b.ais='retreat';
+    b.ait=veryExposed ? 2.0+Math.random() : 0.8+Math.random()*0.6;
+    fleeing=true;
+  }
+
+  // ── AGGRESSIVE: tactically hunt by intercepting trails — never head-on ram ───
+  if(!fleeing&&b.type==='aggressive'&&!player.isDead){
     if(playerDist<b.vis*CL){
       if(player.trSet.size>2){
-        // Aim at middle of player trail to cut it off
-        const tidx=Math.floor(player.trail.length*0.4);
-        const tgt=player.trail[tidx]||player.trail[0];
-        if(tgt){const p=g2w(tgt.gx,tgt.gy);des=Math.atan2(p.wz-b.wz,p.wx-b.wx);}
+        const cutIdx=Math.max(0,Math.floor(player.trail.length*0.15));
+        const tgt=player.trail[cutIdx];
+        if(tgt){
+          const p=g2w(tgt.gx,tgt.gy);
+          const headDist=Math.sqrt((player.wx-b.wx)**2+(player.wz-b.wz)**2);
+          if(headDist>2.5){
+            des=Math.atan2(p.wz-b.wz,p.wx-b.wx);
+            hunting=true; b.ais='hunt'; b.ait=0.4;
+          } else {
+            des=Math.atan2(pdz,pdx)+Math.PI*0.6;
+            hunting=true; b.ais='hunt'; b.ait=0.3;
+          }
+        }
+      } else if(player.trSet.size===0){
+        hunting=false;
       } else {
-        // No trail — just chase the player directly
-        des=Math.atan2(pdz,pdx);
+        if(playerDist<b.vis*CL*0.5){
+          des=Math.atan2(pdz,pdx)+Math.PI*0.5*(Math.random()<0.5?1:-1);
+          hunting=true; b.ais='hunt'; b.ait=0.5;
+        }
       }
-      hunting=true;
-      b.ais='hunt'; b.ait=0.4;
     }
-    // Also hunt other bots with exposed trails
+    // Hunt bots with exposed trails — the longer their trail the more attractive the target
     if(!hunting){
+      let bestScore=-1, bestDes=null;
       for(const o of bots){
-        if(o.id===b.id||o.isDead||o.trSet.size<4)continue;
+        if(o.id===b.id||o.isDead||o.trSet.size<3)continue;
         const dx=o.wx-b.wx,dz=o.wz-b.wz,dist=Math.sqrt(dx*dx+dz*dz);
-        if(dist<b.vis*CL*0.7){
-          const tgt=o.trail[Math.floor(o.trail.length*0.4)]||o.trail[0];
-          if(tgt){const p=g2w(tgt.gx,tgt.gy);des=Math.atan2(p.wz-b.wz,p.wx-b.wx);hunting=true;b.ait=0.3;}
+        if(dist>b.vis*CL)continue;
+        // Score: longer trail + closer = more attractive
+        const score=o.trSet.size/Math.max(1,dist);
+        if(score>bestScore){
+          const cutIdx=Math.max(0,Math.floor(o.trail.length*0.15));
+          const tgt=o.trail[cutIdx]||o.trail[0];
+          if(tgt){
+            const cubeDist=Math.sqrt((o.wx-b.wx)**2+(o.wz-b.wz)**2);
+            if(cubeDist>2.0){
+              const p=g2w(tgt.gx,tgt.gy);
+              bestScore=score;
+              bestDes=Math.atan2(p.wz-b.wz,p.wx-b.wx);
+            }
+          }
+        }
+      }
+      if(bestDes!==null){des=bestDes;hunting=true;b.ait=0.3;}
+    }
+  }
+
+  // ── NORMAL: flee from nearby threats, opportunistically attack when enemy is very exposed ───
+  if(!fleeing&&b.type==='normal'&&!player.isDead&&!hunting){
+    if(playerDist<b.vis*CL){
+      // Attack only when player trail is long AND we're not ourselves exposed
+      if(player.trSet.size>8&&playerDist<b.vis*CL*0.6&&!inDanger){
+        const tidx=Math.floor(player.trail.length*0.3);
+        const tgt=player.trail[tidx]||player.trail[0];
+        if(tgt){const p=g2w(tgt.gx,tgt.gy);des=Math.atan2(p.wz-b.wz,p.wx-b.wx);hunting=true;b.ait=0.5;}
+      } else if(playerDist<b.vis*CL*0.55){
+        des=Math.atan2(-pdz,-pdx)+(Math.random()-0.5)*0.4;
+        b.ais='retreat'; b.ait=1.2;
+        fleeing=true;
+      }
+    }
+    // Normal bots also opportunistically strike at very exposed other bots
+    if(!hunting&&!fleeing){
+      for(const o of bots){
+        if(o.id===b.id||o.isDead||o.trSet.size<10)continue; // only very long trails
+        const dx=o.wx-b.wx,dz=o.wz-b.wz,dist=Math.sqrt(dx*dx+dz*dz);
+        if(dist<b.vis*CL*0.5&&!inDanger){
+          const cutIdx=Math.max(0,Math.floor(o.trail.length*0.2));
+          const tgt=o.trail[cutIdx]||o.trail[0];
+          if(tgt){
+            const p=g2w(tgt.gx,tgt.gy);
+            des=Math.atan2(p.wz-b.wz,p.wx-b.wx);
+            hunting=true; b.ait=0.6;
+          }
           break;
         }
       }
     }
   }
 
-  // ── NORMAL: flee from nearby player, or attack if player trail is long ───
-  if(b.type==='normal'&&!player.isDead&&!hunting){
-    if(playerDist<b.vis*CL){
-      if(player.trSet.size>8&&playerDist<b.vis*CL*0.6){
-        // Opportunistic attack — player has long trail and is very close
-        const tidx=Math.floor(player.trail.length*0.3);
-        const tgt=player.trail[tidx]||player.trail[0];
-        if(tgt){const p=g2w(tgt.gx,tgt.gy);des=Math.atan2(p.wz-b.wz,p.wx-b.wx);hunting=true;b.ait=0.5;}
-      } else if(playerDist<b.vis*CL*0.55){
-        // Flee — steer directly away from player
-        des=Math.atan2(-pdz,-pdx)+(Math.random()-0.5)*0.4;
-        b.ais='retreat'; b.ait=1.2;
-      }
-    }
-  }
-
-  if(!hunting){
+  if(!hunting&&!fleeing){
     if(b.ais==='retreat'){
       const{wx:hx,wz:hz}=g2w(b.sgx,b.sgy);
       des=Math.atan2(hz-b.wz,hx-b.wx);
@@ -869,8 +1179,8 @@ function updateBot(b,dt){
     }
   }
 
-  // ── TRAIL SELF-AVOIDANCE (skip for aggressive while hunting) ──
-  if(!hunting||b.type!=='aggressive'){
+  // ── TRAIL SELF-AVOIDANCE (skip for aggressive while hunting, skip when fleeing) ──
+  if((!hunting||b.type!=='aggressive')&&!fleeing){
     const checkLen=Math.min(b.trail.length,8);
     for(let i=b.trail.length-checkLen;i<b.trail.length-2;i++){
       const{gx:tgx,gy:tgy}=b.trail[i];
@@ -884,11 +1194,14 @@ function updateBot(b,dt){
     }
   }
 
-  // ── EDGE AVOIDANCE — trigger well before the water boundary ────
-  const edge=(SZ/2-10)*CL;  // 10-cell buffer from edge
+  // ── EDGE AVOIDANCE — soft push well before the water boundary ────
+  const edge=(SZ/2-14)*CL;  // 14-cell soft buffer from edge
   if(Math.abs(b.wx)>edge||Math.abs(b.wz)>edge){
-    des=Math.atan2(-b.wz,-b.wx)+(Math.random()-0.5)*0.2;
-    b.ais='retreat'; b.ait=1.5;
+    const toC=Math.atan2(-b.wz,-b.wx);
+    let df=toC-des;while(df>Math.PI)df-=Math.PI*2;while(df<-Math.PI)df+=Math.PI*2;
+    // Proportional push — stronger the closer to edge, but never hard flip
+    const edgePush=Math.min(1,(Math.max(Math.abs(b.wx),Math.abs(b.wz))-edge)/((LIM-edge)+0.001));
+    des+=df*edgePush*0.55;
   }
 
   // ── APPLY STEERING ────────────────────────────────
@@ -1003,6 +1316,7 @@ function updatePowerups(dt){
       const dx=player.wx-pu.wx,dz=player.wz-pu.wz;
       if(Math.sqrt(dx*dx+dz*dz)<0.8){
         collectPowerup(player,pu);
+        pu.mesh.traverse(c=>{if(c.isMesh){if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();}});
         scene.remove(pu.mesh);
         powerups.splice(i,1);
         continue;
@@ -1014,13 +1328,17 @@ function updatePowerups(dt){
       const dx=b.wx-pu.wx,dz=b.wz-pu.wz;
       if(Math.sqrt(dx*dx+dz*dz)<0.8){
         collectPowerup(b,pu);
+        pu.mesh.traverse(c=>{if(c.isMesh){if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();}});
         scene.remove(pu.mesh);
         powerups.splice(i,1);
         break;
       }
     }
     // Expire after 30s
-    if(pu.age>30){scene.remove(pu.mesh);powerups.splice(i,1);}
+    if(pu.age>30){
+      pu.mesh.traverse(c=>{if(c.isMesh){if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();}});
+      scene.remove(pu.mesh);powerups.splice(i,1);
+    }
   }
 
   // Tick active effects on player
@@ -1032,7 +1350,10 @@ function updatePowerups(dt){
     player.shield-=dt;
     if(player.shield<=0){
       player.shield=0;
-      if(player.shieldMesh){scene.remove(player.shieldMesh);player.shieldMesh=null;}
+      if(player.shieldMesh){
+        player.shieldMesh.traverse(c=>{if(c.isMesh){if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();}});
+        scene.remove(player.shieldMesh);player.shieldMesh=null;
+      }
       showBoostNotif('🛡️','Shield gone','#44ccff',1500);
     } else if(player.shieldMesh){
       player.shieldMesh.position.set(player.wx,0.35,player.wz);
@@ -1051,7 +1372,10 @@ function updatePowerups(dt){
     if(b.speedBoost>0){b.speedBoost-=dt;if(b.speedBoost<=0){b.spd=b._basespd||SPD;b.speedBoost=0;}}
     if(b.shield>0){
       b.shield-=dt;
-      if(b.shield<=0){b.shield=0;if(b.shieldMesh){scene.remove(b.shieldMesh);b.shieldMesh=null;}}
+      if(b.shield<=0){b.shield=0;if(b.shieldMesh){
+        b.shieldMesh.traverse(c=>{if(c.isMesh){if(c.geometry)c.geometry.dispose();if(c.material)c.material.dispose();}});
+        scene.remove(b.shieldMesh);b.shieldMesh=null;
+      }}
       else if(b.shieldMesh){
         b.shieldMesh.position.set(b.wx,0.35,b.wz);
         b.shieldMesh.scale.setScalar(1+0.06*Math.sin(Date.now()*0.006));
@@ -1166,14 +1490,32 @@ function updateLB(){
 
 /* ── MINIMAP ────────────────────────────────────────── */
 const mmcvs=document.getElementById('mm'),mmx=mmcvs.getContext('2d');
-function drawMinimap(){
+// Off-screen canvas caches the territory layer — redrawn only on capture
+const _mmOff=document.createElement('canvas');_mmOff.width=110;_mmOff.height=110;
+const _mmOffCtx=_mmOff.getContext('2d');
+let _mmTerDirty=true; // flag: redraw territory layer on next minimap draw
+
+function invalidateMinimapTer(){_mmTerDirty=true;}
+
+function _redrawMinimapTer(){
   const W=110,H=110,sx=W/SZ,sy=H/SZ;
-  mmx.clearRect(0,0,W,H);mmx.fillStyle='rgba(15,25,15,0.9)';mmx.fillRect(0,0,W,H);
+  _mmOffCtx.clearRect(0,0,W,H);
+  _mmOffCtx.fillStyle='rgba(15,25,15,0.9)';_mmOffCtx.fillRect(0,0,W,H);
   for(let gy=0;gy<SZ;gy++)for(let gx=0;gx<SZ;gx++){
     const o=ownerMap[mi(gx,gy)];if(o<0)continue;
     const ent=o===0?player:bots[o-1];if(!ent)continue;
-    mmx.fillStyle=ent.css+'bb';mmx.fillRect(gx*sx,gy*sy,sx+0.5,sy+0.5);
+    _mmOffCtx.fillStyle=ent.css+'bb';_mmOffCtx.fillRect(gx*sx,gy*sy,sx+0.5,sy+0.5);
   }
+  _mmTerDirty=false;
+}
+
+function drawMinimap(){
+  const W=110,H=110,sx=W/SZ,sy=H/SZ;
+  // Rebuild territory layer only when something changed
+  if(_mmTerDirty) _redrawMinimapTer();
+  // Blit cached territory layer
+  mmx.drawImage(_mmOff,0,0);
+  // Live: entity dots + powerups (always redrawn — they move every frame)
   for(const e of[player,...bots]){
     if(e.isDead)continue;const{gx,gy}=w2g(e.wx,e.wz);
     mmx.beginPath();mmx.arc(gx*sx+sx/2,gy*sy+sy/2,e.id===0?3.5:2.2,0,Math.PI*2);
@@ -1216,6 +1558,7 @@ function loop(ts){
   const dt=Math.min((ts-_lts)/1000,0.05);_lts=ts;
   if(G.running&&!G.paused){
     if(!player.isDead){
+      // Player always moves — joystick/keys only change direction
       if(joyActive){
         let d=joyAngle-player.angle;while(d>Math.PI)d-=Math.PI*2;while(d<-Math.PI)d+=Math.PI*2;
         const turnRate=0.16*(1-Math.abs(d)/Math.PI*0.3)*dt*60;
@@ -1254,6 +1597,9 @@ function initGame(){
   const keep=new Set([aml,drl,fill,ptl,gnd]);
   scene.children.slice().forEach(o=>{if(!keep.has(o))scene.remove(o);});
   tileMesh.fill(null);neutMeshes=[];neutMeshMap.fill(null);
+  // Dispose instanced meshes from previous run
+  for(const owner of Object.keys(_ownedInst)) _disposeOwnedInst(Number(owner));
+  if(_neutInst){_neutInst.geometry.dispose();_neutInst.material.dispose();scene.remove(_neutInst);_neutInst=null;}
   Object.keys(matCache).forEach(k=>{matCache[k].dispose&&matCache[k].dispose();delete matCache[k];});
   Object.keys(entColorMap).forEach(k=>delete entColorMap[k]);
   ownerMap.fill(-1);
@@ -1426,6 +1772,7 @@ document.addEventListener('visibilitychange',()=>{
   else if(!document.hidden&&G.paused){_lts=performance.now();}
 });
 document.addEventListener('touchmove',e=>{const el=e.target;if(el.closest&&(el.closest('.joystick-bg')||el.closest('canvas')))return;e.preventDefault();},{passive:false});
+window.addEventListener('blur',()=>{joyActive=false;});
 
 /* ── RESPONSIVE ─────────────────────────────────────── */
 function fitUI(){

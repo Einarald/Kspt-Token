@@ -37,6 +37,16 @@
 }
 #giftLetterInner { animation: letterUnfold 0.6s cubic-bezier(.22,1,.36,1) forwards; }
 
+@keyframes paperEventPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(0,188,212,0); border-color: transparent; }
+  50%       { box-shadow: 0 0 16px 4px rgba(0,188,212,0.7); border-color: #00bcd4; }
+}
+#paper-game-btn.paper-event-active {
+  border: 2px solid #00bcd4;
+  animation: paperEventPulse 1.8s ease-in-out infinite;
+  border-radius: 14px;
+}
+
 #raceModeModal {
   display:none; position:fixed; inset:0; z-index:100000;
   background:rgba(0,0,0,0.92); align-items:center; justify-content:center;
@@ -426,7 +436,7 @@ window.addEventListener('message', (event) => {
   <div class="game-ticket">1 ticket</div>
 </div>
 
-<div class="game-item" onclick="startGame('paper')">
+<div class="game-item" onclick="startGame('paper')" id="paper-game-btn">
   <img src="paper.png" class="game-icon" alt="Paper.io">
   <div class="game-info">
     <div class="game-title">Paper.io</div>
@@ -2853,6 +2863,33 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
       <button class="ap-btn ap-btn-red" style="width:100%;" onclick="adminForceDeleteToken()">🗑 Force Delete Selected Token</button>
     </div>
+
+    <!-- Paper.io Event -->
+    <div class="ap-card" style="border-color:#1a3a5c;">
+      <h3 style="color:#00bcd4;">📄 Start Event in Paper.io</h3>
+      <p style="color:#9fa8da;font-size:11px;margin:0 0 10px;">Players will be redirected to <b>papertung.html</b> instead of paper.html for the specified duration. 1 min = 24 hours.</p>
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+        <label style="color:#9fa8da;font-size:12px;">Duration:</label>
+        <select id="apPaperEventDuration" style="background:#111;border:1px solid #333;color:#fff;border-radius:8px;padding:8px;font-size:13px;width:100%;">
+          <option value="1">1 minute</option>
+          <option value="3">3 minutes</option>
+          <option value="5">5 minutes</option>
+          <option value="10">10 minutes</option>
+          <option value="20">20 minutes</option>
+          <option value="30">30 minutes</option>
+          <option value="60">1 hour</option>
+          <option value="300">5 hours</option>
+          <option value="600">10 hours</option>
+          <option value="1440">24 hours</option>
+        </select>
+      </div>
+      <div id="apPaperEventStatus" style="font-size:12px;color:#555;margin-bottom:8px;"></div>
+      <div class="ap-row" style="gap:8px;">
+        <button class="ap-btn ap-btn-blue" style="flex:1;" onclick="adminSetPaperEvent()">▶ Start Event</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminClearPaperEvent()">■ Stop</button>
+      </div>
+    </div>
+
   </div><!-- /otherSection -->
 
 </div><!-- /ap-wrap -->

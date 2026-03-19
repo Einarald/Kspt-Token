@@ -967,7 +967,7 @@ const translations = {
 'play_mini_games_desc': 'Играйте в мини-игры и зарабатывайте KSPT!',
 'tickets_label': '🎫 Билеты:',
 'tickets_left_today': 'У вас осталось {0} билетов сегодня',
-'next_ticket_in': 'Следующий билет через: {0}',
+'next_ticket_in': 'Следующий билет через:',
 'available_games': 'Доступные игры',
 'ticket_session_note': '1 билет = 1 игровой сеанс',
 'resume': 'Продолжить',
@@ -8807,6 +8807,19 @@ function adminTab(tab) {
     document.getElementById('adminOtherSection').style.display = 'block';
     adminLoadTokenList();
     _adminLoadVerifyList();
+    updatePaperEventButton();
+    window._firebaseDB.ref('paperEvent').once('value', snap => {
+      const ev = snap.val();
+      const status = document.getElementById('apPaperEventStatus');
+      if (ev) {
+        const remaining = Math.max(0, Math.round((new Date(ev.end) - Date.now()) / 60000));
+        if (status) status.textContent = remaining > 0
+          ? '✅ Active — ' + remaining + ' min remaining'
+          : '⏰ Event has ended';
+      } else {
+        if (status) status.textContent = 'No active event';
+      }
+    });
   }
 }
 
@@ -16739,6 +16752,55 @@ function renderGameRecordsLB() {
   el.innerHTML = html;
 }
 // ========== END GAME RECORDS LEADERBOARD ==========
+
+// ── PAPER.IO EVENT ─────────────────────────────────────────────
+function adminSetPaperEvent() {
+  const mins = parseInt(document.getElementById('apPaperEventDuration').value);
+  if (!mins || mins < 1) { showToast('Select a duration!'); return; }
+  const realMs = mins * 60 * 1000;
+  const start = new Date().toISOString();
+  const end   = new Date(Date.now() + realMs).toISOString();
+  window._firebaseDB.ref('paperEvent').set({ start, end }).then(() => {
+    showToast('Paper.io Event started!');
+    const status = document.getElementById('apPaperEventStatus');
+    if (status) status.textContent = '✅ Active — ends in ' + mins + (mins < 60 ? ' min' : ' hours');
+    updatePaperEventButton();
+  });
+}
+
+function adminClearPaperEvent() {
+  window._firebaseDB.ref('paperEvent').remove().then(() => {
+    showToast('Paper.io Event stopped');
+    const status = document.getElementById('apPaperEventStatus');
+    if (status) status.textContent = '❌ Event cancelled';
+    updatePaperEventButton();
+  });
+}
+
+function updatePaperEventButton() {
+  const btn = document.getElementById('paper-game-btn');
+  window._firebaseDB.ref('paperEvent').once('value', snap => {
+    const ev = snap.val();
+    if (!ev) {
+      if (btn) btn.classList.remove('paper-event-active');
+      return;
+    }
+    const now = new Date(), end = new Date(ev.end);
+    if (now <= end) {
+      if (btn) btn.classList.add('paper-event-active');
+    } else {
+      // Event expired — clean up Firebase and remove highlight
+      window._firebaseDB.ref('paperEvent').remove();
+      if (btn) btn.classList.remove('paper-event-active');
+      const status = document.getElementById('apPaperEventStatus');
+      if (status) status.textContent = '⏰ Event has ended';
+    }
+  });
+}
+
+window._firebaseDB && window._firebaseDB.ref('paperEvent').once('value', () => updatePaperEventButton());
+setInterval(updatePaperEventButton, 60000);
+// ── /PAPER.IO EVENT ─────────────────────────────────────────────
 
 async function adminForceDeleteToken() {
   if (!_isAdminUser() || !window._firebaseDB) return;

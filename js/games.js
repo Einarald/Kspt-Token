@@ -382,7 +382,7 @@ function confirmRaceMode(mode) {
 }
 // ===== END RACE MODE SELECTION =====
 
-function startGame(gameType) {
+async function startGame(gameType) {
   if (gameTickets.current <= 0) {
     showToast("Not enough tickets!");
     return;
@@ -409,7 +409,18 @@ function startGame(gameType) {
 
   // iframe
 const container = document.getElementById('gameFrameContainer');
-container.innerHTML = `<iframe class="game-frame" src="games/${gameType}.html" allow="autoplay"></iframe>`;
+let _gameFile = gameType;
+if (gameType === 'paper') {
+  try {
+    const _ev = await new Promise(r => window._firebaseDB.ref('paperEvent').once('value', r));
+    const _evVal = _ev.val();
+    if (_evVal) {
+      const _now = new Date(), _s = new Date(_evVal.start), _e = new Date(_evVal.end);
+      if (_now >= _s && _now <= _e) _gameFile = 'papertung';
+    }
+  } catch(e) {}
+}
+container.innerHTML = `<iframe class="game-frame" src="games/${_gameFile}.html" allow="autoplay"></iframe>`;
 const iframe = container.querySelector('iframe');
 
 iframe.addEventListener('load', () => {

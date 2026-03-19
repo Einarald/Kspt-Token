@@ -6894,11 +6894,21 @@ function buyToken() {
   const _buyingName = selectedToken === 'ksptToken' ? 'KSP Token'
     : selectedToken === 'banxToken' ? 'BANX'
     : selectedToken === 'jvmToken' ? 'JVM'
-    : (d.market && d.market.personalToken && d.market.personalToken.ticker) ? d.market.personalToken.ticker : '';
+    : selectedToken === 'personalToken' ? (d.market?.personalToken?.ticker || '')
+    : selectedToken.startsWith('userToken_') ? (() => {
+        const fid = selectedToken.replace('userToken_', '');
+        const idx = parseInt(fid);
+        const tok = (d.market.myTokens || []).find(t => t.firebaseId === fid)
+          || (d.market.myTokens || [])[idx];
+        return tok ? tok.ticker : '';
+      })()
+    : '';
   if (!_questCryptoId || _buyingName === _questCryptoId) {
     d.questCryptoBought = (d.questCryptoBought || 0) + amountKSPT;
     checkQuestProgress('buy_crypto');
   }
+  d.questExchangeVolume = (d.questExchangeVolume || 0) + amountKSPT;
+  checkQuestProgress('w_exchange');
   let tokensBought = amountKSPT / tokenData.price;
   tokenData.owned += tokensBought;
   tokenData.lastBuyTime = now;
@@ -6949,7 +6959,7 @@ function sellToken() {
   let earnedKSPT = amountTokens * tokenData.price;
   d.tokens += earnedKSPT;
   d.questExchangeVolume = (d.questExchangeVolume || 0) + earnedKSPT;
-  checkQuestProgress('exchange_volume');
+  checkQuestProgress('w_exchange');
   tokenData.lastUserSellPrice = tokenData.price;
   save();
   ui();
@@ -8010,13 +8020,13 @@ function renderPlinkoUI() {
           const offset = Math.min(_plinkoWinOffset, maxOffset);
           return `
             <button id="plinkoShiftLeft" onclick="_plinkoShiftWin(-1)" style="background:none;border:none;color:${offset>0?'#00bcd4':'#333'};font-size:18px;cursor:${offset>0?'pointer':'default'};padding:0 4px;line-height:1;">◀</button>
-            <div style="display:flex;gap:3px;">
+            <div style="display:flex;gap:5px;">
               ${Array.from({length:10},(_,i)=>{
                 const isWin = i >= offset && i < offset + winSlots;
                 const col = colors[_plinkoSelectedColor];
-                return `<div id="plinkoPreviewUrn${i}" style="width:26px;height:26px;border-radius:6px;background:${isWin?col:'#1a1a2a'};
-                  border:2px solid ${isWin?col:'#2a2a2a'};
-                  box-shadow:${isWin?`0 0 7px ${col}`:'none'};
+                return `<div id="plinkoPreviewUrn${i}" style="width:24px;height:24px;border-radius:6px;background:${isWin?col:'#1a1a2a'};
+                  border:2px solid ${isWin?col:'#333'};
+                  box-shadow:${isWin?`0 0 8px ${col},0 0 2px #fff`:'none'};
                   transition:all 0.3s;"></div>`;
               }).join('')}
             </div>
@@ -8047,14 +8057,16 @@ function renderPlinkoUI() {
   // Рисуем статичный превью
   const prev = document.getElementById('plinkoPreview');
   if (prev) {
-    _plinkoDrawStatic(prev, colors, 10 / _plinkoSelectedMult, colors[_plinkoSelectedColor]);
+    const _wsSlots = _plinkoWinSlots(_plinkoSelectedMult);
+    const _wsOffset = Math.min(_plinkoWinOffset, 10 - _wsSlots);
+    _plinkoDrawStatic(prev, colors, _wsSlots, colors[_plinkoSelectedColor], _wsOffset);
   }
 }
 
 function _plinkoSetMult(m) {
   _plinkoSelectedMult = m;
   _plinkoSelectedColor = 0;
-  _plinkoWinOffset = 0; // сброс позиции при смене множителя
+  _plinkoWinOffset = 0;
   renderPlinkoUI();
 }
 
@@ -15671,9 +15683,9 @@ function _startFirebaseSync() {
 // QUESTS SYSTEM
 // ==========================================
 
-const QUEST_GAME_NAMES = ['Snake Game', 'Ping-Pong', 'BlocksFast', 'Slither: KSPT Mode', 'Ghost Train', 'KSPT Races', 'Flappy Bird', 'Space Asteroids', 'Robot Runner'];
-const QUEST_GAME_IDS   = ['snake',      'pingpong',  'blocksfast', 'slither',            'train',       'race',       'flappy',      'asteroids',       'robot'];
-const QUEST_GAME_ICONS = ['snake.png',  'pong.png',  'tetris.png', 'slither.png',        'train.png',   'race.png',   'flappy.png',  'aster.png',       'irob.png'];
+const QUEST_GAME_NAMES = ['Snake Game', 'Ping-Pong', 'BlocksFast', 'Slither: KSPT Mode', 'Ghost Train', 'KSPT Races', 'Flappy Bird', 'Space Asteroids', 'Robot Runner', 'Paper.io'];
+const QUEST_GAME_IDS   = ['snake',      'pingpong',  'blocksfast', 'slither',            'train',       'race',       'flappy',      'asteroids',       'robot',        'paper'];
+const QUEST_GAME_ICONS = ['snake.png',  'pong.png',  'tetris.png', 'slither.png',        'train.png',   'race.png',   'flappy.png',  'aster.png',       'irob.png',     'paper.png'];
 try { initQuestsData(); } catch(e) { console.warn('quests init error', e); }
 
 function getQuestCryptoPool() {
@@ -16623,6 +16635,7 @@ const GAME_RECORD_LABELS = {
   race:      { label: 'Best lap time',  unit: 's',   icon: 'race.png'    },
   asteroids: { label: 'Best score',     unit: 'pts', icon: 'aster.png'   },
   robot:     { label: 'Best distance',  unit: 'm',   icon: 'irob.png'    },
+  paper:     { label: 'Territory',      unit: '%',   icon: 'paper.png'   },
   ek:        { label: 'EK collected',   unit: 'EK',  icon: 'ek.png'      }
 };
 
@@ -16882,16 +16895,18 @@ const PROFILE_REACTIONS = [
   '👎','🤮','💩'
 ];
 
-const PROFILE_GAMES = ['snake','pingpong','blocksfast','slither','train','race','flappy','asteroids','robot'];
+const PROFILE_GAMES = ['snake','pingpong','blocksfast','slither','train','race','flappy','asteroids','robot','paper'];
 const PROFILE_GAME_NAMES = {
   snake:'Snake', pingpong:'Ping-Pong', blocksfast:'BlocksFast',
   slither:'Slither', train:'Ghost Train', race:'KSPT Races',
-  flappy:'Flappy Bird', asteroids:'Space Asteroids', robot:'Robot Runner'
+  flappy:'Flappy Bird', asteroids:'Space Asteroids', robot:'Robot Runner',
+  paper:'Paper.io'
 };
 const PROFILE_GAME_ICONS = {
   snake:'snake.png', pingpong:'pong.png', blocksfast:'tetris.png',
   slither:'slither.png', train:'train.png', race:'race.png',
-  flappy:'flappy.png', asteroids:'aster.png', robot:'irob.png'
+  flappy:'flappy.png', asteroids:'aster.png', robot:'irob.png',
+  paper:'paper.png'
 };
 
 let _profileCurrentTab = 'profile';

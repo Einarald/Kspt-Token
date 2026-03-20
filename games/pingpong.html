@@ -598,8 +598,9 @@ document.addEventListener('keyup', (e)=>{
         dirX = 1;
     }
 
-    ball.speedX = 4 * dirX;
+        ball.speedX = 4 * dirX;
     ball.speedY = (Math.random() * 2 - 1) * 3;
+    if (window.__ppOnlineMode && ppIsLeftSide) ppSendState(true);
 }
 
         function updatePaddles(frameScale = 1) {
@@ -702,6 +703,7 @@ const reward = safeGetOfflinePercent(0.8 * _hitMult);
                 
                 playSound('apple');
                 gameVibrate([30]);
+                if (window.__ppOnlineMode && ppIsLeftSide) ppSendState(true);
             }        
             // Ball collision with AI paddle
             if (ball.x + ball.radius > aiPaddle.x &&
@@ -725,6 +727,7 @@ const reward = safeGetOfflinePercent(0.8 * _hitMult);
                 
                 playSound('apple');
                 gameVibrate([30]);
+                if (window.__ppOnlineMode && ppIsLeftSide) ppSendState(true);
             }
             
             // Ball out of bounds (scoring)
@@ -766,7 +769,7 @@ const reward = safeGetOfflinePercent(0.8 * _hitMult);
             }
         }
 
-        function draw() {
+        function draw(frameScale = 1) {
             // Clear canvas
             ctx.fillStyle = '#111';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -834,8 +837,8 @@ const reward = safeGetOfflinePercent(0.8 * _hitMult);
                 ctx.textAlign = 'center';
                 ctx.fillText(f.text, f.x, f.y - f.rise);
 
-                f.rise += 0.5;
-                f.alpha -= 0.02;
+                f.rise += 0.5 * frameScale;
+                f.alpha -= 0.02 * frameScale;
 
                 if (f.alpha <= 0) {
                     floatingTexts.splice(i, 1);
@@ -850,6 +853,16 @@ const reward = safeGetOfflinePercent(0.8 * _hitMult);
 
   gameRunning = false;
 
+if (window.__ppOnlineMode && ppMyRoomId && ppIsLeftSide) {
+  try {
+    window._ppDB.ref('pp_rooms/' + ppMyRoomId).update({
+      finished: true,
+      finalPlayerScore: playerScore,
+      finalAiScore: aiScore
+    });
+  } catch(e) {}
+}
+
   // НЕ ДОБАВЛЯЕМ финальную награду, если награды уже начислялись по ходу игры.
   // earnedKSPT += safeGetOfflinePercent(playerScore > aiScore ? 5 : 2);
 
@@ -863,7 +876,7 @@ const reward = safeGetOfflinePercent(0.8 * _hitMult);
   const _resultMsg = document.getElementById('onlineResultMsg');
   const _soloScores = document.getElementById('soloScores');
   if (window.__ppOnlineMode) {
-    const _iWon = ppIsLeftSide ? (playerScore > aiScore) : (aiScore > playerScore);
+    const _iWon = window.__ppIsLeftSide ? (playerScore > aiScore) : (aiScore > playerScore);
     if (_title) { _title.textContent = _iWon ? '🏆 You Win!' : '😞 You Lose'; _title.style.color = _iWon ? '#00e676' : '#ff4081'; }
     if (_resultMsg) { _resultMsg.style.display = 'block'; _resultMsg.textContent = _iWon ? `${playerScore} : ${aiScore}` : `${aiScore} : ${playerScore}`; }
     if (_soloScores) _soloScores.style.display = 'none';
@@ -913,11 +926,8 @@ function gameLoop(ts) {
         // Online interpolation tick (overrides AI paddle / ball for guest)
         if (window.ppInterpolateTick) ppInterpolateTick();
         updatePaddles(frameScale);
-        // In online mode as guest — ball is driven by host, skip local physics
-        if (!window.__ppOnlineMode || window.__ppIsLeftSide) {
-            updateBall(frameScale);
-        }
-        draw();
+        updateBall(frameScale);
+        draw(frameScale);
     }
 
     animationId = requestAnimationFrame(gameLoop);
@@ -1203,13 +1213,15 @@ let ppSelfLeaving = false;
 
 // Remote player interpolation
 let ppRemote = {
-  paddleY: 180,       // target
-  paddleYPrev: 180,   // previous
-  paddleYCurrent: 180,// interpolated (shown)
+  paddleY: 180,
+  paddleYPrev: 180,
+  paddleYCurrent: 180,
   ballX: 180, ballY: 180,
   ballXPrev: 180, ballYPrev: 180,
   ballXCurrent: 180, ballYCurrent: 180,
-  lastUpdateTime: 0
+ballSpeedX: 4, ballSpeedY: 2,
+lastUpdateTime: 0,
+prevUpdateTime: 0
 };
 
 // ---- Init ----
@@ -1367,7 +1379,16 @@ function ppOpenWaitingRoom(rid) {
     ppSelfLeaving = false;
 
     // Start when host pressed start
-    if (room.started && !ppOnlineMode) {
+    if (room.finished && ppOnlineMode && !window.__kspt_gameOverHandled) {
+  playerScore = room.finalPlayerScore ?? playerScore;
+  aiScore = room.finalAiScore ?? aiScore;
+  playerScoreEl.textContent = playerScore;
+  aiScoreEl.textContent = aiScore;
+  endGame();
+  return;
+}
+
+if (room.started && !ppOnlineMode) {
       ppWinScore = room.winScore || 3;
       ppStartOnlineGame(room);
     }
@@ -1446,8 +1467,8 @@ function ppStartOnlineGame(room) {
     else { clearInterval(cdInterval); overlay.remove(); }
   }, 1000);
 
-  // Start send loop (5 times/sec = 200ms)
-  ppSendInterval = setInterval(ppSendState, 200);
+  // Start send loop
+  ppSendInterval = setInterval(ppSendState, 70);
 
   // Listen to remote state
   window._ppDB.ref('pp_states/' + ppMyRoomId).on('child_changed', snap => ppApplyRemote(snap.key, snap.val()));
@@ -1473,16 +1494,20 @@ function ppStartOnlineGame(room) {
 }
 
 // ---- Send my state ----
-function ppSendState() {
+function ppSendState(isEvent = false) {
   if (!ppOnlineMode || !ppMyRoomId) return;
   const state = {
     t: Date.now(),
     name: ppMyPlayerName
   };
-  // Host sends ball + left paddle; guest sends right paddle only
-   if (ppIsLeftSide) {
-    state.ballX = Math.round(ball.x * 10) / 10;
-    state.ballY = Math.round(ball.y * 10) / 10;
+  if (ppIsLeftSide) {
+    // Координаты мяча — только при событиях (удар/сброс)
+    if (isEvent) {
+      state.ballX = Math.round(ball.x * 10) / 10;
+      state.ballY = Math.round(ball.y * 10) / 10;
+      state.ballSpeedX = ball.speedX;
+      state.ballSpeedY = ball.speedY;
+    }
     state.paddleY = Math.round(playerPaddle.y * 10) / 10;
     state.playerScore = playerScore;
     state.aiScore = aiScore;
@@ -1496,21 +1521,30 @@ function ppSendState() {
 function ppApplyRemote(uid, data) {
   if (!data || uid === ppMyPlayerId) return;
   const now = Date.now();
-  // Save previous for interpolation
-  ppRemote.paddleYPrev = ppRemote.paddleYCurrent;
+    ppRemote.prevUpdateTime = ppRemote.lastUpdateTime || now;
   ppRemote.lastUpdateTime = now;
 
   if (data.paddleY !== undefined) {
-    ppRemote.paddleYPrev = (ppRemote.lastUpdateTime === 0) ? data.paddleY : (ppRemote.paddleYCurrent ?? data.paddleY);
+    ppRemote.paddleYPrev = ppRemote.paddleY;
     ppRemote.paddleY = data.paddleY;
   }
-  if (data.ballX !== undefined) {
-    ppRemote.ballXPrev = (ppRemote.lastUpdateTime === 0) ? data.ballX : (ppRemote.ballXCurrent ?? data.ballX);
+  if (data.ballX !== undefined && data.ballY !== undefined) {
+    // Гость: снэп позиции и скорости — происходит только на событиях
+    // (удар ракеткой, сброс мяча), между ними мяч летит локально
+    if (!ppIsLeftSide) {
+      ball.x = data.ballX;
+      ball.y = data.ballY;
+    }
     ppRemote.ballX = data.ballX;
-  }
-  if (data.ballY !== undefined) {
-    ppRemote.ballYPrev = (ppRemote.lastUpdateTime === 0) ? data.ballY : (ppRemote.ballYCurrent ?? data.ballY);
     ppRemote.ballY = data.ballY;
+  }
+  if (data.ballSpeedX !== undefined) {
+    ppRemote.ballSpeedX = data.ballSpeedX;
+    if (!ppIsLeftSide) ball.speedX = data.ballSpeedX;
+  }
+  if (data.ballSpeedY !== undefined) {
+    ppRemote.ballSpeedY = data.ballSpeedY;
+    if (!ppIsLeftSide) ball.speedY = data.ballSpeedY;
   }
   // Sync score to guest
   if (!ppIsLeftSide) {
@@ -1523,24 +1557,29 @@ function ppApplyRemote(uid, data) {
 window.ppInterpolateTick = function() {
   if (!ppOnlineMode) return;
   const now = Date.now();
-  const interval = 200; // matches send interval
-  const elapsed = now - ppRemote.lastUpdateTime;
-  const alpha = Math.min(1.0, elapsed / interval);
 
-  // Interpolate remote paddle
-  ppRemote.paddleYCurrent = ppRemote.paddleYPrev + (ppRemote.paddleY - ppRemote.paddleYPrev) * alpha;
-  ppRemote.ballXCurrent   = ppRemote.ballXPrev   + (ppRemote.ballX   - ppRemote.ballXPrev)   * alpha;
-  ppRemote.ballYCurrent   = ppRemote.ballYPrev   + (ppRemote.ballY   - ppRemote.ballYPrev)   * alpha;
+  // --- МЯЧ: dead reckoning — предсказываем позицию через скорость ---
+  // Хост шлёт ballSpeedX/Y, поэтому знаем куда летит мяч между пакетами
+  const msSince = Math.min(now - ppRemote.lastUpdateTime, 250); // не более 250ms
+  const dtFrames = msSince / 16.6667; // frameScale-эквивалент
+  let bx = ppRemote.ballX + ppRemote.ballSpeedX * gameSpeed * dtFrames;
+  let by = ppRemote.ballY + ppRemote.ballSpeedY * gameSpeed * dtFrames;
+  bx = Math.max(ball.radius, Math.min(canvas.width  - ball.radius, bx));
+  by = Math.max(ball.radius, Math.min(canvas.height - ball.radius, by));
+  ppRemote.ballXCurrent = bx;
+  ppRemote.ballYCurrent = by;
+
+  // --- ПАДДЛ: плавный lerp к последнему известному значению ---
+  const interval = Math.max(50, (ppRemote.lastUpdateTime - ppRemote.prevUpdateTime) || 70);
+  const paddleAlpha = Math.min(1, (now - ppRemote.lastUpdateTime + interval) / interval);
+  const fromPaddleY = ppRemote.paddleYPrev ?? ppRemote.paddleY;
+  ppRemote.paddleYCurrent = fromPaddleY + (ppRemote.paddleY - fromPaddleY) * paddleAlpha;
 
   if (ppIsLeftSide) {
-    // I am host/left — I control playerPaddle, remote controls aiPaddle (right)
-    // Override AI paddle with interpolated remote value
     aiPaddle.y = ppRemote.paddleYCurrent;
   } else {
-    // I am guest/right — I control aiPaddle, remote (host) controls playerPaddle and ball
     playerPaddle.y = ppRemote.paddleYCurrent;
-    ball.x = ppRemote.ballXCurrent;
-    ball.y = ppRemote.ballYCurrent;
+    // мяч считается локально — не трогаем
   }
 };
 

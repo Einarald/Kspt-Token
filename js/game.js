@@ -9957,9 +9957,37 @@ function _adminApplyEffects(effects, durationMs) {
   if (effects.yinyang) {
     const strength = sMap[effects.yinyang] || 0.65;
     _adminEffectParticles.push({ t:'yinyang', strength, phase:0 });
-    // Apply grayscale to body
     document.body.style.filter = `grayscale(${Math.round(strength * 100)}%)`;
     window._adminYinYangActive = true;
+  }
+  if (effects.heatwave) {
+    const spread = effects.heatwave === 'weak' ? '6px' : effects.heatwave === 'strong' ? '20px' : '12px';
+    const speed  = effects.heatwave === 'weak' ? '2.5s' : effects.heatwave === 'strong' ? '0.7s' : '1.3s';
+    if (!document.getElementById('_adminFireStyle')) {
+      const style = document.createElement('style');
+      style.id = '_adminFireStyle';
+      style.textContent = `
+        @keyframes _adminFireGlow {
+          0%,100% { box-shadow: 0 0 4px 2px #ff4400, 0 0 ${spread} 4px #ff2200; filter: brightness(1); }
+          50%      { box-shadow: 0 0 ${spread} 6px #ffaa00, 0 0 30px 8px #ff5500; filter: brightness(1.18); }
+        }
+        @keyframes _adminFireCoin {
+          0%,100% { filter: drop-shadow(0 0 4px #ff6600) drop-shadow(0 0 8px #ff2200); }
+          50%      { filter: drop-shadow(0 0 14px #ffcc00) drop-shadow(0 0 24px #ff4400) brightness(1.25); }
+        }
+        ._adminFire     { animation: _adminFireGlow ${speed} ease-in-out infinite !important; }
+        ._adminFireCoin { animation: _adminFireCoin ${speed} ease-in-out infinite !important; }
+      `;
+      document.head.appendChild(style);
+    }
+    document.querySelectorAll('.nav-item').forEach(el => el.classList.add('_adminFire'));
+    const _fc = document.getElementById('coin');
+    if (_fc) _fc.classList.add('_adminFireCoin');
+    window._adminFireActive = true;
+  }
+  if (effects.vortex) {
+    const speed = effects.vortex === 'weak' ? 0.003 : effects.vortex === 'strong' ? 0.012 : 0.006;
+    _adminEffectParticles.push({ t:'vortex', speed, angle:0 });
   }
 
   function draw() {
@@ -10036,6 +10064,29 @@ function _adminApplyEffects(effects, durationMs) {
             setTimeout(() => { app.style.transform = ''; }, 80);
           }
           break;
+        case 'heatwave':
+          // CSS-based — nothing to draw on canvas
+          break;
+        case 'vortex':
+          p.angle += p.speed;
+          // Spinning translucent arcs around center
+          for (let i = 0; i < 6; i++) {
+            const a = p.angle + (Math.PI * 2 / 6) * i;
+            const r = Math.min(W, H) * 0.38;
+            ctx.save();
+            ctx.globalAlpha = 0.09;
+            ctx.strokeStyle = `hsl(${Math.round((a / (Math.PI * 2)) * 360 + p.angle * 50) % 360},80%,65%)`;
+            ctx.lineWidth = 18;
+            ctx.beginPath();
+            ctx.arc(W / 2, H / 2, r * (0.5 + 0.5 * ((i % 3) / 3)), a, a + Math.PI * 0.6);
+            ctx.stroke();
+            ctx.restore();
+          }
+          // Slow rotation of entire canvas
+          const app2 = document.querySelector('.app') || document.body;
+          const deg = Math.sin(p.angle) * (p.speed > 0.009 ? 3 : p.speed > 0.005 ? 1.5 : 0.6);
+          app2.style.transform = `rotate(${deg}deg)`;
+          break;
         case 'yinyang':
           p.phase += 0.02;
           // Animated b&w blobs on canvas
@@ -10073,11 +10124,22 @@ function _adminClearEffects() {
   // Clear beat transform
   const app = document.querySelector('.app') || document.body;
   app.style.transform = '';
+// Clear fire effect
+  if (window._adminFireActive) {
+    document.querySelectorAll('._adminFire').forEach(el => el.classList.remove('_adminFire'));
+    document.querySelectorAll('._adminFireCoin').forEach(el => el.classList.remove('_adminFireCoin'));
+    const _fs = document.getElementById('_adminFireStyle');
+    if (_fs) _fs.remove();
+    window._adminFireActive = false;
+  }
   // Clear yinyang grayscale
   if (window._adminYinYangActive) {
     document.body.style.filter = '';
     window._adminYinYangActive = false;
   }
+  // Clear vortex rotation
+  const _vortexApp = document.querySelector('.app') || document.body;
+  _vortexApp.style.transform = '';
 }
 
 /* ---- UI Chaos ---- */

@@ -110,8 +110,9 @@ canvas{background:#1a2a1a;border:2px solid var(--accent);border-radius:10px;disp
 <div class="game-over" id="winScreen" style="border-color:gold;display:none;">
   <h2 style="color:gold;font-size:22px;">🏆 You Win MAX!</h2>
   <div style="color:#fff;font-size:13px;margin-bottom:10px;">You conquered the entire map!</div>
+  <canvas id="winMapCanvas" width="240" height="240" style="border-radius:8px;border:2px solid gold;display:block;margin:10px auto;"></canvas>
+  <div style="color:gold;font-size:32px;font-weight:bold;margin:8px 0;">🏆 WIN!</div>
   <div class="earned">+<span id="winKSPT">0.00</span> KSPT</div>
-  <div class="earned">+<span id="winEK">3</span> EK</div>
   <button id="winPlayAgainBtn" style="background:#00e676;margin-bottom:10px;width:100%;padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:15px;">Play Again</button>
   <button id="winExitBtn" style="background:#ff4081;width:100%;padding:12px;border:none;border-radius:8px;font-weight:bold;cursor:pointer;font-size:15px;">Exit to Menu</button>
 </div>
@@ -1411,12 +1412,25 @@ function chkTerReward(){
 function showWin(){
   if(!G.running)return; G.running=false;
   snd('ek'); vib([100,50,100,50,300]);
-  const winR=offlinePct(20); G.kspt+=winR; awardKSPT(winR,0,0);
-  const winEK=3;
-  for(let i=0;i<winEK;i++) awardEK(1,0,0);
-  document.getElementById('winKSPT').textContent=(G.kspt).toFixed(2);
-  document.getElementById('winEK').textContent=winEK;
+  const winR=Math.round((window.__kspt_hourly||0)*0.10*100)/100;
+  G.kspt+=winR; awardKSPT(winR,0,0);
+  document.getElementById('winKSPT').textContent=winR.toFixed(2);
   document.getElementById('winScreen').style.display='block';
+  (function(){
+    const mc=document.getElementById('winMapCanvas');
+    if(!mc)return;
+    const mctx=mc.getContext('2d');
+    const W=240,H=240,sx=W/SZ,sy=H/SZ;
+    mctx.fillStyle='#0a0a0a';mctx.fillRect(0,0,W,H);
+    for(let gy=0;gy<SZ;gy++)for(let gx=0;gx<SZ;gx++){
+      if(ownerMap[mi(gx,gy)]<0)continue;
+      const packed=_cellColor[mi(gx,gy)];
+      const r=(packed>>16)&0xff,g2=(packed>>8)&0xff,b=packed&0xff;
+      mctx.fillStyle=`rgb(${r},${g2},${b})`;
+      mctx.fillRect(gx*sx,gy*sy,sx+0.5,sy+0.5);
+    }
+    mctx.strokeStyle='rgba(255,215,0,0.8)';mctx.lineWidth=2;mctx.strokeRect(1,1,W-2,H-2);
+  })();
 }
 
 /* ── GAME OVER ──────────────────────────────────────── */

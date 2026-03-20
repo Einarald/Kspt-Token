@@ -361,14 +361,39 @@ window.addEventListener('message', (event) => {
     </div>
 
     <!-- Ping-Pong -->
-    <div class="game-item" onclick="startGame('pingpong')">
-      <img src="pong.png" class="game-icon">
-      <div class="game-info">
-        <div class="game-title">Ping-Pong</div>
-        <div class="game-desc">Defend your goal, score points, earn KSPT!</div>
-      </div>
-      <div class="game-ticket">1 ticket</div>
-    </div>
+    <div class="game-item" onclick="startGame('pingpong')" style="position:relative;margin-bottom:12px;">
+  
+  <img src="pong.png" class="game-icon">
+  
+  <div class="game-info">
+    <div class="game-title">Ping-Pong</div>
+    <div class="game-desc">Defend your goal, score points, earn KSPT!</div>
+  </div>
+  
+  <div class="game-ticket">1 ticket</div>
+
+  <button onclick="event.stopPropagation();startPingPongOnline()"
+    style="
+      position:absolute;
+      top:6px;
+      right:6px;
+      width:28px;
+      height:28px;
+      border-radius:50%;
+      border:1px solid rgba(0,229,255,0.6);
+      background:rgba(0,188,212,0.15);
+      color:#00e5ff;
+      font-size:14px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:0;
+    ">
+    🌐
+  </button>
+
+</div>
 
     <!-- BlocksFast -->
     <div class="game-item" onclick="startGame('blocksfast')">

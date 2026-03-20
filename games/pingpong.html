@@ -201,8 +201,42 @@ html, body {
             font-size: 24px;
             margin: 15px 0;
         }
+    /* ===== ONLINE LOBBY ===== */
+#ppOnlineLobby { display:none; position:fixed; top:0; left:0; width:100%; height:100%; background:rgba(0,0,0,0.97); z-index:200; overflow-y:auto; padding:20px; box-sizing:border-box; }
+.pp-lobby-title { color:#00e676; font-size:22px; font-weight:bold; text-align:center; margin-bottom:16px; }
+.pp-lobby-btn { width:100%; padding:13px; border:none; border-radius:12px; font-weight:bold; font-size:15px; cursor:pointer; margin-bottom:10px; }
+.pp-lobby-btn-create { background:linear-gradient(135deg,#00e676,#00c853); color:#000; }
+.pp-lobby-btn-back { background:rgba(255,255,255,0.1); color:#fff; border:1px solid #444; }
+#ppRoomNameInput { width:100%; padding:11px 14px; border-radius:10px; border:1px solid #00bcd4; background:#1a1a1a; color:#fff; font-size:15px; margin-bottom:10px; box-sizing:border-box; }
+.pp-score-select { width:100%; padding:10px 14px; border-radius:10px; border:1px solid #00bcd4; background:#1a1a1a; color:#fff; font-size:15px; margin-bottom:10px; box-sizing:border-box; }
+.pp-room-card { background:#111; border:1px solid #333; border-radius:12px; padding:12px 14px; margin-bottom:10px; display:flex; justify-content:space-between; align-items:center; }
+.pp-room-card-info { font-size:14px; }
+.pp-room-card-name { color:#00e676; font-weight:bold; font-size:15px; }
+.pp-room-card-count { color:#aaa; font-size:12px; margin-top:3px; }
+.pp-room-join-btn { background:#00bcd4; color:#000; border:none; border-radius:8px; padding:7px 14px; font-weight:bold; cursor:pointer; font-size:13px; }
+#ppWaitingRoom { display:none; }
+.pp-player-slot { display:flex; align-items:center; gap:10px; padding:9px 12px; background:#1a1a1a; border-radius:10px; margin-bottom:8px; border:1px solid #2a2a2a; }
+.pp-player-slot-name { font-size:13px; font-weight:bold; color:#fff; }
+.pp-player-slot-you { color:#00e676; font-size:11px; }
+#ppStartOnlineBtn { background:linear-gradient(135deg,#00e676,#00c853); color:#000; border:none; border-radius:12px; padding:14px; width:100%; font-size:16px; font-weight:bold; cursor:pointer; display:none; margin-top:12px; }
     </style>
 </head>
+<!-- Firebase for online mode -->
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.0/firebase-database-compat.js"></script>
+<script>
+  const _ppFbConfig = {
+    apiKey: "AIzaSyCvvNiYR_bD7S8xReVZz9wwaP2tJwYya9k",
+    authDomain: "crypto-exchange-35c73.firebaseapp.com",
+    databaseURL: "https://crypto-exchange-35c73-default-rtdb.europe-west1.firebasedatabase.app",
+    projectId: "crypto-exchange-35c73",
+    storageBucket: "crypto-exchange-35c73.firebasestorage.app",
+    messagingSenderId: "797502229447",
+    appId: "1:797502229447:web:4c01e79846d26a67b027e2"
+  };
+  if (!firebase.apps.length) firebase.initializeApp(_ppFbConfig);
+  window._ppDB = firebase.database();
+</script>
 <body>
     <div class="game-container">
         <div class="game-header">
@@ -546,6 +580,12 @@ document.addEventListener('keyup', (e)=>{
 }
 
         function updatePaddles(frameScale = 1) {
+            // In online mode as guest (right side) — joystick controls AI paddle
+            if (window.__ppOnlineMode && !window.__ppIsLeftSide) {
+                aiPaddle.y += joystickDirection * aiPaddle.speed * gameSpeed * frameScale;
+                if (aiPaddle.y < 0) aiPaddle.y = 0;
+                if (aiPaddle.y > canvas.height - aiPaddle.height) aiPaddle.y = canvas.height - aiPaddle.height;
+            } else {
             // Update player paddle based on joystick
             playerPaddle.y += joystickDirection * playerPaddle.speed * gameSpeed * frameScale;
             
@@ -555,19 +595,22 @@ document.addEventListener('keyup', (e)=>{
                 playerPaddle.y = canvas.height - playerPaddle.height;
             }
             
-            // AI paddle follows ball
-            const aiPaddleCenter = aiPaddle.y + aiPaddle.height / 2;
-            if (aiPaddleCenter < ball.y - 10) {
-    aiPaddle.y += aiPaddle.speed * gameSpeed * frameScale;
-} else if (aiPaddleCenter > ball.y + 10) {
-    aiPaddle.y -= aiPaddle.speed * gameSpeed * frameScale;
-}
+            // AI paddle follows ball (skip in online mode — remote player controls it)
+            if (!window.__ppOnlineMode) {
+                const aiPaddleCenter = aiPaddle.y + aiPaddle.height / 2;
+                if (aiPaddleCenter < ball.y - 10) {
+                    aiPaddle.y += aiPaddle.speed * gameSpeed * frameScale;
+                } else if (aiPaddleCenter > ball.y + 10) {
+                    aiPaddle.y -= aiPaddle.speed * gameSpeed * frameScale;
+                }
+            }
             
-            // Keep AI paddle in bounds
+            // Keep AI paddle in bounds (solo mode)
             if (aiPaddle.y < 0) aiPaddle.y = 0;
             if (aiPaddle.y > canvas.height - aiPaddle.height) {
                 aiPaddle.y = canvas.height - aiPaddle.height;
             }
+            } // end else (solo mode)
         }
    
         function spawnFloatingText(text, x, y, color = '#00e676') {
@@ -618,14 +661,15 @@ if (ball.y + ball.radius > canvas.height) {
                 // Make sure ball goes to the right
                 ball.x = playerPaddle.x + playerPaddle.width + ball.radius;
                 
-                // Award KSPT for hitting the ball (0.8% от offline income)
-                const reward = safeGetOfflinePercent(0.8);
+                // Award KSPT for hitting the ball (0.8% offline income; 30% less online)
+                const _hitMult = window.__ppOnlineMode ? 0.7 : 1.0;
+                const reward = safeGetOfflinePercent(0.8 * _hitMult);
                 earnedKSPT += reward;
                 spawnFloatingText(`+${reward.toFixed(2)}`, canvas.width / 2, canvas.height / 2, '#00e5ff');
                 safeAwardGameReward(reward, ball.x, ball.y);
                 
-                // При попадании мяча по ракетке игрока — шанс 1.3% +1 EK
-                if (Math.random() < 0.013) { // 1.3%
+                // EK disabled in online mode
+                if (!window.__ppOnlineMode && Math.random() < 0.013) { // 1.3%
                   sessionEK++;
                   safeAwardGameEK(1, ball.x, ball.y);
                   spawnFloatingText('+1 EK', ball.x - 10, ball.y - 10, '#ffd54f');
@@ -665,7 +709,8 @@ if (ball.y + ball.radius > canvas.height) {
                 playSound('ai_goal');
                 gameVibrate([100, 50, 100]);
                 
-                if (aiScore >= 5) {
+                const _ppWin = window.__ppOnlineWinScore || 5;
+                if (aiScore >= _ppWin) {
                     endGame();
                 } else {
                     resetBall();
@@ -675,15 +720,17 @@ if (ball.y + ball.radius > canvas.height) {
                 playerScore++;
                 playerScoreEl.textContent = playerScore;
                 
-                // Award KSPT for scoring
-                const reward = safeGetOfflinePercent(5.0);
+                // Award KSPT for scoring (30% less in online mode)
+                const _ppScoreMult = window.__ppOnlineMode ? 0.7 : 1.0;
+                const reward = safeGetOfflinePercent(5.0 * _ppScoreMult);
                 earnedKSPT += reward;
                 spawnFloatingText(`+${reward.toFixed(2)}`, canvas.width / 2, canvas.height / 2, '#00e5ff');
                 safeAwardGameReward(reward, ball.x, ball.y);
                 playSound('player_goal');
                 gameVibrate([200, 100, 200]);
                 
-                if (playerScore >= 100) {
+                const _ppWin2 = window.__ppOnlineWinScore || 100;
+                if (playerScore >= _ppWin2) {
                     endGame();
                 } else {
                     resetBall();
@@ -712,6 +759,17 @@ if (ball.y + ball.radius > canvas.height) {
             
             ctx.fillStyle = '#ff4081';
             ctx.fillRect(aiPaddle.x, aiPaddle.y, aiPaddle.width, aiPaddle.height);
+
+            // Online mode labels
+            if (window.__ppOnlineMode) {
+                ctx.font = 'bold 10px Arial';
+                ctx.fillStyle = '#00bcd4';
+                ctx.textAlign = 'left';
+                ctx.fillText(window.__ppIsLeftSide ? 'You' : 'Opponent', playerPaddle.x + 12, playerPaddle.y - 4);
+                ctx.fillStyle = '#ff4081';
+                ctx.textAlign = 'right';
+                ctx.fillText(window.__ppIsLeftSide ? 'Opponent' : 'You', aiPaddle.x - 2, aiPaddle.y - 4);
+            }
             
             // Draw ball
             ctx.fillStyle = ball.color;
@@ -804,8 +862,13 @@ function gameLoop(ts) {
     const frameScale = dt / 16.6667; // база 60 FPS
 
     if (!gamePaused && gameRunning) {
+        // Online interpolation tick (overrides AI paddle / ball for guest)
+        if (window.ppInterpolateTick) ppInterpolateTick();
         updatePaddles(frameScale);
-        updateBall(frameScale);
+        // In online mode as guest — ball is driven by host, skip local physics
+        if (!window.__ppOnlineMode || window.__ppIsLeftSide) {
+            updateBall(frameScale);
+        }
         draw();
     }
 
@@ -912,14 +975,19 @@ function gameVibrate(pattern) {
           console.log('Reward awarded (local):', isNaN(r) ? reward : r.toFixed(2), 'KSPT at', x, y);
         };
 
-        // Start the game
-        initGame();
+        // Start the game — defer so online scripts load first
+        window.__ppStartMode = new URLSearchParams(location.search).get('mode');
+        if (window.__ppStartMode !== 'online') {
+            initGame();
+        }
+        // online mode: ppOpenLobby called at bottom of page after all scripts
 
-        // Handle visibility change (pause when tab not visible)
+        // Handle visibility change — only pause if running inside iframe
         document.addEventListener('visibilitychange', function() {
-            if (document.hidden) {
+            if (document.hidden && window.self === window.top) {
                 gamePaused = true;
-                document.getElementById('pauseBtn').textContent = 'Resume';
+                const pb = document.getElementById('pauseBtn');
+                if (pb) pb.textContent = 'Resume';
             }
         });
     </script>
@@ -1013,5 +1081,441 @@ if (joystick) {
 })();
 </script>
 
+<!-- ===== PING PONG ONLINE LOBBY ===== -->
+<div id="ppOnlineLobby">
+  <div class="pp-lobby-title">🏓 Online Ping Pong</div>
+
+  <div id="ppLobbyMain">
+    <input id="ppRoomNameInput" type="text" placeholder="Room name (e.g. Fast Pong)" maxlength="30">
+    <div style="color:#aaa;font-size:13px;margin-bottom:6px;">Win score (host chooses):</div>
+    <select id="ppWinScoreSelect" class="pp-score-select">
+      <option value="1">First to 1</option>
+      <option value="3" selected>First to 3</option>
+      <option value="5">First to 5</option>
+      <option value="10">First to 10</option>
+      <option value="15">First to 15</option>
+      <option value="20">First to 20</option>
+    </select>
+    <button class="pp-lobby-btn pp-lobby-btn-create" id="ppCreateRoomBtn">➕ Create Room</button>
+    <div style="color:#aaa;font-size:13px;margin:10px 0 6px;">Active rooms:</div>
+    <div id="ppRoomList"><div style="color:#555;text-align:center;padding:20px;">Loading...</div></div>
+    <button class="pp-lobby-btn pp-lobby-btn-back" id="ppLobbyBackBtn">← Back</button>
+  </div>
+
+  <div id="ppWaitingRoom">
+    <div style="color:#aaa;font-size:13px;margin-bottom:6px;">Room: <span id="ppWaitingRoomName" style="color:#00e676;font-weight:bold;"></span></div>
+    <div style="color:#aaa;font-size:12px;margin-bottom:4px;">Win score: <span id="ppWaitingWinScore" style="color:#00bcd4;font-weight:bold;"></span></div>
+    <div style="color:#aaa;font-size:12px;margin-bottom:12px;">Players (<span id="ppWaitingCount">1</span>/2):</div>
+    <div id="ppPlayerSlotList"></div>
+    <div id="ppWaitingStatusMsg" style="color:#aaa;font-size:13px;text-align:center;margin-top:10px;">Waiting for host to start...</div>
+    <button id="ppStartOnlineBtn">🏓 START GAME</button>
+    <button class="pp-lobby-btn pp-lobby-btn-back" id="ppLeaveRoomBtn" style="margin-top:10px;">← Leave Room</button>
+  </div>
+</div>
+
+<script>
+// ================================================================
+// PING PONG ONLINE SYSTEM
+// ================================================================
+
+(function() {
+
+// ---- Player identity ----
+function ppGetUid() {
+  return String(window.Telegram?.WebApp?.initDataUnsafe?.user?.id || localStorage.getItem('_kspt_uid') || 'pp_' + Date.now());
+}
+function ppGetMeta() {
+  const u = window.__tgUser || window.Telegram?.WebApp?.initDataUnsafe?.user;
+  let fallbackName = 'Player';
+  try {
+    const raw = localStorage.getItem('kspt_data') || localStorage.getItem('d');
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && (parsed.name || parsed.username)) fallbackName = parsed.name || parsed.username;
+    }
+  } catch(e) {}
+  return {
+    name: u ? (u.first_name + (u.last_name ? ' ' + u.last_name : '')) : fallbackName,
+    uid: ppGetUid()
+  };
+}
+
+// ---- State ----
+let ppOnlineMode = false;
+let ppMyRoomId = null;
+let ppMyPlayerId = null;
+let ppMyPlayerName = 'Player';
+let ppIsHost = false;
+let ppIsLeftSide = false; // host=left, guest=right
+let ppWinScore = 3;
+let ppRoomListener = null;
+let ppRoomsListener = null;
+let ppSendInterval = null;
+let ppSelfLeaving = false;
+
+// Remote player interpolation
+let ppRemote = {
+  paddleY: 180,       // target
+  paddleYPrev: 180,   // previous
+  paddleYCurrent: 180,// interpolated (shown)
+  ballX: 180, ballY: 180,
+  ballXPrev: 180, ballYPrev: 180,
+  ballXCurrent: 180, ballYCurrent: 180,
+  lastUpdateTime: 0
+};
+
+// ---- Init ----
+const ppMeta = ppGetMeta();
+ppMyPlayerId = ppMeta.uid;
+ppMyPlayerName = ppMeta.name;
+
+// ---- Escape HTML helper ----
+function ppEsc(s) {
+  return String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+
+// ---- Open / Close lobby ----
+function ppOpenLobby() {
+  document.getElementById('ppOnlineLobby').style.display = 'block';
+  document.getElementById('ppLobbyMain').style.display = 'block';
+  document.getElementById('ppWaitingRoom').style.display = 'none';
+  ppLoadRoomList();
+}
+
+function ppCloseLobby() {
+  document.getElementById('ppOnlineLobby').style.display = 'none';
+  if (ppRoomsListener) {
+    window._ppDB.ref('pp_rooms').off('value', ppRoomsListener);
+    ppRoomsListener = null;
+  }
+}
+
+function ppCloseLobbyAndCancel() {
+  ppCloseLobby();
+  ppCleanup();
+  safeExitGame();
+}
+
+// ---- Room list ----
+function ppLoadRoomList() {
+  const listEl = document.getElementById('ppRoomList');
+  if (ppRoomsListener) window._ppDB.ref('pp_rooms').off('value', ppRoomsListener);
+  ppRoomsListener = function(snap) {
+    const rooms = snap.val();
+    if (!rooms) {
+      listEl.innerHTML = '<div style="color:#555;text-align:center;padding:20px;">No rooms yet. Create one!</div>';
+      return;
+    }
+    listEl.innerHTML = '';
+    Object.entries(rooms).forEach(([rid, room]) => {
+      if (!room || !room.players) return;
+      const count = Object.keys(room.players).length;
+      if (count >= 2 || room.started) return;
+      const card = document.createElement('div');
+      card.className = 'pp-room-card';
+      card.innerHTML = `<div class="pp-room-card-info">
+        <div class="pp-room-card-name">${ppEsc(room.name || 'Room')}</div>
+        <div class="pp-room-card-count">1/2 players • Host: ${ppEsc(room.hostName || '?')} • First to ${room.winScore || 3}</div>
+      </div>
+      <button class="pp-room-join-btn" data-rid="${rid}">Join</button>`;
+      card.querySelector('.pp-room-join-btn').addEventListener('click', () => ppJoinRoom(rid));
+      listEl.appendChild(card);
+    });
+    if (!listEl.children.length) {
+      listEl.innerHTML = '<div style="color:#555;text-align:center;padding:20px;">No open rooms. Create one!</div>';
+    }
+  };
+  window._ppDB.ref('pp_rooms').on('value', ppRoomsListener);
+}
+
+// ---- Create room ----
+function ppCreateRoom() {
+  const name = document.getElementById('ppRoomNameInput').value.trim() || 'Pong Room';
+  ppWinScore = parseInt(document.getElementById('ppWinScoreSelect').value) || 3;
+  const rid = 'pp_room_' + Date.now() + '_' + ppMyPlayerId;
+  ppMyRoomId = rid;
+  ppIsHost = true;
+  ppIsLeftSide = true;
+  const myEntry = { uid: ppMyPlayerId, name: ppMyPlayerName, joinedAt: Date.now(), side: 'left' };
+  const roomData = {
+    name: name,
+    hostUid: ppMyPlayerId,
+    hostName: ppMyPlayerName,
+    winScore: ppWinScore,
+    started: false,
+    createdAt: Date.now(),
+    players: { [ppMyPlayerId]: myEntry }
+  };
+  window._ppDB.ref('pp_rooms/' + rid).set(roomData).then(() => {
+    window._ppDB.ref('pp_rooms/' + rid).onDisconnect().remove();
+    ppOpenWaitingRoom(rid);
+  });
+}
+
+// ---- Join room ----
+function ppJoinRoom(rid) {
+  ppMyRoomId = rid;
+  ppIsHost = false;
+  ppIsLeftSide = false;
+  const myEntry = { uid: ppMyPlayerId, name: ppMyPlayerName, joinedAt: Date.now(), side: 'right' };
+  window._ppDB.ref('pp_rooms/' + rid + '/players/' + ppMyPlayerId).set(myEntry);
+  window._ppDB.ref('pp_rooms/' + rid + '/players/' + ppMyPlayerId).onDisconnect().remove();
+  ppOpenWaitingRoom(rid);
+}
+
+// ---- Waiting room ----
+function ppOpenWaitingRoom(rid) {
+  document.getElementById('ppLobbyMain').style.display = 'none';
+  document.getElementById('ppWaitingRoom').style.display = 'block';
+  if (ppRoomsListener) { window._ppDB.ref('pp_rooms').off('value', ppRoomsListener); ppRoomsListener = null; }
+  if (ppRoomListener) window._ppDB.ref('pp_rooms/' + rid).off('value', ppRoomListener);
+
+  ppRoomListener = function(snap) {
+    const room = snap.val();
+    if (!room) { ppLeaveRoom(); return; }
+    const players = room.players ? Object.values(room.players) : [];
+    document.getElementById('ppWaitingRoomName').textContent = room.name || 'Room';
+    document.getElementById('ppWaitingWinScore').textContent = room.winScore || 3;
+    document.getElementById('ppWaitingCount').textContent = players.length;
+
+    // Render player slots
+    const slotList = document.getElementById('ppPlayerSlotList');
+    slotList.innerHTML = '';
+    players.forEach(p => {
+      const slot = document.createElement('div');
+      slot.className = 'pp-player-slot';
+      const isMe = p.uid === ppMyPlayerId;
+      const side = p.side === 'left' ? '🟦 Left' : '🟥 Right';
+      slot.innerHTML = `<span style="font-size:18px;">${p.side === 'left' ? '🟦' : '🟥'}</span>
+        <div>
+          <div class="pp-player-slot-name">${ppEsc(p.name || 'Player')}</div>
+          ${isMe ? '<div class="pp-player-slot-you">← You</div>' : ''}
+        </div>
+        <div style="margin-left:auto;color:#aaa;font-size:12px;">${p.side === 'left' ? 'Left paddle' : 'Right paddle'}</div>`;
+      slotList.appendChild(slot);
+    });
+
+    // Show start button only for host
+    const startBtn = document.getElementById('ppStartOnlineBtn');
+    startBtn.style.display = ppIsHost ? 'block' : 'none';
+
+    const statusMsg = document.getElementById('ppWaitingStatusMsg');
+    if (players.length < 2) {
+      statusMsg.style.display = 'block';
+      statusMsg.style.color = '#aaa';
+      statusMsg.textContent = ppIsHost ? 'Waiting for opponent...' : 'Waiting for host to start...';
+    } else {
+      statusMsg.style.display = ppIsHost ? 'none' : 'block';
+      statusMsg.textContent = 'Waiting for host to start...';
+    }
+
+    // Check if kicked
+    const stillIn = players.some(p2 => p2.uid === ppMyPlayerId);
+    if (!stillIn && !ppSelfLeaving) {
+      ppLeaveRoom(); ppCloseLobby();
+      alert('You have been removed from the room.');
+      safeExitGame();
+    }
+    ppSelfLeaving = false;
+
+    // Start when host pressed start
+    if (room.started && !ppOnlineMode) {
+      ppWinScore = room.winScore || 3;
+      ppStartOnlineGame(room);
+    }
+  };
+  window._ppDB.ref('pp_rooms/' + rid).on('value', ppRoomListener);
+}
+
+// ---- Leave room ----
+function ppLeaveRoom() {
+  if (!ppMyRoomId) return;
+  ppSelfLeaving = true;
+  window._ppDB.ref('pp_rooms/' + ppMyRoomId + '/players/' + ppMyPlayerId).remove();
+  if (ppIsHost) window._ppDB.ref('pp_rooms/' + ppMyRoomId).remove();
+  if (ppRoomListener) {
+    window._ppDB.ref('pp_rooms/' + ppMyRoomId).off('value', ppRoomListener);
+    ppRoomListener = null;
+  }
+  ppMyRoomId = null; ppIsHost = false;
+  document.getElementById('ppWaitingRoom').style.display = 'none';
+  document.getElementById('ppLobbyMain').style.display = 'block';
+  ppLoadRoomList();
+}
+
+// ---- Host presses Start ----
+function ppHostStart() {
+  if (!ppIsHost || !ppMyRoomId) return;
+  window._ppDB.ref('pp_rooms/' + ppMyRoomId + '/players').once('value', snap => {
+    const count = snap.val() ? Object.keys(snap.val()).length : 0;
+    if (count < 2) {
+      const msg = document.getElementById('ppWaitingStatusMsg');
+      msg.style.display = 'block';
+      msg.style.color = '#ff4081';
+      msg.textContent = '⚠️ Need 2 players to start!';
+      setTimeout(() => { msg.style.color = '#aaa'; msg.textContent = 'Waiting for opponent...'; }, 2500);
+      return;
+    }
+    // Consume ticket only now
+    safeConsumeTicket();
+    window._ppDB.ref('pp_rooms/' + ppMyRoomId).update({ started: true, startedAt: Date.now() });
+  });
+}
+
+// ---- Start online game (called on all clients) ----
+function ppStartOnlineGame(room) {
+  ppOnlineMode = true;
+  // Guest also consumes ticket
+  if (!ppIsHost) safeConsumeTicket();
+  ppCloseLobby();
+
+  // Determine win score
+  ppWinScore = room.winScore || 3;
+
+  // Hide normal buttons, show only Exit
+  document.querySelector('.game-buttons').innerHTML =
+    '<button id="ppOnlineExitBtn" style="padding:12px 22px;background:linear-gradient(135deg,#ff4081,#f50057);color:#fff;border:none;border-radius:12px;font-weight:bold;font-size:15px;cursor:pointer;">Exit</button>';
+  document.getElementById('ppOnlineExitBtn').addEventListener('click', () => { ppCleanup(); safeExitGame(); });
+
+  // Remap controls: host=left paddle (player), guest=right paddle (was AI)
+  // Host controls playerPaddle (left), guest controls aiPaddle (right)
+  // The game already runs — we just need to override AI and sync
+
+  // Show countdown
+  const overlay = document.createElement('div');
+  overlay.id = 'ppCountdown';
+  overlay.style.cssText = 'position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);font-size:80px;font-weight:bold;color:#00e676;text-shadow:0 0 20px #000;z-index:300;pointer-events:none;';
+  document.body.appendChild(overlay);
+
+  let cd = 3;
+  overlay.textContent = cd;
+  const cdInterval = setInterval(() => {
+    cd--;
+    if (cd > 0) { overlay.textContent = cd; }
+    else if (cd === 0) { overlay.textContent = 'GO!'; }
+    else { clearInterval(cdInterval); overlay.remove(); }
+  }, 1000);
+
+  // Start send loop (5 times/sec = 200ms)
+  ppSendInterval = setInterval(ppSendState, 200);
+
+  // Listen to remote state
+  window._ppDB.ref('pp_states/' + ppMyRoomId).on('child_changed', snap => ppApplyRemote(snap.key, snap.val()));
+  window._ppDB.ref('pp_states/' + ppMyRoomId).on('child_added',   snap => ppApplyRemote(snap.key, snap.val()));
+
+  // Override game end condition to use ppWinScore
+  window.__ppOnlineWinScore = ppWinScore;
+  window.__ppOnlineMode = true;
+  window.__ppIsLeftSide = ppIsLeftSide;
+
+  // Start game loop (was never running in online mode)
+  window.__kspt_gameOverHandled = false;
+  gameRunning = true;
+  gamePaused = false;
+  if (animationId) cancelAnimationFrame(animationId);
+  animationId = requestAnimationFrame(gameLoop);
+}
+
+// ---- Send my state ----
+function ppSendState() {
+  if (!ppOnlineMode || !ppMyRoomId) return;
+  const state = {
+    t: Date.now(),
+    name: ppMyPlayerName
+  };
+  // Host sends ball + left paddle; guest sends right paddle only
+  if (ppIsLeftSide) {
+    state.ballX = Math.round(ball.x * 10) / 10;
+    state.ballY = Math.round(ball.y * 10) / 10;
+    state.paddleY = Math.round(playerPaddle.y * 10) / 10;
+  } else {
+    state.paddleY = Math.round(aiPaddle.y * 10) / 10;
+  }
+  window._ppDB.ref('pp_states/' + ppMyRoomId + '/' + ppMyPlayerId).set(state);
+}
+
+// ---- Apply remote state with interpolation ----
+function ppApplyRemote(uid, data) {
+  if (!data || uid === ppMyPlayerId) return;
+  const now = Date.now();
+  // Save previous for interpolation
+  ppRemote.paddleYPrev = ppRemote.paddleYCurrent;
+  ppRemote.lastUpdateTime = now;
+
+  if (data.paddleY !== undefined) ppRemote.paddleY = data.paddleY;
+  // Host sends ball position, guest receives it
+  if (data.ballX !== undefined) { ppRemote.ballXPrev = ppRemote.ballXCurrent; ppRemote.ballX = data.ballX; }
+  if (data.ballY !== undefined) { ppRemote.ballYPrev = ppRemote.ballYCurrent; ppRemote.ballY = data.ballY; }
+}
+
+// ---- Interpolation tick (called from game loop) ----
+window.ppInterpolateTick = function() {
+  if (!ppOnlineMode) return;
+  const now = Date.now();
+  const interval = 200; // matches send interval
+  const elapsed = now - ppRemote.lastUpdateTime;
+  const alpha = Math.min(1.0, elapsed / interval);
+
+  // Interpolate remote paddle
+  ppRemote.paddleYCurrent = ppRemote.paddleYPrev + (ppRemote.paddleY - ppRemote.paddleYPrev) * alpha;
+  ppRemote.ballXCurrent   = ppRemote.ballXPrev   + (ppRemote.ballX   - ppRemote.ballXPrev)   * alpha;
+  ppRemote.ballYCurrent   = ppRemote.ballYPrev   + (ppRemote.ballY   - ppRemote.ballYPrev)   * alpha;
+
+  if (ppIsLeftSide) {
+    // I am host/left — I control playerPaddle, remote controls aiPaddle (right)
+    // Override AI paddle with interpolated remote value
+    aiPaddle.y = ppRemote.paddleYCurrent;
+  } else {
+    // I am guest/right — I control aiPaddle, remote (host) controls playerPaddle and ball
+    playerPaddle.y = ppRemote.paddleYCurrent;
+    ball.x = ppRemote.ballXCurrent;
+    ball.y = ppRemote.ballYCurrent;
+  }
+};
+
+// ---- Cleanup ----
+function ppCleanup() {
+  if (ppSendInterval) { clearInterval(ppSendInterval); ppSendInterval = null; }
+  if (ppMyRoomId) {
+    window._ppDB.ref('pp_states/' + ppMyRoomId).off();
+    window._ppDB.ref('pp_rooms/' + ppMyRoomId + '/players/' + ppMyPlayerId).remove();
+    if (ppIsHost) window._ppDB.ref('pp_rooms/' + ppMyRoomId).remove();
+    window._ppDB.ref('pp_states/' + ppMyRoomId + '/' + ppMyPlayerId).remove();
+  }
+  if (ppRoomListener) { window._ppDB.ref('pp_rooms/' + ppMyRoomId).off('value', ppRoomListener); ppRoomListener = null; }
+  ppOnlineMode = false; ppMyRoomId = null;
+  window.__ppOnlineMode = false;
+}
+
+// ---- Wire up lobby buttons ----
+const _ppOnlineBtn = document.getElementById('ppOnlineBtn');
+if (_ppOnlineBtn) _ppOnlineBtn.addEventListener('click', ppOpenLobby);
+document.getElementById('ppLobbyBackBtn').addEventListener('click', ppCloseLobbyAndCancel);
+document.getElementById('ppCreateRoomBtn').addEventListener('click', ppCreateRoom);
+document.getElementById('ppLeaveRoomBtn').addEventListener('click', () => { ppLeaveRoom(); });
+document.getElementById('ppStartOnlineBtn').addEventListener('click', ppHostStart);
+
+// Expose remote object so game loop can read it
+window._ppRemote = ppRemote;
+window._ppIsLeftSide = () => ppIsLeftSide;
+window.ppOpenLobby = ppOpenLobby;
+window.ppCloseLobby = ppCloseLobby;
+window.ppHostStart = ppHostStart;
+window.ppCleanup = ppCleanup;
+
+})();
+</script>
+
+<script>
+if (window.__ppStartMode === 'online') {
+    window.addEventListener('load', () => {
+        if (window.ppOpenLobby) {
+            window.ppOpenLobby();
+        } else {
+            console.error('ppOpenLobby not found');
+        }
+    });
+}
+</script>
 </body>
 </html>

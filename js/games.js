@@ -382,6 +382,34 @@ function confirmRaceMode(mode) {
 }
 // ===== END RACE MODE SELECTION =====
 
+function startPingPongOnline() {
+  if (gameTickets.current <= 0) {
+    showToast("Not enough tickets!");
+    return;
+  }
+  // Билет НЕ списываем — спишется внутри pingpong.html когда хост нажмёт START
+  currentGame = 'pingpong';
+  document.getElementById('games').classList.remove('active');
+  const gameContainer = document.getElementById('gameContainer');
+  gameContainer.style.display = 'block';
+  gameContainer.classList.add('active');
+  const balEl = document.getElementById('balanceGames');
+  if (balEl && typeof d !== 'undefined') balEl.textContent = `${d.tokens.toFixed(2)} KSPT  •  ${Number(d.ek||0)} EK`;
+  const container = document.getElementById('gameFrameContainer');
+  container.innerHTML = `<iframe class="game-frame" src="games/pingpong.html?mode=online" allow="autoplay"></iframe>`;
+  const iframe = container.querySelector('iframe');
+  iframe.addEventListener('load', () => {
+    try {
+      const hourly = (typeof getHourlyRate === 'function') ? getHourlyRate() : 0;
+      const tgUser = window.Telegram?.WebApp?.initDataUnsafe?.user || null;
+      iframe.contentWindow.postMessage({ type: 'kspt_init', hourly, tgUser }, '*');
+    } catch(e) {}
+    try { enableMobileGameMode(iframe); } catch(e) {}
+  });
+  gameActive = true;
+  startGameLoop();
+}
+
 async function startGame(gameType) {
   if (gameTickets.current <= 0) {
     showToast("Not enough tickets!");

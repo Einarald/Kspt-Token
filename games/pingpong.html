@@ -1378,7 +1378,6 @@ function ppStartOnlineGame(room) {
   document.getElementById('exitBtn').style.background = 'linear-gradient(135deg,#ff4081,#f50057)';
   document.getElementById('exitBtn').style.color = '#fff';
   document.getElementById('exitBtn').onclick = () => { ppCleanup(); safeExitGame(); };
-  document.getElementById('ppOnlineExitBtn').addEventListener('click', () => { ppCleanup(); safeExitGame(); });
 
   // Remap controls: host=left paddle (player), guest=right paddle (was AI)
   // Host controls playerPaddle (left), guest controls aiPaddle (right)

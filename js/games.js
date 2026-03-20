@@ -333,8 +333,10 @@ function openRaceModeModal() {
     return;
   }
   _raceModeCountdown = 15;
-  document.getElementById('raceModeTimer').textContent = 'Auto-starting with Bots in ' + _raceModeCountdown + 's...';
-  document.getElementById('raceModeModal').classList.add('active');
+  const _timerEl = document.getElementById('raceModeTimer');
+  if (_timerEl) _timerEl.textContent = 'Auto-starting with Bots in ' + _raceModeCountdown + 's...';
+  const _modal = document.getElementById('raceModeModal');
+  if (_modal) _modal.classList.add('active');
   _raceModeTimer = setInterval(() => {
     _raceModeCountdown--;
     const el = document.getElementById('raceModeTimer');
@@ -346,7 +348,8 @@ function openRaceModeModal() {
 }
 
 function closeRaceModeModal() {
-  document.getElementById('raceModeModal').classList.remove('active');
+  const modal = document.getElementById('raceModeModal');
+  if (modal) modal.classList.remove('active');
   if (_raceModeTimer) { clearInterval(_raceModeTimer); _raceModeTimer = null; }
 }
 

@@ -1373,8 +1373,11 @@ function ppStartOnlineGame(room) {
   ppWinScore = room.winScore || 3;
 
   // Hide normal buttons, show only Exit
-  document.querySelector('.game-buttons').innerHTML =
-    '<button id="ppOnlineExitBtn" style="padding:12px 22px;background:linear-gradient(135deg,#ff4081,#f50057);color:#fff;border:none;border-radius:12px;font-weight:bold;font-size:15px;cursor:pointer;">Exit</button>';
+  document.getElementById('pauseBtn').style.display = 'none';
+  document.getElementById('restartBtn').style.display = 'none';
+  document.getElementById('exitBtn').style.background = 'linear-gradient(135deg,#ff4081,#f50057)';
+  document.getElementById('exitBtn').style.color = '#fff';
+  document.getElementById('exitBtn').onclick = () => { ppCleanup(); safeExitGame(); };
   document.getElementById('ppOnlineExitBtn').addEventListener('click', () => { ppCleanup(); safeExitGame(); });
 
   // Remap controls: host=left paddle (player), guest=right paddle (was AI)
@@ -1411,9 +1414,10 @@ function ppStartOnlineGame(room) {
   // Start game loop (was never running in online mode)
   window.__kspt_gameOverHandled = false;
   gameRunning = true;
-  gamePaused = false;
+  gamePaused = true;
   if (animationId) cancelAnimationFrame(animationId);
   animationId = requestAnimationFrame(gameLoop);
+  setTimeout(() => { gamePaused = false; }, 3500);
 }
 
 // ---- Send my state ----
@@ -1442,10 +1446,18 @@ function ppApplyRemote(uid, data) {
   ppRemote.paddleYPrev = ppRemote.paddleYCurrent;
   ppRemote.lastUpdateTime = now;
 
-  if (data.paddleY !== undefined) ppRemote.paddleY = data.paddleY;
-  // Host sends ball position, guest receives it
-  if (data.ballX !== undefined) { ppRemote.ballXPrev = ppRemote.ballXCurrent; ppRemote.ballX = data.ballX; }
-  if (data.ballY !== undefined) { ppRemote.ballYPrev = ppRemote.ballYCurrent; ppRemote.ballY = data.ballY; }
+  if (data.paddleY !== undefined) {
+    ppRemote.paddleYPrev = (ppRemote.lastUpdateTime === 0) ? data.paddleY : (ppRemote.paddleYCurrent ?? data.paddleY);
+    ppRemote.paddleY = data.paddleY;
+  }
+  if (data.ballX !== undefined) {
+    ppRemote.ballXPrev = (ppRemote.lastUpdateTime === 0) ? data.ballX : (ppRemote.ballXCurrent ?? data.ballX);
+    ppRemote.ballX = data.ballX;
+  }
+  if (data.ballY !== undefined) {
+    ppRemote.ballYPrev = (ppRemote.lastUpdateTime === 0) ? data.ballY : (ppRemote.ballYCurrent ?? data.ballY);
+    ppRemote.ballY = data.ballY;
+  }
 }
 
 // ---- Interpolation tick (called from game loop) ----
@@ -1485,6 +1497,11 @@ function ppCleanup() {
   if (ppRoomListener) { window._ppDB.ref('pp_rooms/' + ppMyRoomId).off('value', ppRoomListener); ppRoomListener = null; }
   ppOnlineMode = false; ppMyRoomId = null;
   window.__ppOnlineMode = false;
+  document.getElementById('pauseBtn').style.display = '';
+  document.getElementById('restartBtn').style.display = '';
+  document.getElementById('exitBtn').style.background = '';
+  document.getElementById('exitBtn').style.color = '';
+  document.getElementById('exitBtn').onclick = null;
 }
 
 // ---- Wire up lobby buttons ----

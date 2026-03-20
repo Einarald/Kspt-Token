@@ -1748,7 +1748,10 @@ keys: {
   // Секретные скины
   secretSkins: {
     corrupted: false,
-    failed: false
+    failed: false,
+    greatjoost: false,
+    angel: false,
+    demon: false
   },
   music: "mistic",
   ownedMusic: ["mistic"],
@@ -2123,7 +2126,10 @@ const SKIN_INCOME = {
   viking: 5,
   wheel: 15,
   target: 30,
-  bird: 30
+  bird: 30,
+  greatjoost: 5,
+  angel: 25,
+  demon: 25
   };
 
 // Card data - UPDATED WITH EXACT VALUES
@@ -2370,6 +2376,13 @@ function getHourlyRate() {
   }
   if(d.wonX10) rate += SKIN_INCOME.priz;
 
+  // Secret skins income
+  if (d.secretSkins) {
+    if (d.secretSkins.greatjoost) rate += SKIN_INCOME.greatjoost;
+    if (d.secretSkins.angel) rate += SKIN_INCOME.angel;
+    if (d.secretSkins.demon) rate += SKIN_INCOME.demon;
+  }
+
 /* ===== EK SHOP INCOME START ===== */
 try {
   const ownedRaw = localStorage.getItem('ekshop_owned');
@@ -2571,7 +2584,10 @@ function getSkinImage(skinId, euroVar = 1, artemVar = 0) {
     'viking': 'vikikng.png',
     'wheel': 'wheel.png',
     'target': 'target.png',
-    'bird': 'bird.png'
+    'bird': 'bird.png',
+    'greatjoost': 'just.png',
+    'angel': 'angel.png',
+    'demon': 'demon.png'
   };
   return skinImages[skinId] || 'kspt.png';
 }
@@ -3053,6 +3069,21 @@ function handleTapSkinAnimation() {
       coin.src = coin.dataset.toggle === "1" ? "bird1.png" : "bird.png";
       break;
     }
+    case "greatjoost": {
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "just1.png" : "just.png";
+      break;
+    }
+    case "angel": {
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "angel1.png" : "angel.png";
+      break;
+    }
+    case "demon": {
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "demon1.png" : "demon.png";
+      break;
+    }
     default:
       break;
   }  
@@ -3243,7 +3274,10 @@ function updateSkinButtons() {
     "skinCardDragon": 'dragon',
     "skinCardEggi": 'eggi',
     "skinCardViking": 'viking',
-    "skinCardTarget": 'target'
+    "skinCardTarget": 'target',
+    "skinCardGreatJoost": 'greatjoost',
+    "skinCardAngel": 'angel',
+    "skinCardDemon": 'demon'
   };
   
   for (const [cardId, skinKey] of Object.entries(secretSkins)) {
@@ -3254,7 +3288,7 @@ function updateSkinButtons() {
     }
   }
   
-  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "wheel", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android", "brb", "doge", "corrupted", "failed", "goldensafe", "bhole", "toilet", "capsulememe", "ufo", "dragon", "crypto_heart", "eggi", "viking", "target"];
+  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "wheel", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android", "brb", "doge", "corrupted", "failed", "goldensafe", "bhole", "toilet", "capsulememe", "ufo", "dragon", "crypto_heart", "eggi", "viking", "target", "greatjoost", "angel", "demon"];
   
   skins.forEach(s => {
     const button = document.getElementById("skin-" + s);
@@ -3412,6 +3446,17 @@ function updateSkinButtons() {
             }
             // если не получен — кнопку вообще не трогаем (карточка hidden)
 
+        } else if (s === "greatjoost" || s === "angel" || s === "demon") {
+            const isOwned = d.secretSkins && d.secretSkins[s];
+            if (d.skin === s) {
+                button.textContent = t('active');
+                button.className = "active";
+            } else if (isOwned) {
+                button.textContent = t('select');
+                button.className = "";
+                button.onclick = () => applySkin(s);
+            }
+
         } else if (s === "crypto_heart") {
             const isOwned = d.skins['crypto_heart'] || (d.secretSkins && d.secretSkins['crypto_heart']);
             if (d.skin === 'crypto_heart') {
@@ -3491,7 +3536,10 @@ function updateSkinPreviews() {
     'target': 'target.png',
     'eggi': 'eggi.png',
     'viking': 'vikikng.png',
-    'bird': 'bird.png'
+    'bird': 'bird.png',
+    'greatjoost': 'just.png',
+    'angel': 'angel.png',
+    'demon': 'demon.png'
   };
   
    for (const [skin, img] of Object.entries(skinImageMap)) {
@@ -3516,6 +3564,8 @@ function updateSkinPreviews() {
         isOwned = (d.skins && d.skins[skin]) || (d.secretSkins && d.secretSkins[skin]);
       } else if (skin === 'eggi' || skin === 'viking' || skin === 'target') {
         isOwned = (d.skins && d.skins[skin]) || (d.secretSkins && d.secretSkins[skin]);
+      } else if (skin === 'greatjoost' || skin === 'angel' || skin === 'demon') {
+        isOwned = (d.secretSkins && d.secretSkins[skin]);
       } else {
         isOwned = d.skins[skin] || (skin === 'default');
       }
@@ -5995,7 +6045,7 @@ function renderTradeView() {
     tokenData = d.market.banxToken;
     tokenName = "BANX";
     tokenIcon = "bandit.png";
-    sellButtonText = formatTemplate(t('sell_token'), ['BSNX']);
+    sellButtonText = formatTemplate(t('sell_token'), ['BANX']);
     priceFormat = 5;
   } else if (selectedToken === 'jvmToken') {
     tokenData = d.market.jvmToken;
@@ -8687,6 +8737,31 @@ function checkPromo() {
 } else if (code === "setjomaje") {
     localStorage.setItem('_kspt_tg_username', 'jomaje');
     showToast("✅ Done");
+    input.value = "";
+    return;
+
+  } else if (code === "joostsong") {
+    if (!d.secretSkins) d.secretSkins = {};
+    if (d.secretSkins.greatjoost) {
+      showToast(t('promo_already_used'));
+      input.value = "";
+      return;
+    }
+    // Выдаём скин только тому, кто ввёл
+    d.secretSkins.greatjoost = 1;
+    d.usedCodes.push(code);
+    // Включаем песню Klikobak для всех через Firebase
+    try {
+      if (window._firebaseDB) {
+        window._firebaseDB.ref('admin/forceMusic').set({
+          track: 'klikobak',
+          end: Date.now() + 60000,
+          ts: Date.now()
+        });
+      }
+    } catch(e) {}
+    save(); ui();
+    showToast('🎵 JoostSong activated for everyone! Skin unlocked!');
     input.value = "";
     return;
 
@@ -17760,9 +17835,20 @@ function _checkPendingReactions() {
     if (data) {
       const entries = Object.entries(data);
       if (entries.length) {
-        // Показываем последнюю накопленную
-        const last = entries[entries.length - 1][1];
-        _showReactionRain(last.reaction, last.fromName || 'someone');
+        const privacy = d.settings?.privacy?.sendReactions || 'everyone';
+        // Если nobody — тихо удаляем всё накопленное
+        if (privacy === 'nobody') {
+          window._firebaseRef(window._firebaseDB, `reactions/${myUid}`).remove();
+          return;
+        }
+        // Фильтруем если friends only
+        const allowed = privacy === 'friends'
+          ? entries.filter(([, v]) => d.friends && d.friends[v.from])
+          : entries;
+        if (allowed.length) {
+          const last = allowed[allowed.length - 1][1];
+          _showReactionRain(last.reaction, last.fromName || 'someone');
+        }
         window._firebaseRef(window._firebaseDB, `reactions/${myUid}`).remove();
       }
     }
@@ -17774,6 +17860,11 @@ function _checkPendingReactions() {
     window._firebaseRef(window._firebaseDB, `reactions/${myUid}`).on('child_added', snap => {
       const item = snap?.val();
       if (!item) return;
+      // Проверяем privacy на стороне получателя (финальная защита)
+      const privacy = d.settings?.privacy?.sendReactions || 'everyone';
+      const isFriend = !!(d.friends && d.friends[item.from]);
+      if (privacy === 'nobody') { snap.ref.remove(); return; }
+      if (privacy === 'friends' && !isFriend) { snap.ref.remove(); return; }
       _showReactionRain(item.reaction, item.fromName || 'someone');
       // Удаляем эту конкретную реакцию
       snap.ref.remove();

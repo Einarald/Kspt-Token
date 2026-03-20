@@ -47,29 +47,6 @@
   border-radius: 14px;
 }
 
-#raceModeModal {
-  display:none; position:fixed; inset:0; z-index:100000;
-  background:rgba(0,0,0,0.92); align-items:center; justify-content:center;
-}
-#raceModeModal.active { display:flex; }
-.race-mode-box {
-  background:linear-gradient(135deg,#0f0f0f,#1a1a1a);
-  border:1px solid #00bcd4; border-radius:20px;
-  padding:28px 24px; width:min(320px,88vw); text-align:center;
-}
-.race-mode-box h2 { color:#00e676; margin:0 0 6px; font-size:20px; }
-.race-mode-box p  { color:#aaa; font-size:13px; margin:0 0 22px; }
-.race-mode-btn {
-  display:block; width:100%; padding:15px; margin-bottom:12px;
-  border:none; border-radius:13px; font-size:16px; font-weight:bold;
-  cursor:pointer; transition:transform .1s;
-}
-.race-mode-btn:active { transform:scale(.96); }
-.race-mode-btn.bots   { background:linear-gradient(135deg,#00bcd4,#0097a7); color:#000; }
-.race-mode-btn.online { background:linear-gradient(135deg,#7c4dff,#651fff); color:#fff; }
-.race-mode-btn.cancel { background:rgba(255,255,255,0.07); color:#aaa; border:1px solid #333; }
-#raceModeTimer { color:#ff9800; font-size:13px; margin-top:-4px; margin-bottom:16px; }
-
 #lbAvatarPicker { display:none; gap:12px; justify-content:center; flex-wrap:wrap; margin:10px 0 14px; }
 .lb-avatar-option { width:48px; height:48px; border-radius:50%; object-fit:cover; cursor:pointer; border:2px solid #333; transition:border-color .15s, transform .1s; }
 .lb-avatar-option:hover { border-color:#00bcd4; transform:scale(1.08); }
@@ -82,16 +59,6 @@
 <body oncontextmenu="return false;" ontouchstart="">
 
 <div id="toast" class="toast">Purchase successful</div>
-<div id="raceModeModal">
-  <div class="race-mode-box">
-    <h2>🏁 KSPT Races</h2>
-    <p>Choose game mode</p>
-    <div id="raceModeTimer">Auto-starting with Bots in 15s...</div>
-    <button class="race-mode-btn bots"   onclick="confirmRaceMode('bots')">🤖 Play vs Bots</button>
-    <button class="race-mode-btn online" onclick="confirmRaceMode('online')">🌐 Play Online</button>
-    <button class="race-mode-btn cancel" onclick="closeRaceModeModal()">✕ Cancel</button>
-  </div>
-</div>
 <div id="whiteFade" class="white-fade"></div>
 
 <div id="rewardPopup" class="reward-popup">
@@ -425,13 +392,33 @@ window.addEventListener('message', (event) => {
   <div class="game-ticket">1 ticket</div>
 </div>
 
-<div class="game-item" onclick="openRaceModeModal()">
+<div class="game-item" onclick="confirmRaceMode('bots')" style="position:relative;margin-bottom:12px;">
   <img src="race.png" class="game-icon" alt="KSPT Races">
   <div class="game-info">
     <div class="game-title">KSPT Races</div>
     <div class="game-desc">3D racing — beat bots or race online, collect KSPT coins!</div>
   </div>
   <div class="game-ticket">1 ticket</div>
+  <button onclick="event.stopPropagation();confirmRaceMode('online')"
+    style="
+      position:absolute;
+      top:6px;
+      right:6px;
+      width:28px;
+      height:28px;
+      border-radius:50%;
+      border:1px solid rgba(0,229,255,0.6);
+      background:rgba(0,188,212,0.15);
+      color:#00e5ff;
+      font-size:14px;
+      cursor:pointer;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      padding:0;
+    ">
+    🌐
+  </button>
 </div>
 
 <div class="game-item" onclick="startGame('flappy')">
@@ -1627,6 +1614,28 @@ window.addEventListener('message', (event) => {
     <button id="skin-dragon" onclick="applySkin('dragon')">Equip</button>
   </div>
 
+  <div class="card" id="skinCardGreatJoost" style="display:none">
+    <img id="skin-img-greatjoost" src="just.png" class="card-img">
+    <div class="card-title">GreatJoost</div>
+    <div class="card-sub">Secret promo skin · 5 KSPT/h</div>
+    <button id="skin-greatjoost" onclick="applySkin('greatjoost')">Select</button>
+  </div>
+
+  <div class="card" id="skinCardAngel" style="display:none">
+    <img id="skin-img-angel" src="angel.png" class="card-img">
+    <div class="card-title">Angel Coin</div>
+    <div class="card-sub">Secret skin · 25 KSPT/h</div>
+    <button id="skin-angel" onclick="applySkin('angel')">Select</button>
+  </div>
+
+  <div class="card" id="skinCardDemon" style="display:none">
+    <img id="skin-img-demon" src="demon.png" class="card-img">
+    <div class="card-title">Demon Coin</div>
+    <div class="card-sub">Secret skin · 25 KSPT/h</div>
+    <button id="skin-demon" onclick="applySkin('demon')">Select</button>
+  </div>
+
+
   <div class="card">
     <div class="card-title">NUMBER #1!</div>
     <div class="card-sub" id="limitedSkinSub" style="color:#ff9800"></div>
@@ -2324,6 +2333,9 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="bhole">Black Hole</option>
            <option value="ufo">UFO Wood</option>
            <option value="dragon">Chinese Dragon</option>
+          <option value="greatjoost">GreatJoost</option>
+          <option value="angel">Angel Coin</option>
+          <option value="demon">Demon Coin</option>
           <option value="goldensafe">Golden Safe</option>
           <optgroup label="─── Admin Only ───">
             <option value="capsulememe">💊 Capsule Meme</option>
@@ -2706,6 +2718,9 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="capsulememe">Capsule Meme</option>
           <option value="ufo">UFO Wood</option>
           <option value="dragon">Chinese Dragon</option>
+          <option value="greatjoost">GreatJoost</option>
+          <option value="angel">Angel Coin</option>
+          <option value="demon">Demon Coin</option>
         </select>
         <button class="ap-btn ap-btn-green ap-btn-sm" onclick="adminModGiveSkin()">+ Give</button>
         <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminModTakeSkin()">− Take</button>

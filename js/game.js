@@ -9161,6 +9161,60 @@ async function adminSetEK() {
   showToast(`✅ EK action queued`);
 }
 
+/* ---- MOD: Clear Game Record ---- */
+function _adminLoadGameRecordOptions() {
+  const uid = _adminSelectedUid();
+  const sel = document.getElementById('apClearGameId');
+  if (!sel) return;
+  const allGames = typeof GAME_RECORD_LABELS !== 'undefined' ? Object.keys(GAME_RECORD_LABELS) : [];
+  sel.innerHTML = '<option value="">— select game —</option>';
+  if (!uid || !_adminPlayers[uid]) {
+    allGames.forEach(g => {
+      const meta = GAME_RECORD_LABELS[g];
+      const opt = document.createElement('option');
+      opt.value = g;
+      opt.textContent = g + (meta && meta.label ? ' (' + meta.label + ')' : '');
+      sel.appendChild(opt);
+    });
+    return;
+  }
+  const p = _adminPlayers[uid];
+  const records = p.gameRecords || {};
+  const withRecord = allGames.filter(g => records[g] > 0);
+  const without = allGames.filter(g => !records[g]);
+  withRecord.forEach(g => {
+    const meta = GAME_RECORD_LABELS[g];
+    const opt = document.createElement('option');
+    opt.value = g;
+    opt.textContent = g + ' — ' + records[g] + (meta && meta.unit ? ' ' + meta.unit : '');
+    sel.appendChild(opt);
+  });
+  if (without.length) {
+    const divider = document.createElement('option');
+    divider.disabled = true;
+    divider.textContent = '— no record yet —';
+    sel.appendChild(divider);
+    without.forEach(g => {
+      const opt = document.createElement('option');
+      opt.value = g;
+      opt.textContent = g;
+      sel.appendChild(opt);
+    });
+  }
+}
+
+async function adminClearGameRecord() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) { showToast('Select a player first'); return; }
+  const game = document.getElementById('apClearGameId').value;
+  if (!game) { showToast('Select a game first'); return; }
+  if (!confirm('Clear "' + game + '" record for ' + uid + '?')) return;
+  await _db.ref('admin/modActions/' + uid).set({ action: 'clearGameRecord', game, ts: Date.now() });
+  await _db.ref('leaderboard/' + uid + '/gameRecords/' + game).remove();
+  showToast('Game record "' + game + '" cleared for ' + uid);
+  setTimeout(() => { _adminLoadPlayers(); _adminLoadGameRecordOptions(); }, 800);
+}
+
 /* ---- MOD: Ban / Unban ---- */
 async function adminBanPlayer(ban) {
   if (!_isAdminUser()) return;
@@ -10464,6 +10518,14 @@ function _adminApplyModAction(v) {
       if (typeof pushMyLeaderboardData === 'function') pushMyLeaderboardData();
       if (typeof renderProfileTab === 'function') renderProfileTab();
       _adminShowOverlay(v.grant ? '✅ You are now Verified!' : '✕ Verified removed', '#ffd700', 5000);
+      break;
+    case 'clearGameRecord':
+      if (!d) return;
+      if (!d.gameRecords) d.gameRecords = {};
+      delete d.gameRecords[v.game];
+      save();
+      if (typeof pushMyLeaderboardData === 'function') pushMyLeaderboardData();
+      _adminShowOverlay('Your "' + v.game + '" record was reset by admin', '#ff7043', 5000);
       break;
   }
 }
@@ -17971,9 +18033,13 @@ function _showPublicProfile(uid, p) {
 
       ${(function(){
         if (!p.skins && !p.secretSkins) return '';
-        const allIds = [...Object.keys(p.skins||{}), ...Object.keys(p.secretSkins||{})].filter(id => (p.skins||{})[id] || (p.secretSkins||{})[id]);
+        const allIds = [
+          ...Object.keys(p.skins||{}),
+          ...Object.keys(p.secretSkins||{}),
+          ...Object.keys(p.ekshop_owned||{})
+        ].filter((id, i, arr) => arr.indexOf(id) === i && ((p.skins||{})[id] || (p.secretSkins||{})[id] || (p.ekshop_owned||{})[id]));
         if (!allIds.length) return '';
-        const items = allIds.slice(0,18).map(id => {
+        const items = allIds.map(id => {
           const img = getSkinImage(id, 1, 0);
           return `<img src="${img}" onerror="this.src='kspt.png'" title="${id}" style="width:32px;height:32px;object-fit:contain;border-radius:6px;background:#1a1a1a;padding:2px;">`;
         }).join('');

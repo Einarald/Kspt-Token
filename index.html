@@ -2181,6 +2181,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="minion.mp4">🍌 Minion Bob</option>
           <option value="woke.mp4">😴 Woke Up</option>
           <option value="math.mp4">📐 Math Edit</option>
+          <option value="ferto.mp4">Ferto</option>
         </select>
       </div>
       <div class="ap-row">
@@ -2394,6 +2395,8 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="tiktok">Tiktok Song</option>
           <option value="batidao">No Batidao</option>
           <option value="eind">Eind!</option>
+          <option value="ferto">Ferto</option>
+          <option value="figaro">Figaro</option>
         </optgroup>
       </select>
       <div class="ap-row">
@@ -2527,6 +2530,20 @@ document.addEventListener('DOMContentLoaded', function () {
         <input type="checkbox" class="ap-effect-check" style="width:16px;height:16px;margin-right:6px;">
         <span style="color:#e8eaf6;font-size:13px;flex:1;">☯️ YingYang (B&W Mode)</span>
         <select class="ap-select ap-effect-strength" data-effect="yinyang" style="max-width:85px;">
+          <option value="weak">Weak</option><option value="medium" selected>Med</option><option value="strong">Strong</option>
+        </select>
+      </div>
+      <div class="ap-effect-row ap-row" style="background:#0d0d20;border-radius:8px;padding:7px 10px;margin-bottom:6px;">
+        <input type="checkbox" class="ap-effect-check" style="width:16px;height:16px;margin-right:6px;">
+        <span style="color:#e8eaf6;font-size:13px;flex:1;">🔥 Heat Wave (Screen Distortion)</span>
+        <select class="ap-select ap-effect-strength" data-effect="heatwave" style="max-width:85px;">
+          <option value="weak">Weak</option><option value="medium" selected>Med</option><option value="strong">Strong</option>
+        </select>
+      </div>
+      <div class="ap-effect-row ap-row" style="background:#0d0d20;border-radius:8px;padding:7px 10px;margin-bottom:6px;">
+        <input type="checkbox" class="ap-effect-check" style="width:16px;height:16px;margin-right:6px;">
+        <span style="color:#e8eaf6;font-size:13px;flex:1;">🌀 Vortex (Spinning UI)</span>
+        <select class="ap-select ap-effect-strength" data-effect="vortex" style="max-width:85px;">
           <option value="weak">Weak</option><option value="medium" selected>Med</option><option value="strong">Strong</option>
         </select>
       </div>
@@ -2869,6 +2886,19 @@ document.addEventListener('DOMContentLoaded', function () {
         <button class="ap-btn ap-btn-red" style="flex:1;" onclick="adminRemoveFromLeaderboard()">🗑 Remove</button>
         <button class="ap-btn ap-btn-green" style="flex:1;" onclick="adminRestoreToLeaderboard()">♻️ Restore</button>
       </div>
+    </div>
+
+<!-- Clear Game Records -->
+    <div class="ap-card">
+      <h3>Clear Game Record</h3>
+      <p style="color:#ef9a9a;font-size:11px;margin:0 0 8px;">Resets selected game score to 0 and removes player from leaderboard for that game.</p>
+      <div class="ap-row">
+        <select id="apClearGameId" class="ap-select" style="flex:1;">
+          <option value="">— select game —</option>
+        </select>
+        <button class="ap-btn ap-btn-red" onclick="adminClearGameRecord()">Clear</button>
+      </div>
+      <button class="ap-btn ap-btn-blue ap-btn-sm" style="margin-top:6px;width:100%;" onclick="_adminLoadGameRecordOptions()">Refresh list from player</button>
     </div>
 
   </div><!-- /modSection -->

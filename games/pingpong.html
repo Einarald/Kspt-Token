@@ -242,8 +242,8 @@ html, body {
         <div class="game-header">
             <div class="game-title">🏓 Ping Pong</div>
             <div class="game-stats">
-                <div>Player: <span id="playerScore">0</span></div>
-                <div>AI: <span id="aiScore">0</span></div>
+                <div id="scoreLabel1">Player: <span id="playerScore">0</span></div>
+                <div id="scoreLabel2">AI: <span id="aiScore">0</span></div>
                 <div>Speed: <span id="speed">100%</span></div>
             </div>
         </div>
@@ -263,9 +263,12 @@ html, body {
     </div>
     
     <div class="game-over" id="gameOverScreen">
-        <h2>Game Over!</h2>
-        <div>Player Score: <span id="finalPlayerScore">0</span></div>
-        <div>AI Score: <span id="finalAiScore">0</span></div>
+        <h2 id="gameOverTitle">Game Over!</h2>
+        <div id="onlineResultMsg" style="font-size:18px; margin-bottom:8px; display:none;"></div>
+        <div id="soloScores">
+          <div>Player Score: <span id="finalPlayerScore">0</span></div>
+          <div>AI Score: <span id="finalAiScore">0</span></div>
+        </div>
         <div class="earned">+<span id="earnedKSPT">0.00</span> KSPT</div>
         <div class="earned">+<span id="earnedEK">0</span> EK</div>
         <button id="playAgainBtn" style="background:#00e676; margin-bottom:10px;">Play Again</button>
@@ -530,7 +533,11 @@ downBtn.addEventListener('contextmenu', e => e.preventDefault());
                 const rect = canvas.getBoundingClientRect();
                 const scaleY = canvas.height / rect.height;
                 const newY = (t.clientY - rect.top) * scaleY - playerPaddle.height / 2;
-                playerPaddle.y = Math.max(0, Math.min(canvas.height - playerPaddle.height, newY));
+                if (window.__ppOnlineMode && !window.__ppIsLeftSide) {
+                    aiPaddle.y = Math.max(0, Math.min(canvas.height - aiPaddle.height, newY));
+                } else {
+                    playerPaddle.y = Math.max(0, Math.min(canvas.height - playerPaddle.height, newY));
+                }
                 joystickDirection = 0;
             } else {
                 const rect = canvas.getBoundingClientRect();
@@ -570,12 +577,28 @@ document.addEventListener('keyup', (e)=>{
 });
 
         // Game functions
-        function resetBall() {
+        let _lastScorerWasLeft = null; // null = первый запуск
+
+        function resetBall(scorerWasLeft) {
     ball.x = canvas.width / 2;
     ball.y = canvas.height / 2;
 
-    // Мяч всегда летит к ИИ (вправо = положительный speedX)
-    ball.speedX = 4;
+    let dirX;
+    if (window.__ppOnlineMode) {
+        if (scorerWasLeft === undefined) {
+            // Первый запуск в онлайне — рандом
+            dirX = Math.random() < 0.5 ? 1 : -1;
+        } else {
+            // Мяч летит к тому, кто только что забил очко
+            // scorerWasLeft=true → забил синий (левый) → мяч летит влево (к синему), speedX отрицательный
+            dirX = scorerWasLeft ? -1 : 1;
+        }
+    } else {
+        // Офлайн — всегда к боту (вправо)
+        dirX = 1;
+    }
+
+    ball.speedX = 4 * dirX;
     ball.speedY = (Math.random() * 2 - 1) * 3;
 }
 
@@ -625,6 +648,8 @@ document.addEventListener('keyup', (e)=>{
         }
 
         function updateBall(frameScale = 1) {
+            // Guest gets ball position from host via interpolation — skip local physics
+            if (window.__ppOnlineMode && !window.__ppIsLeftSide) return;
             // Move ball
             ball.x += ball.speedX * gameSpeed * frameScale;
             ball.y += ball.speedY * gameSpeed * frameScale;
@@ -661,9 +686,9 @@ if (ball.y + ball.radius > canvas.height) {
                 // Make sure ball goes to the right
                 ball.x = playerPaddle.x + playerPaddle.width + ball.radius;
                 
-                // Award KSPT for hitting the ball (0.8% offline income; 30% less online)
-                const _hitMult = window.__ppOnlineMode ? 0.7 : 1.0;
-                const reward = safeGetOfflinePercent(0.8 * _hitMult);
+                // Award KSPT for hitting the ball (0.8% offline income; 50% less online)
+const _hitMult = window.__ppOnlineMode ? 0.5 : 1.0;
+const reward = safeGetOfflinePercent(0.8 * _hitMult);
                 earnedKSPT += reward;
                 spawnFloatingText(`+${reward.toFixed(2)}`, canvas.width / 2, canvas.height / 2, '#00e5ff');
                 safeAwardGameReward(reward, ball.x, ball.y);
@@ -693,7 +718,8 @@ if (ball.y + ball.radius > canvas.height) {
                 
                 ballHits++;
                 if (ballHits % 5 === 0) {
-                    gameSpeed = Math.min(gameSpeed + 0.03, 2.0);
+                    const _speedInc = window.__ppOnlineMode ? 0.024 : 0.03; // 20% less in online
+                    gameSpeed = Math.min(gameSpeed + _speedInc, 2.0);
                     speedEl.textContent = Math.round(gameSpeed * 100) + '%';
                 }
                 
@@ -703,7 +729,8 @@ if (ball.y + ball.radius > canvas.height) {
             
             // Ball out of bounds (scoring)
             if (ball.x - ball.radius < 0) {
-                // AI scores
+                // AI scores — only host handles scoring
+                if (window.__ppOnlineMode && !window.__ppIsLeftSide) return;
                 aiScore++;
                 aiScoreEl.textContent = aiScore;
                 playSound('ai_goal');
@@ -713,10 +740,11 @@ if (ball.y + ball.radius > canvas.height) {
                 if (aiScore >= _ppWin) {
                     endGame();
                 } else {
-                    resetBall();
+                    resetBall(false); // AI/right scored = правый забил
                 }
             } else if (ball.x + ball.radius > canvas.width) {
-                // Player scores
+                // Player scores — only host handles scoring
+                if (window.__ppOnlineMode && !window.__ppIsLeftSide) return;
                 playerScore++;
                 playerScoreEl.textContent = playerScore;
                 
@@ -733,7 +761,7 @@ if (ball.y + ball.radius > canvas.height) {
                 if (playerScore >= _ppWin2) {
                     endGame();
                 } else {
-                    resetBall();
+                    resetBall(true); // Player/left scored = левый забил
                 }
             }
         }
@@ -828,14 +856,34 @@ if (ball.y + ball.radius > canvas.height) {
   finalPlayerScoreEl.textContent = playerScore;
   finalAiScoreEl.textContent = aiScore;
   earnedKSPTEl.textContent = earnedKSPT.toFixed(2);
-  
-  // Показываем количество EK
   earnedEKElem.textContent = sessionEK;
+
+  // Online: show win/lose screen, hide solo scores
+  const _title = document.getElementById('gameOverTitle');
+  const _resultMsg = document.getElementById('onlineResultMsg');
+  const _soloScores = document.getElementById('soloScores');
+  if (window.__ppOnlineMode) {
+    const _iWon = ppIsLeftSide ? (playerScore > aiScore) : (aiScore > playerScore);
+    if (_title) { _title.textContent = _iWon ? '🏆 You Win!' : '😞 You Lose'; _title.style.color = _iWon ? '#00e676' : '#ff4081'; }
+    if (_resultMsg) { _resultMsg.style.display = 'block'; _resultMsg.textContent = _iWon ? `${playerScore} : ${aiScore}` : `${aiScore} : ${playerScore}`; }
+    if (_soloScores) _soloScores.style.display = 'none';
+    // Hide Play Again in online mode
+    const _pa = document.getElementById('playAgainBtn');
+    if (_pa) _pa.style.display = 'none';
+  } else {
+    if (_title) { _title.textContent = 'Game Over!'; _title.style.color = ''; }
+    if (_resultMsg) _resultMsg.style.display = 'none';
+    if (_soloScores) _soloScores.style.display = 'block';
+    const _pa = document.getElementById('playAgainBtn');
+    if (_pa) _pa.style.display = '';
+  }
 
   // НЕ ВЫЗЫВАЕМ safeConsumeTicket() — билет уже списан при старте (games.js)
   // safeConsumeTicket();
 
-  try { (window.parent||window.top).postMessage({ type:'kspt_game_record', game:'pingpong', value: playerScore }, '*'); } catch(e){}
+  if (!window.__ppOnlineMode) {
+    try { (window.parent||window.top).postMessage({ type:'kspt_game_record', game:'pingpong', value: playerScore }, '*'); } catch(e){}
+  }
   gameOverScreen.style.display = 'block';
 
   if (playerScore > aiScore) {
@@ -1409,6 +1457,11 @@ function ppStartOnlineGame(room) {
   window.__ppOnlineWinScore = ppWinScore;
   window.__ppOnlineMode = true;
   window.__ppIsLeftSide = ppIsLeftSide;
+  // Fix score labels for online mode
+  const _lbl1 = document.getElementById('scoreLabel1');
+  const _lbl2 = document.getElementById('scoreLabel2');
+  if (_lbl1) _lbl1.innerHTML = (ppIsLeftSide ? 'You' : 'Opponent') + ': <span id="playerScore">' + playerScore + '</span>';
+  if (_lbl2) _lbl2.innerHTML = (ppIsLeftSide ? 'Opponent' : 'You') + ': <span id="aiScore">' + aiScore + '</span>';
 
   // Start game loop (was never running in online mode)
   window.__kspt_gameOverHandled = false;
@@ -1427,10 +1480,12 @@ function ppSendState() {
     name: ppMyPlayerName
   };
   // Host sends ball + left paddle; guest sends right paddle only
-  if (ppIsLeftSide) {
+   if (ppIsLeftSide) {
     state.ballX = Math.round(ball.x * 10) / 10;
     state.ballY = Math.round(ball.y * 10) / 10;
     state.paddleY = Math.round(playerPaddle.y * 10) / 10;
+    state.playerScore = playerScore;
+    state.aiScore = aiScore;
   } else {
     state.paddleY = Math.round(aiPaddle.y * 10) / 10;
   }
@@ -1456,6 +1511,11 @@ function ppApplyRemote(uid, data) {
   if (data.ballY !== undefined) {
     ppRemote.ballYPrev = (ppRemote.lastUpdateTime === 0) ? data.ballY : (ppRemote.ballYCurrent ?? data.ballY);
     ppRemote.ballY = data.ballY;
+  }
+  // Sync score to guest
+  if (!ppIsLeftSide) {
+    if (data.playerScore !== undefined) { playerScore = data.playerScore; playerScoreEl.textContent = playerScore; }
+    if (data.aiScore !== undefined) { aiScore = data.aiScore; aiScoreEl.textContent = aiScore; }
   }
 }
 

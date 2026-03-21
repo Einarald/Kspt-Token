@@ -1559,16 +1559,18 @@ window.ppInterpolateTick = function() {
   if (!ppOnlineMode) return;
   const now = Date.now();
 
-  // --- МЯЧ: dead reckoning — предсказываем позицию через скорость ---
-  // Хост шлёт ballSpeedX/Y, поэтому знаем куда летит мяч между пакетами
-  const msSince = Math.min(now - ppRemote.lastUpdateTime, 250); // не более 250ms
-  const dtFrames = msSince / 16.6667; // frameScale-эквивалент
-  let bx = ppRemote.ballX + ppRemote.ballSpeedX * gameSpeed * dtFrames;
-  let by = ppRemote.ballY + ppRemote.ballSpeedY * gameSpeed * dtFrames;
-  bx = Math.max(ball.radius, Math.min(canvas.width  - ball.radius, bx));
-  by = Math.max(ball.radius, Math.min(canvas.height - ball.radius, by));
-  ppRemote.ballXCurrent = bx;
-  ppRemote.ballYCurrent = by;
+  // --- МЯЧ: dead reckoning ---
+  // Ждём первого пакета от хоста — пока не пришёл, мяч не двигаем
+  if (ppRemote.lastUpdateTime > 0 && ppRemote.ballX !== undefined) {
+    const msSince = Math.min(now - ppRemote.lastUpdateTime, 150);
+    const dtFrames = msSince / 16.6667;
+    let bx = ppRemote.ballX + ppRemote.ballSpeedX * gameSpeed * dtFrames;
+    let by = ppRemote.ballY + ppRemote.ballSpeedY * gameSpeed * dtFrames;
+    bx = Math.max(ball.radius, Math.min(canvas.width  - ball.radius, bx));
+    by = Math.max(ball.radius, Math.min(canvas.height - ball.radius, by));
+    ppRemote.ballXCurrent = bx;
+    ppRemote.ballYCurrent = by;
+  }
 
   // --- ПАДДЛ: плавный lerp к последнему известному значению ---
   const interval = Math.max(50, (ppRemote.lastUpdateTime - ppRemote.prevUpdateTime) || 70);
@@ -1580,7 +1582,9 @@ window.ppInterpolateTick = function() {
     aiPaddle.y = ppRemote.paddleYCurrent;
   } else {
     playerPaddle.y = ppRemote.paddleYCurrent;
-    // мяч считается локально — не трогаем
+    // Применяем dead reckoning позицию мяча к ball
+    if (ppRemote.ballXCurrent !== undefined) ball.x = ppRemote.ballXCurrent;
+    if (ppRemote.ballYCurrent !== undefined) ball.y = ppRemote.ballYCurrent;
   }
 };
 

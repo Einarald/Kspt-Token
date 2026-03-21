@@ -1530,23 +1530,14 @@ function ppApplyRemote(uid, data) {
     ppRemote.paddleY = data.paddleY;
   }
   if (data.ballX !== undefined && data.ballY !== undefined) {
-    // Гость: снэп позиции и скорости — происходит только на событиях
-    // (удар ракеткой, сброс мяча), между ними мяч летит локально
-    if (!ppIsLeftSide) {
-      ball.x = data.ballX;
-      ball.y = data.ballY;
-    }
     ppRemote.ballX = data.ballX;
     ppRemote.ballY = data.ballY;
+    // Сбрасываем время снэпа чтобы dead reckoning стартовал с этой точки
+    ppRemote.snapTime = Date.now();
   }
-  if (data.ballSpeedX !== undefined) {
-    ppRemote.ballSpeedX = data.ballSpeedX;
-    if (!ppIsLeftSide) ball.speedX = data.ballSpeedX;
-  }
-  if (data.ballSpeedY !== undefined) {
-    ppRemote.ballSpeedY = data.ballSpeedY;
-    if (!ppIsLeftSide) ball.speedY = data.ballSpeedY;
-  }
+  if (data.ballSpeedX !== undefined) ppRemote.ballSpeedX = data.ballSpeedX;
+  if (data.ballSpeedY !== undefined) ppRemote.ballSpeedY = data.ballSpeedY;
+  // НЕ пишем в ball напрямую — только ppInterpolateTick двигает мяч у гостя
   // Sync score to guest
   if (!ppIsLeftSide) {
     if (data.playerScore !== undefined) { playerScore = data.playerScore; playerScoreEl.textContent = playerScore; }
@@ -1561,12 +1552,12 @@ window.ppInterpolateTick = function() {
 
   // --- МЯЧ: dead reckoning ---
   // Ждём первого пакета от хоста — пока не пришёл, мяч не двигаем
-  if (ppRemote.lastUpdateTime > 0 && ppRemote.ballX !== undefined) {
-    const msSince = Math.min(now - ppRemote.lastUpdateTime, 150);
+  if (ppRemote.snapTime && ppRemote.ballX !== undefined) {
+    const msSince = Math.min(now - ppRemote.snapTime, 300);
     const dtFrames = msSince / 16.6667;
-    let bx = ppRemote.ballX + ppRemote.ballSpeedX * gameSpeed * dtFrames;
-    let by = ppRemote.ballY + ppRemote.ballSpeedY * gameSpeed * dtFrames;
-    bx = Math.max(ball.radius, Math.min(canvas.width  - ball.radius, bx));
+    let bx = ppRemote.ballX + (ppRemote.ballSpeedX || 0) * gameSpeed * dtFrames;
+    let by = ppRemote.ballY + (ppRemote.ballSpeedY || 0) * gameSpeed * dtFrames;
+    bx = Math.max(ball.radius, Math.min(canvas.width - ball.radius, bx));
     by = Math.max(ball.radius, Math.min(canvas.height - ball.radius, by));
     ppRemote.ballXCurrent = bx;
     ppRemote.ballYCurrent = by;

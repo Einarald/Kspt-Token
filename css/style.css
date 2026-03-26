@@ -1858,6 +1858,222 @@ body.kspt-game-active{
   transform: scale(1.05);
 }
 
+/* ===== GLITCH FRAGMENT SYSTEM ===== */
+
+/* --- Mini card on keys tab --- */
+.gfrag-card {
+  border: 2px solid #ff00ff !important;
+  box-shadow: 0 0 18px rgba(255,0,255,0.25);
+  cursor: pointer;
+  transition: box-shadow .2s;
+}
+.gfrag-card:active { box-shadow: 0 0 30px rgba(255,0,255,0.6); }
+
+.gfrag-multi {
+  background: #ff00ff; color: #000;
+  border-radius: 12px; padding: 2px 8px;
+  font-weight: bold; font-size: 12px;
+}
+
+.gfrag-slots {
+  display: flex; gap: 10px; justify-content: center;
+  margin: 10px 0;
+}
+.gfrag-slot {
+  width: 68px; height: 68px;
+  border: 2px dashed #550055;
+  border-radius: 6px;
+  display: flex; align-items: center; justify-content: center;
+  background: #0d000d;
+  overflow: hidden;
+  position: relative;
+  transition: border-color .3s, box-shadow .3s;
+}
+.gfrag-slot.owned {
+  border-color: #ff00ff;
+  box-shadow: 0 0 12px rgba(255,0,255,0.5);
+}
+.gfrag-mini-img {
+  width: 100%; height: 100%;
+  object-fit: contain;
+  opacity: 0.18;
+  transition: opacity .35s, filter .35s;
+  filter: grayscale(1) brightness(0.6);
+}
+.gfrag-slot.owned .gfrag-mini-img {
+  opacity: 1;
+  filter: none;
+  animation: gfragPieceGlow 2s ease-in-out infinite;
+}
+
+.gfrag-status {
+  font-size: 12px; color: #ff99ff;
+  margin-top: 4px; text-align: center;
+}
+
+/* --- Full-screen modal --- */
+.gfrag-modal {
+  display: none;
+  position: fixed; inset: 0;
+  z-index: 18000;
+  background: #050008;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  padding: 0 16px 24px;
+  overflow-y: auto;
+}
+.gfrag-modal.active { display: flex; }
+
+.gfrag-scanlines {
+  pointer-events: none;
+  position: fixed; inset: 0; z-index: 1;
+  background: repeating-linear-gradient(
+    0deg,
+    transparent,
+    transparent 3px,
+    rgba(255,0,255,0.03) 3px,
+    rgba(255,0,255,0.03) 4px
+  );
+}
+
+.gfrag-close {
+  position: fixed; top: 16px; right: 16px; z-index: 2;
+  background: rgba(255,255,255,0.08); border: none;
+  color: #aaa; font-size: 18px;
+  width: 36px; height: 36px; border-radius: 50%;
+  cursor: pointer; display: flex; align-items: center; justify-content: center;
+}
+
+.gfrag-modal-header {
+  z-index: 2; text-align: center;
+  padding-top: 56px; margin-bottom: 8px;
+}
+.gfrag-modal-title {
+  font-size: 26px; font-weight: bold;
+  color: #ff00ff; letter-spacing: 3px;
+  text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff88;
+  animation: gfragTitlePulse 2.5s ease-in-out infinite;
+}
+@keyframes gfragTitlePulse {
+  0%,100% { text-shadow: 0 0 20px #ff00ff, 0 0 40px #ff00ff88; }
+  50%      { text-shadow: 0 0 30px #ff00ff, 0 0 60px #ff00ffcc, 0 0 80px #ff00ff44; }
+}
+.gfrag-modal-sub {
+  font-size: 13px; color: #ff99ff; margin-top: 4px; z-index: 2;
+}
+
+.gfrag-art-wrap {
+  position: relative; z-index: 2;
+  margin: 10px 0;
+}
+.gfrag-art {
+  width: 110px; height: 110px; object-fit: contain;
+  filter: drop-shadow(0 0 16px #ff00ff) drop-shadow(0 0 4px #fff);
+  animation: gfragFloat 3s ease-in-out infinite;
+}
+@keyframes gfragFloat {
+  0%,100% { transform: translateY(0); }
+  50%      { transform: translateY(-7px); }
+}
+.gfrag-multi-modal {
+  position: absolute; top: -6px; right: -6px;
+  background: #ff00ff; color: #000;
+  border-radius: 50%; width: 28px; height: 28px;
+  display: flex; align-items: center; justify-content: center;
+  font-weight: bold; font-size: 12px;
+  box-shadow: 0 0 8px #ff00ff;
+}
+
+/* Big fragment slots */
+.gfrag-big-slots {
+  display: flex; gap: 12px; justify-content: center;
+  z-index: 2; margin: 12px 0;
+}
+.gfrag-big-slot {
+  display: flex; flex-direction: column; align-items: center; gap: 6px;
+}
+.gfrag-slot-label {
+  font-size: 10px; color: #884488; letter-spacing: 1px; text-transform: uppercase;
+}
+.gfrag-piece {
+  width: 88px; height: 88px;
+  background: #110011;
+  border: 2px solid #440044;
+  position: relative; overflow: hidden;
+  transition: border-color .3s, box-shadow .3s;
+}
+/* Jagged vertical cuts via clip-path */
+.gfrag-piece-0 { clip-path: polygon(0 0, 100% 0, 88% 8%, 95% 22%, 85% 40%, 92% 58%, 83% 75%, 90% 90%, 100% 100%, 0 100%); }
+.gfrag-piece-1 { clip-path: polygon(5% 0, 95% 0, 100% 100%, 10% 100%, 18% 82%, 8% 65%, 17% 48%, 7% 30%, 15% 14%); }
+.gfrag-piece-2 { clip-path: polygon(0 0, 100% 0, 100% 100%, 0 100%, 12% 88%, 5% 72%, 14% 55%, 6% 38%, 16% 20%, 7% 6%); }
+
+.gfrag-piece.owned {
+  border-color: #ff00ff;
+  box-shadow: 0 0 20px rgba(255,0,255,0.7), inset 0 0 10px rgba(255,0,255,0.2);
+  animation: gfragPieceGlow 2s ease-in-out infinite;
+}
+@keyframes gfragPieceGlow {
+  0%,100% { box-shadow: 0 0 20px rgba(255,0,255,0.7), inset 0 0 10px rgba(255,0,255,0.2); }
+  50%      { box-shadow: 0 0 35px rgba(255,0,255,1),   inset 0 0 18px rgba(255,0,255,0.35); }
+}
+.gfrag-piece-img {
+  width: 100%; height: 100%; object-fit: cover;
+  opacity: 0;
+  transition: opacity .4s;
+}
+.gfrag-piece.owned .gfrag-piece-img { opacity: 1; }
+.gfrag-piece-num {
+  position: absolute; bottom: 4px; right: 6px;
+  font-size: 10px; color: #ff99ff; font-weight: bold;
+  opacity: 0; transition: opacity .4s;
+}
+.gfrag-piece.owned .gfrag-piece-num { opacity: 1; }
+
+/* Counter bar */
+.gfrag-counter-wrap {
+  z-index: 2; width: 100%; max-width: 300px;
+  display: flex; align-items: center; gap: 10px; margin-top: 14px;
+}
+.gfrag-counter-bar {
+  flex: 1; height: 8px; background: #2a002a;
+  border-radius: 4px; overflow: hidden;
+}
+.gfrag-counter-fill {
+  height: 100%; background: linear-gradient(90deg, #7700aa, #ff00ff);
+  border-radius: 4px; width: 0%;
+  transition: width .5s cubic-bezier(.22,1,.36,1);
+  box-shadow: 0 0 8px #ff00ff;
+}
+.gfrag-counter-label {
+  font-size: 14px; font-weight: bold; color: #ff99ff;
+  min-width: 36px; text-align: right;
+}
+
+.gfrag-hint {
+  z-index: 2; font-size: 12px; color: #664466;
+  text-align: center; margin-top: 10px; max-width: 300px;
+  line-height: 1.5;
+}
+
+.gfrag-open-btn {
+  z-index: 2; margin-top: 20px;
+  width: 100%; max-width: 300px;
+  padding: 16px; border: none; border-radius: 14px;
+  background: linear-gradient(135deg, #7700aa, #ff00ff);
+  color: #fff; font-size: 16px; font-weight: bold;
+  letter-spacing: 2px; cursor: pointer;
+  box-shadow: 0 0 24px rgba(255,0,255,0.5);
+  transition: opacity .2s, box-shadow .2s;
+}
+.gfrag-open-btn:disabled {
+  opacity: 0.3; box-shadow: none; cursor: default;
+}
+.gfrag-open-btn:not(:disabled):active {
+  box-shadow: 0 0 40px rgba(255,0,255,0.9);
+}
+/* ===== /GLITCH FRAGMENT SYSTEM ===== */
+
 /* Keys Animation */
 @keyframes key-float {
   0%, 100% { transform: translateY(0); }

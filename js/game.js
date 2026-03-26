@@ -1560,7 +1560,8 @@ const capsuleRewards = [
   { type: 'puzzle', weight: 10, name: 'Puzzle Piece', img: 'puz.png' },
   { type: 'background', id: 'heaven', weight: 2, name: 'Background: Heaven', img: 'heaven.png' },
   { type: 'skin', id: 'capsule', weight: 1, name: 'Skin: Capsule Master', img: 'capskine.png' },
-  { type: 'music', id: 'calm', weight: 5, name: 'Music: Calm + Hush', img: 'calm.png' }
+  { type: 'music', id: 'calm', weight: 5, name: 'Music: Calm + Hush', img: 'calm.png' },
+  { type: 'glitchFragment', weight: 4, name: 'Glitch Fragment', img: 'glitchbox.png' }
 ];
 
 // Helper function to get weighted random reward
@@ -1739,6 +1740,7 @@ keys: {
     duplicates: 0 // сколько раз удваивалось в текущей сессии
   },
   glitchRewards: [], // полученные награды из текущей сессии
+  glitchFragments: [false, false, false], // 3 кусочка глитч-бокса
   // Таймеры бустов
   tapBoostEnd: 0, // время окончания tap boost
   offlineMultiplierEnd: 0, // время окончания x2 offline буста
@@ -1973,9 +1975,7 @@ if (!d.puzzles5) d.puzzles5 = [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0
 if (!d.playtimeMs) d.playtimeMs = 0;
 if (typeof d.puzzle5Done === 'undefined') d.puzzle5Done = false;
 
-if (!d.glitchBox) {
-  d.glitchBox = defaultData.glitchBox;
-}
+if (!d.glitchFragments) d.glitchFragments = [false, false, false];
 
 if (!d.tapBoostEnd) d.tapBoostEnd = 0;
 if (!d.offlineMultiplierEnd) d.offlineMultiplierEnd = 0;
@@ -6963,7 +6963,11 @@ function buyToken() {
   tokenData.owned += tokensBought;
   tokenData.lastBuyTime = now;
   tokenData.lastUserBuyPrice = tokenData.price;
+  tokenData.volume = (tokenData.volume || 0) + amountKSPT;
   lastMarketBuyTime = now;
+  // Покупка двигает цену вверх: 1 KSPT = +0.01%, макс +30%
+  const _buyImpact = Math.min(0.30, amountKSPT * 0.0001);
+  tokenData.price = tokenData.price * (1 + _buyImpact);
   
   let tokenName = selectedToken === 'ksptToken' ? 'KSP Tokens' :
                   selectedToken === 'banxToken' ? 'BANX' :
@@ -7008,7 +7012,11 @@ function sellToken() {
   tokenData.owned -= amountTokens;
   let earnedKSPT = amountTokens * tokenData.price;
   d.tokens += earnedKSPT;
+  tokenData.volume = (tokenData.volume || 0) + earnedKSPT;
   d.questExchangeVolume = (d.questExchangeVolume || 0) + earnedKSPT;
+  // Продажа двигает цену вниз: 1 KSPT = -0.01%, макс -30%
+  const _sellImpact = Math.min(0.30, earnedKSPT * 0.0001);
+  tokenData.price = tokenData.price * (1 - _sellImpact);
   checkQuestProgress('w_exchange');
   tokenData.lastUserSellPrice = tokenData.price;
   save();
@@ -7076,7 +7084,9 @@ function _tickMyTokens(now) {
       tok.lastUpdate = now;
       let sign = Math.random() < 0.5 ? -1 : 1;
       let pct = Math.random() < 0.05 ? (Math.random() * 0.05) + 0.10 : (Math.random() * 0.05) + 0.03;
-      let p = Math.min(10, Math.max(0.001, tok.price + tok.price * pct * sign));
+      const _floor = tok.initialPrice ? tok.initialPrice * 0.01 : 0.001;
+      const _ceil  = tok.initialPrice ? tok.initialPrice * 10   : 10;
+      let p = Math.min(_ceil, Math.max(_floor, tok.price + tok.price * pct * sign));
       tok.price = p;
       tok.history = tok.history || [];
       tok.history.push(p);
@@ -9522,6 +9532,11 @@ function _startAdminListener() {
   });
 
   // Force Music listener
+  _db.ref('admin/countdown').on('value', snap => {
+    const v = snap?.val();
+    if (!v || !v.end || v.end <= Date.now()) { _adminHideCountdown(); return; }
+    _adminShowCountdown(v.title || 'Coming soon...', v.titleColor || '#ffffff', v.timerColor || '#ffd700', v.end, v.size || 'medium', v.opacity !== undefined ? v.opacity : 0.8);
+  });
   _db.ref('admin/forceMusic').on('value', snap => {
     const v = snap.val();
     if (!v) {
@@ -9989,6 +10004,11 @@ function _adminApplyEffects(effects, durationMs) {
     const speed = effects.vortex === 'weak' ? 0.003 : effects.vortex === 'strong' ? 0.012 : 0.006;
     _adminEffectParticles.push({ t:'vortex', speed, angle:0 });
   }
+  if (effects.mirror) {
+    const interval = effects.mirror === 'weak' ? 420 : effects.mirror === 'strong' ? 90 : 200;
+    const holdFrames = effects.mirror === 'strong' ? 60 : 30;
+    _adminEffectParticles.push({ t:'mirror', timer:0, interval, holdFrames, flipped:false, holding:0 });
+  }
 
   function draw() {
     ctx.clearRect(0, 0, W, H);
@@ -10087,6 +10107,25 @@ function _adminApplyEffects(effects, durationMs) {
           const deg = Math.sin(p.angle) * (p.speed > 0.009 ? 3 : p.speed > 0.005 ? 1.5 : 0.6);
           app2.style.transform = `rotate(${deg}deg)`;
           break;
+        case 'mirror': {
+          p.timer++;
+          const _app = document.querySelector('.app') || document.body;
+          if (!p.flipped && p.timer >= p.interval) {
+            p.timer = 0; p.flipped = true; p.holding = 0;
+            // чередуем горизонтальное и вертикальное
+            p._axis = (p._axis === 'Y') ? 'X' : 'Y';
+            _app.style.transform = `scale${p._axis || 'X'}(-1)`;
+            _app.style.transition = 'transform 0.18s ease';
+          }
+          if (p.flipped) {
+            p.holding++;
+            if (p.holding >= p.holdFrames) {
+              p.flipped = false;
+              _app.style.transform = '';
+            }
+          }
+          break;
+        }
         case 'yinyang':
           p.phase += 0.02;
           // Animated b&w blobs on canvas
@@ -10115,6 +10154,76 @@ function _adminApplyEffects(effects, durationMs) {
   _adminUpdateActiveBar();
 }
 
+// ===== ADMIN COUNTDOWN =====
+async function adminSetCountdown() {
+  const title = document.getElementById('apCountdownTitle')?.value.trim() || 'Coming soon...';
+  const mins = parseFloat(document.getElementById('apCountdownMins')?.value) || 60;
+  const titleColor = document.getElementById('apCountdownTitleColor')?.value || '#ffffff';
+  const timerColor = document.getElementById('apCountdownTimerColor')?.value || '#ffd700';
+  const size = document.getElementById('apCountdownSize')?.value || 'medium';
+  const opacity = Math.min(100, Math.max(10, parseFloat(document.getElementById('apCountdownOpacity')?.value) || 80)) / 100;
+  const endTs = Date.now() + mins * 60 * 1000;
+  await _db.ref('admin/countdown').set({ title, titleColor, timerColor, size, opacity, end: endTs, ts: Date.now() });
+  const status = document.getElementById('apCountdownStatus');
+  if (status) status.textContent = `✅ Countdown started: ${mins} min`;
+}
+
+async function adminStopCountdown() {
+  await _db.ref('admin/countdown').remove();
+  const status = document.getElementById('apCountdownStatus');
+  if (status) status.textContent = '■ Stopped.';
+  _adminHideCountdown();
+}
+
+function _adminHideCountdown() {
+  const el = document.getElementById('_adminCountdownWidget');
+  if (el) el.remove();
+  if (window._adminCountdownInterval) { clearInterval(window._adminCountdownInterval); window._adminCountdownInterval = null; }
+}
+
+function _adminShowCountdown(title, titleColor, timerColor, endTs, size, opacity) {
+  _adminHideCountdown();
+  const sizeMap = { small: { pad:'6px 14px', title:'11px', timer:'16px', minW:'140px' }, medium: { pad:'10px 20px', title:'12px', timer:'22px', minW:'200px' }, large: { pad:'14px 28px', title:'15px', timer:'32px', minW:'260px' } };
+  const s = sizeMap[size] || sizeMap.medium;
+  const op = opacity !== undefined ? opacity : 0.8;
+  let widget = document.getElementById('_adminCountdownWidget');
+  if (!widget) {
+    widget = document.createElement('div');
+    widget.id = '_adminCountdownWidget';
+    document.body.appendChild(widget);
+  }
+  widget.style.cssText = `
+    position:fixed;top:12px;left:50%;transform:translateX(-50%);
+    z-index:88000;background:rgba(0,0,0,0.85);border:1px solid #333;
+    border-radius:14px;padding:${s.pad};text-align:center;
+    pointer-events:none;min-width:${s.minW};opacity:${op};
+  `;
+  widget._titleSize = s.title;
+  widget._timerSize = s.timer;
+
+  function _fmtMs(ms) {
+    if (ms <= 0) return '00:00:00';
+    const totalSec = Math.floor(ms / 1000);
+    const h = Math.floor(totalSec / 3600);
+    const m = Math.floor((totalSec % 3600) / 60);
+    const s = totalSec % 60;
+    if (h > 0) return `${h}:${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+    return `${String(m).padStart(2,'0')}:${String(s).padStart(2,'0')}`;
+  }
+
+  function tick() {
+    const left = endTs - Date.now();
+    if (left <= 0) { _adminHideCountdown(); return; }
+    widget.innerHTML = `
+      <div style="font-size:${widget._titleSize||'12px'};font-weight:bold;color:${titleColor};margin-bottom:4px;">${title}</div>
+      <div style="font-size:${widget._timerSize||'22px'};font-weight:bold;color:${timerColor};font-variant-numeric:tabular-nums;letter-spacing:2px;">${_fmtMs(left)}</div>
+    `;
+  }
+  tick();
+  window._adminCountdownInterval = setInterval(tick, 1000);
+}
+// ===== /ADMIN COUNTDOWN =====
+
 function _adminClearEffects() {
   if (_adminEffectRAF) { cancelAnimationFrame(_adminEffectRAF); _adminEffectRAF = null; }
   const c = document.getElementById('adminEffectCanvas');
@@ -10137,9 +10246,10 @@ function _adminClearEffects() {
     document.body.style.filter = '';
     window._adminYinYangActive = false;
   }
-  // Clear vortex rotation
+  // Clear vortex / mirror transform
   const _vortexApp = document.querySelector('.app') || document.body;
   _vortexApp.style.transform = '';
+  _vortexApp.style.transition = '';
 }
 
 /* ---- UI Chaos ---- */
@@ -10313,6 +10423,10 @@ function _adminApplyOpening(type, v) {
       d.goldCapsule.lastOpen = 0;
       save(); showToast('🥇 Gold Capsule from Admin!');
       if (typeof startGoldCapsuleSequence === 'function') startGoldCapsuleSequence();
+      break;
+    case 'glitchFragment':
+      _giveGlitchFragment();
+      _adminShowOverlay('🌀 Glitch Fragment from Admin!', '#ff00ff', 3000);
       break;
     case 'glitchBox':
       if (!d.glitchBox) d.glitchBox = { taps: 0, doubled: 1, duplicates: 0, cooldownDays: 20, lastOpen: 0, firstOpen: true };
@@ -10616,7 +10730,7 @@ let _giftOpening = false;
 
 function startGiftBoxSequence() {
   if (_giftOpening) return;
-  if (!d.giftBox || !d.giftBox.obtained) { showToast(t('locked')); return; }
+  if (!d.giftBox || !d.giftBox.obtained) { return; }
   _giftOpening = true;
   _giftTaps = 0;
   const modal = document.getElementById('giftBoxModal');
@@ -10900,10 +11014,7 @@ let _bombExploding = false;
 
 function startBombBoxSequence() {
   if (_bombExploding) return;
-  if (!d.bombBox || !d.bombBox.obtained) {
-    showToast(t('locked'));
-    return;
-  }
+  if (!d.bombBox || !d.bombBox.obtained) { return; }
   const modal = document.getElementById('bombBoxModal');
   const img = document.getElementById('bombBoxImg');
 
@@ -11184,7 +11295,7 @@ let _eggOpening = false;
 
 function startEasterEggSequence() {
   if (_eggOpening) return;
-  if (!d.easterEgg || !d.easterEgg.obtained) { showToast(t('locked')); return; }
+  if (!d.easterEgg || !d.easterEgg.obtained) { return; }
   _eggOpening = true;
   _eggSwipes = d.easterEgg.swipes || 0;
   const modal = document.getElementById('easterEggModal');
@@ -11405,10 +11516,7 @@ let noobBoxTaps = 0;
 
 function startNoobBoxSequence() {
   if (noobBoxOpening) return;
-  if (!d.noobBox || !d.noobBox.obtained) {
-    showToast(t('locked'));
-    return;
-  }
+  if (!d.noobBox || !d.noobBox.obtained) { return; }
 
   noobBoxOpening = true;
   noobBoxTaps = d.noobBox.taps || 0;
@@ -11738,6 +11846,10 @@ function openCapsule() {
           d.bonuses.offline25 = true;
           rewardText = reward.name;
           break;
+        case 'glitchFragment':
+      _giveGlitchFragment();
+      reward.img = `oblom${_lastGlitchFragmentIdx + 1}.png`;
+      break;
           
         case 'tap2x':
           d.bonuses.tap2x = { active: true, end: Date.now() + reward.duration * 1000 };
@@ -11934,10 +12046,7 @@ let goldCapsuleTaps = 0;
 
 function startGoldCapsuleSequence() {
   if (goldCapsuleOpening) return;
-  if (!d.goldCapsule || !d.goldCapsule.obtained) {
-    showToast(t('locked'));
-    return;
-  }
+  if (!d.goldCapsule || !d.goldCapsule.obtained) { return; }
 
   goldCapsuleOpening = true;
   goldCapsuleTaps = d.goldCapsule.taps || 0;
@@ -13234,7 +13343,8 @@ let currentKeyIndex = 0;
 const keyColors = ['blue', 'red', 'green', 'yellow', 'black'];
 
 function getVisibleKeyColors() {
-  const base = ['blue', 'red', 'green', 'yellow', 'black'];
+  const base = ['blue', 'red', 'green', 'yellow'];
+  if (d.keys && d.keys.black > 0) base.push('black');
   if (d.keys && d.keys.admin > 0) base.push('admin');
   return base;
 }
@@ -13304,7 +13414,7 @@ function updateKeysUI() {
   if (currentKeyIndex >= visibleKeys.length) currentKeyIndex = 0;
   const currentKey = visibleKeys[currentKeyIndex];
   const keyCount = (d.keys && d.keys[currentKey]) ? d.keys[currentKey] : 0;
-  const maxKeys = currentKey === 'admin' ? 1 : 4;
+  const maxKeys = currentKey === 'admin' || currentKey === 'black' ? 1 : 4;
   
   const keyImg = document.getElementById('currentKeyImg');
   const keyCounter = document.getElementById('keyCounter');
@@ -13438,36 +13548,17 @@ function buyKeyItem(keyColor, item) {
 
   // === НОВАЯ БЛОКИРОВКА ДЛЯ ПАЗЛОВ (КРАСНЫЙ КЛЮЧ) ===
   if (item.type === 'puzzle') {
-      const now = Date.now();
-      const delay = 0;
-
-      // Проверяем 1-й набор пазлов
-      if (!d.puzzleDone) {
-          let hasMissing = false;
-          for(let i=0; i<9; i++) {
-              if (d.puzzles[i] === 0) hasMissing = true;
-          }
-          if (!hasMissing) {
-              // Пазлы собраны, но кнопку "собрать" еще не нажали (или просто всё есть)
-              showToast(t('all_puzzles_owned') || "All puzzle pieces owned!");
-              return; // ПРЕРЫВАЕМ, КЛЮЧ НЕ ТРАТИТСЯ
-          }
-      } 
-      // Проверяем паузу между пазлами
-      else if (now < (d.puzzleDoneTime || 0) + delay) {
-           showToast(t('puzzle_next_wait') || "Next puzzle not ready!");
-           return; // ПРЕРЫВАЕМ, КЛЮЧ НЕ ТРАТИТСЯ
-      } 
-      // Проверяем 2-й набор пазлов
-      else {
-          let hasMissing2 = false;
-          for(let i=0; i<9; i++) {
-              if (d.puzzles2[i] === 0) hasMissing2 = true;
-          }
-          if (!hasMissing2) {
-               showToast(t('all_puzzles_owned') || "All puzzle pieces owned!");
-               return; // ПРЕРЫВАЕМ, КЛЮЧ НЕ ТРАТИТСЯ
-          }
+      // Проверяем есть ли хоть один незаполненный пазл из всех 5
+      function _hasMissing(arr, len) { for(let i=0;i<len;i++) if(!arr[i]) return true; return false; }
+      const allDone =
+          (d.puzzleDone  || !_hasMissing(d.puzzles,  9))  &&
+          (d.puzzle2Done || !_hasMissing(d.puzzles2, 9))  &&
+          (d.puzzle3Done || !_hasMissing(d.puzzles3, 9))  &&
+          (d.puzzle4Done || !_hasMissing(d.puzzles4, 9))  &&
+          (d.puzzle5Done || !_hasMissing(d.puzzles5, 25));
+      if (allDone) {
+          showToast(t('all_puzzles_owned') || "All puzzle pieces owned!");
+          return;
       }
   }
 
@@ -13526,10 +13617,7 @@ function applyKeyReward(keyColor, item) {
       break;
       
     case 'glitchBox':
-      // Даем возможность открыть Glitch Box
-      d.glitchBox.lastOpen = 0;
-      showToast('Glitch Box ready to open!');
-      updateGlitchBoxUI();
+      _giveGlitchFragment();
       break;
       
     case 'ek':
@@ -13555,8 +13643,7 @@ function applyKeyReward(keyColor, item) {
       save(); startGoldCapsuleSequence();
       break;
     case 'adminGlitchBox':
-      d.glitchBox.lastOpen = 0;
-      save(); updateGlitchBoxUI(); showToast('🌀 Glitch Box ready!');
+      _giveGlitchFragment();
       break;
     case 'adminBombBox':
       if (!d.bombBox) d.bombBox = { obtained: false };
@@ -13659,8 +13746,9 @@ function giveRandomPuzzlePiece() {
     
     if (missing.length > 0) {
       const idx = missing[Math.floor(Math.random() * missing.length)];
-      d.puzzles[idx] = 1;
-      showToast(`Puzzle piece ${idx + 1} obtained!`);
+  d.glitchFragments[idx] = true;
+  showToast(`🌀 Glitch Fragment ${idx + 1}/3 obtained!`);
+  _lastGlitchFragmentIdx = idx;
     } else {
       // Все собраны — убираем награду, просто пишем текст
       showToast(t('all_puzzles_owned'));
@@ -13733,6 +13821,32 @@ function giveRandomPuzzlePiece() {
   if (typeof updateThirdPuzzleUI === 'function') updateThirdPuzzleUI();
   if (typeof updateFourthPuzzleUI === 'function') updateFourthPuzzleUI();
   if (typeof updateFifthPuzzleUI === 'function') updateFifthPuzzleUI();
+}
+
+// ===== GLITCH FRAGMENT SYSTEM =====
+let _lastGlitchFragmentIdx = 0;
+function _giveGlitchFragment() {
+  if (!d.glitchFragments) d.glitchFragments = [false, false, false];
+
+  const missing = d.glitchFragments.map((v, i) => (!v ? i : -1)).filter(i => i >= 0);
+  if (missing.length === 0) {
+    showToast('All 3 fragments already collected!');
+    return;
+  }
+  // Случайный из недостающих
+  const idx = missing[Math.floor(Math.random() * missing.length)];
+  d.glitchFragments[idx] = true;
+  showToast(`🌀 Glitch Fragment ${idx + 1}/3 obtained!`);
+
+  if (d.glitchFragments.every(v => v)) {
+    d.glitchBox.firstOpen = true;
+    save();
+    updateGlitchBoxUI();
+    showToast('🌀 All 3 fragments! Press OPEN to claim!');
+  } else {
+    save();
+    updateGlitchBoxUI();
+  }
 }
 
 // Активировать tap boost
@@ -13899,51 +14013,74 @@ function playGlitchSound() {
   source.playbackRate.value = 0.8 + Math.random() * 0.4;
 }
 
-// Обновление UI Glitch Box
+// Открыть экран фрагментов
+function openGlitchFragmentScreen() {
+  const m = document.getElementById('glitchFragmentModal');
+  if (m) { m.classList.add('active'); updateGlitchBoxUI(); }
+}
+function closeGlitchFragmentScreen() {
+  const m = document.getElementById('glitchFragmentModal');
+  if (m) m.classList.remove('active');
+}
+
+// Обновление UI Glitch Box (карточка + модальный экран)
 function updateGlitchBoxUI() {
-  const now = Date.now();
-  const cooldownMs = d.glitchBox.cooldownDays * 24 * 60 * 60 * 1000;
-  const lastOpen = d.glitchBox.lastOpen || 0;
-  const timeSinceOpen = now - lastOpen;
-  
+  const frags = d.glitchFragments || [false, false, false];
+  const count = frags.filter(Boolean).length;
+  const isReady = d.glitchBox.firstOpen || count >= 3;
+  const multi = d.glitchBox.doubled || 1;
+
+  // --- Множители ---
+  ['glitchBoxMultiplier', 'glitchBoxMultiplierModal'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = `x${multi}`;
+  });
+
+  // --- Мини-слоты на карточке ---
+  for (let i = 0; i < 3; i++) {
+    const slot = document.getElementById(`gfrag-${i}`);
+    if (slot) slot.classList.toggle('owned', !!frags[i]);
+    const miniImg = document.getElementById(`gfrag-mini-${i}`);
+    if (miniImg) miniImg.classList.toggle('owned', !!frags[i]);
+  }
+
+  // --- Статус-строка карточки ---
   const glitchTimer = document.getElementById('glitchTimer');
-  const openBtn = document.getElementById('openGlitchBoxBtn');
-  const progressBar = document.getElementById('glitchProgressBar');
-  const tapCount = document.getElementById('glitchTapCount');
-  const multiplier = document.getElementById('glitchBoxMultiplier');
-  
-  if (!glitchTimer || !openBtn) return;
-  
-  // Обновляем множитель
-  if (multiplier) {
-    multiplier.textContent = `x${d.glitchBox.doubled}`;
+  if (glitchTimer) {
+    glitchTimer.textContent = isReady
+      ? '✅ Ready to open!'
+      : `${count} / 3 fragments collected`;
   }
-  
-  // Проверяем, можно ли открывать
-  if (d.glitchBox.firstOpen || timeSinceOpen >= cooldownMs) {
-    glitchTimer.textContent = 'Ready to open!';
-    openBtn.disabled = false;
-    openBtn.style.opacity = '1';
-  } else {
-    // Показываем оставшееся время
-    const remainingMs = cooldownMs - timeSinceOpen;
-    const days = Math.floor(remainingMs / (1000 * 60 * 60 * 24));
-    const hours = Math.floor((remainingMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-    
-    glitchTimer.textContent = `Cooldown: ${days}d ${hours}h`;
-    openBtn.disabled = true;
-    openBtn.style.opacity = '0.5';
+
+  // --- Большие слоты в модалке ---
+  for (let i = 0; i < 3; i++) {
+    const piece = document.getElementById(`gfragPiece-${i}`);
+    if (piece) piece.classList.toggle('owned', !!frags[i]);
   }
-  
-  // Обновляем прогресс
-  if (progressBar) {
-    const progress = Math.min(100, (d.glitchBox.taps / 30) * 100);
-    progressBar.style.width = `${progress}%`;
-  }
-  
-  if (tapCount) {
-    tapCount.textContent = `Taps: ${d.glitchBox.taps}/30`;
-  }
+
+  // --- Полоска прогресса в модалке ---
+  const fill = document.getElementById('gfragFill');
+  if (fill) fill.style.width = `${Math.round((count / 3) * 100)}%`;
+  const label = document.getElementById('gfragCounterLabel');
+  if (label) label.textContent = `${count} / 3`;
+
+  // --- Подзаголовок модалки ---
+  const sub = document.getElementById('gfragModalSub');
+  if (sub) sub.textContent = isReady
+    ? '🌀 All fragments collected — open the box!'
+    : `Collect ${3 - count} more fragment${3 - count !== 1 ? 's' : ''} to unlock`;
+
+  // --- Кнопка открыть ---
+  const openBtn = document.getElementById('gfragOpenBtn');
+  if (openBtn) openBtn.disabled = !isReady;
+
+  // --- Tap-прогресс (виден только когда бокс готов) ---
+  const tapWrap = document.getElementById('gfragTapWrap');
+  if (tapWrap) tapWrap.style.display = isReady ? 'block' : 'none';
+  const pb2 = document.getElementById('glitchProgressBar2');
+  if (pb2) pb2.style.width = `${Math.min(100, ((d.glitchBox.taps || 0) / 30) * 100)}%`;
+  const tc2 = document.getElementById('glitchTapCount2');
+  if (tc2) tc2.textContent = `Taps: ${d.glitchBox.taps || 0}/30`;
 }
 
 // ===== KEY BOX =====
@@ -14423,7 +14560,7 @@ function pushMyLeaderboardData() {
     favGame: d.profile?.favGame || '',
     skins: d.skins || {},
     secretSkins: d.secretSkins || {},
-    myTokens: (d.market?.myTokens || []).map(tk => ({ ticker: tk.ticker||'', name: tk.name||'' })),
+    myTokens: (d.market?.myTokens || []).filter(tk => String(tk.creatorId) === _getMyId()).map(tk => ({ ticker: tk.ticker||'', name: tk.name||'' })),
     streakDays: d.streak?.days || 0,
     streakActive: d.streak?.lastClaimTs ? (Date.now() - d.streak.lastClaimTs) < 86400000 * 1.5 : false,
     verified: d.verified || false
@@ -14922,16 +15059,15 @@ function startGlitchBoxSequence() {
   const cooldownMs = days * 24 * 60 * 60 * 1000;
   const lastOpen = d.glitchBox.lastOpen || 0;
   
-  // Проверяем кулдаун (только если это не первое открытие)
+  // Новая система: бокс открывается через фрагменты или если firstOpen уже выставлен
+  const _frags = d.glitchFragments || [false, false, false];
   if (!d.glitchBox.firstOpen) {
-    const timePassed = now - lastOpen;
-    if (timePassed < cooldownMs) {
-      // Вычисляем сколько осталось для уведомления
-      const left = cooldownMs - timePassed;
-      const h = Math.floor(left / (1000 * 60 * 60));
-      showToast(`Wait ${h} hours more!`);
-      return;
-    }
+    if (_frags.filter(Boolean).length < 3) return;
+    // Все 3 собраны — сбрасываем и открываем
+    d.glitchFragments = [false, false, false];
+    d.glitchBox.firstOpen = true;
+    save();
+    updateGlitchBoxUI();
   }
   
   // Сбрасываем прогресс текущей сессии
@@ -15165,6 +15301,7 @@ function openGlitchBox() {
   d.glitchBox.firstOpen = false;
   d.glitchBox.lastOpen = Date.now();
   d.glitchBox.taps = 0;
+  d.glitchFragments = [false, false, false];
 
   // Собираем N наград, но НЕ применяем их сейчас
   const rewards = [];
@@ -15277,6 +15414,7 @@ function applyGlitchReward(reward) {
       d.questEkEarned = (d.questEkEarned || 0) + reward.value;
       d.wQuestEkEarned = (d.wQuestEkEarned || 0) + reward.value;
       checkQuestProgress('earn_ek');
+      checkQuestProgress('w_ek');
       break;
       
     case 'key':
@@ -17059,6 +17197,8 @@ function showTokenDetail(firebaseId) {
   const priceChange = initialPrice > 0 ? ((currentPrice - initialPrice) / initialPrice * 100).toFixed(1) : '0.0';
   const changeColor = priceChange >= 0 ? '#00e676' : '#ff4081';
   const createdDate = tok.createdAt ? new Date(tok.createdAt).toLocaleDateString() : '—';
+  const marketCap = (tok.price || 0) * (tok.supply || 0);
+  const volume = tok.volume || 0;
   const lastPrice = tok.history && tok.history.length >= 2 ? tok.history[tok.history.length - 2] : currentPrice;
 
   // Аватарка создателя из leaderboard
@@ -17117,6 +17257,14 @@ function showTokenDetail(firebaseId) {
       <div style="display:flex;justify-content:space-between;">
         <span style="color:#888;font-size:12px;">Created</span>
         <span style="font-weight:bold;color:#aaa;">${createdDate}</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="color:#888;font-size:12px;">Market Cap</span>
+        <span style="font-weight:bold;color:#ff9800;">${formatNumber(marketCap, 2)} KSPT</span>
+      </div>
+      <div style="display:flex;justify-content:space-between;">
+        <span style="color:#888;font-size:12px;">Volume</span>
+        <span style="font-weight:bold;color:#64b5f6;">${formatNumber(volume, 2)} KSPT</span>
       </div>
     </div>
 
@@ -17687,6 +17835,28 @@ function renderFriendsTab() {
       }
     </div>
   `;
+
+  // Подтягиваем актуальный lastSeen из Firebase для каждого друга
+  if (window._firebaseReady && window._firebaseDB && friendIds.length > 0) {
+    friendIds.forEach(uid => {
+      window._firebaseRef(window._firebaseDB, `leaderboard/${uid}/lastSeen`).once('value').then(snap => {
+        const ls = snap?.val();
+        if (ls && d.friends[uid]) {
+          d.friends[uid].lastSeen = ls;
+          // Обновляем только этот элемент без полного перерендера
+          const listEl = document.getElementById('friendsList');
+          if (listEl) {
+            const items = listEl.querySelectorAll('.friend-item');
+            items.forEach(item => {
+              if (item.getAttribute('onclick') && item.getAttribute('onclick').includes(uid)) {
+                item.outerHTML = _renderFriendItem(uid, d.friends[uid]);
+              }
+            });
+          }
+        }
+      });
+    });
+  }
 }
 
 function _renderFriendItem(uid, friend) {

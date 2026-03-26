@@ -840,26 +840,22 @@ window.addEventListener('message', (event) => {
     <div id="keyBoxTapCount" style="display:none;"></div>
   </div>
 
-  <!-- Нижний блок: Glitch Box -->
-  <div id="glitchBox" class="card" style="text-align: center; border: 2px solid #ff00ff;">
-    <div class="card-title" style="color: #ff00ff;">GLITCH BOX</div>
-    <div class="card-sub" style="color: #ff99ff; margin-bottom: 10px;">First open free! Cooldown: 20 days</div>
-    
-    <div id="glitchBoxVisual" style="position: relative; margin: 15px auto; width: 120px; height: 120px;">
-      <img id="glitchBoxImg" src="glitchbox.png" style="width: 100%; height: 100%; object-fit: contain; cursor: pointer;">
-      <div id="glitchBoxMultiplier" style="position: absolute; top: -10px; right: -10px; background: red; color: white; border-radius: 50%; width: 30px; height: 30px; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: 12px;">x1</div>
+  <!-- Glitch Box — Fragment Card -->
+  <div id="glitchBox" class="card gfrag-card" onclick="openGlitchFragmentScreen()">
+    <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;">
+      <div style="font-weight:bold;font-size:15px;color:#ff00ff;letter-spacing:1px;">⚡ GLITCH BOX</div>
+      <div id="glitchBoxMultiplier" class="gfrag-multi">x1</div>
     </div>
-    
-    <div id="glitchProgress" style="margin: 10px 0;">
-      <div style="background: #333; height: 10px; border-radius: 5px; overflow: hidden;">
-        <div id="glitchProgressBar" style="background: #ff00ff; height: 100%; width: 0%;"></div>
-      </div>
-      <div id="glitchTapCount" style="font-size: 12px; margin-top: 5px;">Taps: 0/30</div>
+    <div class="gfrag-slots" id="glitchFragSlots">
+      <div class="gfrag-slot" id="gfrag-0"><img id="gfrag-mini-0" class="gfrag-mini-img" src="oblom1.png"></div>
+      <div class="gfrag-slot" id="gfrag-1"><img id="gfrag-mini-1" class="gfrag-mini-img" src="oblom2.png"></div>
+      <div class="gfrag-slot" id="gfrag-2"><img id="gfrag-mini-2" class="gfrag-mini-img" src="oblom3.png"></div>
     </div>
-    
-    <div id="glitchTimer" class="card-sub" style="color: #ffb74d; margin: 10px 0;">Ready to open!</div>
-    
-<button id="openGlitchBoxBtn" onclick="startGlitchBoxSequence()" style="background: #ff00ff; color: #000; font-weight: bold; padding: 12px 24px; border-radius: 12px; border: none; cursor: pointer; width: 100%;">OPEN GLITCH BOX</button>
+    <div id="glitchTimer" class="gfrag-status">0 / 3 fragments</div>
+    <!-- скрытые элементы чтобы не ломать старый JS -->
+    <div id="glitchProgressBar" style="display:none;"></div>
+    <div id="glitchTapCount" style="display:none;"></div>
+    <button id="openGlitchBoxBtn" style="display:none;" onclick="startGlitchBoxSequence()"></button>
   </div>
 </div>
 
@@ -1896,6 +1892,80 @@ document.addEventListener('DOMContentLoaded', function () {
   
   </div>
 
+<!-- ===== GLITCH FRAGMENT SCREEN ===== -->
+<div id="glitchFragmentModal" class="gfrag-modal">
+
+  <!-- scanline overlay -->
+  <div class="gfrag-scanlines"></div>
+
+  <!-- close -->
+  <button class="gfrag-close" onclick="closeGlitchFragmentScreen()">✕</button>
+
+  <!-- header -->
+  <div class="gfrag-modal-header">
+    <div class="gfrag-modal-title">GLITCH BOX</div>
+    <div class="gfrag-modal-sub" id="gfragModalSub">Collect 3 fragments to open</div>
+  </div>
+
+  <!-- box art -->
+  <div class="gfrag-art-wrap">
+    <img src="glitchbox.png" class="gfrag-art" id="gfragArt">
+    <div id="glitchBoxMultiplierModal" class="gfrag-multi-modal">x1</div>
+  </div>
+
+  <!-- 3 big fragment slots -->
+  <div class="gfrag-big-slots">
+    <div class="gfrag-big-slot" id="gfragBig-0">
+      <div class="gfrag-piece gfrag-piece-0" id="gfragPiece-0">
+        <img src="oblom1.png" class="gfrag-piece-img">
+        <div class="gfrag-piece-num">I</div>
+      </div>
+      <div class="gfrag-slot-label">Fragment I</div>
+    </div>
+    <div class="gfrag-big-slot" id="gfragBig-1">
+      <div class="gfrag-piece gfrag-piece-1" id="gfragPiece-1">
+        <img src="oblom2.png" class="gfrag-piece-img">
+        <div class="gfrag-piece-num">II</div>
+      </div>
+      <div class="gfrag-slot-label">Fragment II</div>
+    </div>
+    <div class="gfrag-big-slot" id="gfragBig-2">
+      <div class="gfrag-piece gfrag-piece-2" id="gfragPiece-2">
+        <img src="oblom3.png" class="gfrag-piece-img">
+        <div class="gfrag-piece-num">III</div>
+      </div>
+      <div class="gfrag-slot-label">Fragment III</div>
+    </div>
+  </div>
+  <!-- counter bar -->
+  <div class="gfrag-counter-wrap">
+    <div class="gfrag-counter-bar">
+      <div class="gfrag-counter-fill" id="gfragFill"></div>
+    </div>
+    <div class="gfrag-counter-label" id="gfragCounterLabel">0 / 3</div>
+  </div>
+
+  <!-- how to get hint -->
+  <div class="gfrag-hint" id="gfragHint">
+    Capsule or Green Key → +1 random fragment
+  </div>
+
+  <!-- tap progress (visible only when box ready) -->
+  <div id="gfragTapWrap" style="display:none;width:100%;max-width:320px;margin-top:10px;">
+    <div style="background:#2a002a;border-radius:8px;height:8px;overflow:hidden;margin-bottom:6px;">
+      <div id="glitchProgressBar2" style="background:#ff00ff;height:100%;width:0%;transition:width .2s;"></div>
+    </div>
+    <div id="glitchTapCount2" style="font-size:12px;color:#ff99ff;text-align:center;">Taps: 0/30</div>
+  </div>
+
+  <!-- open button -->
+  <button id="gfragOpenBtn" class="gfrag-open-btn" onclick="closeGlitchFragmentScreen();startGlitchBoxSequence();" disabled>
+    OPEN GLITCH BOX
+  </button>
+
+</div>
+<!-- ===== /GLITCH FRAGMENT SCREEN ===== -->
+
 <!-- Full Shop Modal -->
 <div id="shopModal" class="shop-modal">
   <div class="shop-modal-content">
@@ -2217,6 +2287,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="capsule">Capsule</option>
           <option value="goldCapsule">Gold Capsule</option>
           <option value="glitchBox">Glitch Box</option>
+          <option value="glitchFragment">🌀 Glitch Fragment</option>
           <option value="keyBox">Key Box</option>
           <option value="fortuneWheel">Fortune Wheel Spin</option>
           <option value="bombBox">💣 Bomb Box</option>
@@ -2397,6 +2468,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="eind">Eind!</option>
           <option value="ferto">Ferto</option>
           <option value="figaro">Figaro</option>
+          <option value="squeak">Squeak</option>
         </optgroup>
       </select>
       <div class="ap-row">
@@ -2544,6 +2616,13 @@ document.addEventListener('DOMContentLoaded', function () {
         <input type="checkbox" class="ap-effect-check" style="width:16px;height:16px;margin-right:6px;">
         <span style="color:#e8eaf6;font-size:13px;flex:1;">🌀 Vortex (Spinning UI)</span>
         <select class="ap-select ap-effect-strength" data-effect="vortex" style="max-width:85px;">
+          <option value="weak">Weak</option><option value="medium" selected>Med</option><option value="strong">Strong</option>
+        </select>
+      </div>
+      <div class="ap-effect-row ap-row" style="background:#0d0d20;border-radius:8px;padding:7px 10px;margin-bottom:6px;">
+        <input type="checkbox" class="ap-effect-check" style="width:16px;height:16px;margin-right:6px;">
+        <span style="color:#e8eaf6;font-size:13px;flex:1;">🪞 Mirror Flip (UI Flips)</span>
+        <select class="ap-select ap-effect-strength" data-effect="mirror" style="max-width:85px;">
           <option value="weak">Weak</option><option value="medium" selected>Med</option><option value="strong">Strong</option>
         </select>
       </div>
@@ -2770,6 +2849,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="capsule">Capsule</option>
           <option value="goldCapsule">Gold Capsule</option>
           <option value="glitchBox">Glitch Box</option>
+          <option value="glitchFragment">🌀 Glitch Fragment</option>
           <option value="keyBox">Key Box</option>
           <option value="fortuneWheel">Fortune Wheel Spin</option>
           <option value="bombBox">💣 Bomb Box</option>
@@ -2957,6 +3037,50 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="ap-row" style="gap:8px;">
         <button class="ap-btn ap-btn-blue" style="flex:1;" onclick="adminSetPaperEvent()">▶ Start Event</button>
         <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminClearPaperEvent()">■ Stop</button>
+      </div>
+    </div>
+
+<!-- Countdown Timer -->
+    <div class="ap-card" style="border-color:#1a3a1a;">
+      <h3 style="color:#69f0ae;">⏳ Countdown Timer</h3>
+      <p style="color:#9fa8da;font-size:11px;margin:0 0 10px;">Shows a live countdown to all online players.</p>
+
+      <div style="display:flex;flex-direction:column;gap:8px;margin-bottom:10px;">
+        <div>
+          <label style="color:#9fa8da;font-size:11px;">Title text (white by default)</label>
+          <div style="display:flex;gap:6px;margin-top:4px;">
+            <input id="apCountdownTitle" class="ap-input" placeholder="e.g. Event starts in..." style="flex:1;">
+            <input type="color" id="apCountdownTitleColor" value="#ffffff" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:2px;background:#1a1a1a;">
+          </div>
+        </div>
+        <div>
+          <label style="color:#9fa8da;font-size:11px;">Duration (minutes)</label>
+          <div style="display:flex;gap:6px;margin-top:4px;">
+            <input id="apCountdownMins" class="ap-input" type="number" min="1" value="60" placeholder="minutes" style="flex:1;">
+            <input type="color" id="apCountdownTimerColor" value="#ffd700" style="width:36px;height:36px;border:none;border-radius:6px;cursor:pointer;padding:2px;background:#1a1a1a;">
+          </div>
+          <div style="font-size:10px;color:#555;margin-top:3px;">Timer color (default yellow)</div>
+        </div>
+        <div style="display:flex;gap:8px;">
+          <div style="flex:1;">
+            <label style="color:#9fa8da;font-size:11px;">Size</label>
+            <select id="apCountdownSize" class="ap-select" style="width:100%;margin-top:4px;">
+              <option value="small">Small</option>
+              <option value="medium" selected>Medium</option>
+              <option value="large">Large</option>
+            </select>
+          </div>
+          <div style="flex:1;">
+            <label style="color:#9fa8da;font-size:11px;">Opacity (%)</label>
+            <input id="apCountdownOpacity" class="ap-input" type="number" min="10" max="100" value="80" style="width:100%;margin-top:4px;">
+          </div>
+        </div>
+      </div>
+
+      <div id="apCountdownStatus" style="font-size:12px;color:#555;margin-bottom:8px;min-height:16px;"></div>
+      <div class="ap-row" style="gap:8px;">
+        <button class="ap-btn ap-btn-green" style="flex:1;" onclick="adminSetCountdown()">▶ Start</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminStopCountdown()">■ Stop</button>
       </div>
     </div>
 

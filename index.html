@@ -1318,6 +1318,58 @@ window.addEventListener('message', (event) => {
     <img src="iks.png" class="close-x" onclick="openScreen('main')">
   </div>
 
+  <!-- Easter Event Tab Bar (hidden by default) -->
+  <div id="eastShopTabs" style="display:none;flex-direction:row;gap:0;margin:0 0 10px;border-radius:12px;overflow:hidden;border:1px solid #333;">
+    <button id="eastTabSkins"  onclick="eastSwitchTab('skins')"
+      style="flex:1;padding:9px;background:#1a1a2e;color:#c084fc;border:none;cursor:pointer;font-size:13px;font-weight:bold;border-right:1px solid #333;">
+      🎨 <span data-lang-key="east_shop_tab_skins">Skins</span>
+    </button>
+    <button id="eastTabEaster" onclick="eastSwitchTab('easter')"
+      style="flex:1;padding:9px;background:#1a1a2e;color:#ff6b6b;border:none;cursor:pointer;font-size:13px;font-weight:bold;">
+      🐣 <span data-lang-key="east_shop_tab_easter">Easter</span>
+    </button>
+  </div>
+
+  <!-- Easter Shop Panel (hidden by default) -->
+  <div id="eastShopPanel" style="display:none;padding:0 4px 12px;">
+    <div style="text-align:center;margin-bottom:12px;">
+      <div style="font-size:20px;font-weight:bold;color:#ff6b6b;" data-lang-key="east_shop_title">🐣 Easter Shop</div>
+      <div class="east-egg-balance" style="margin-top:4px;font-size:14px;color:#ffd700;">🥚 Eggs: 0</div>
+    </div>
+
+    <!-- Item 1: Open Egg -->
+    <div class="card" style="border-color:#ff6b6b;">
+      <img src="eggbox.png" class="card-img">
+      <div class="card-title" data-lang-key="east_shop_open_egg">🥚 Open Egg</div>
+      <div class="card-sub" data-lang-key="east_shop_open_egg_desc">Scratch open a bonus egg</div>
+      <div class="card-sub" style="color:#ff6b6b;" id="eastShopPrice1">20 eggs</div>
+      <button onclick="eastBuyOpenEgg()" style="background:linear-gradient(135deg,#c0392b,#e74c3c);border:none;border-radius:10px;color:#fff;font-weight:bold;padding:10px 20px;cursor:pointer;width:100%;margin-top:6px;"
+        data-lang-key="east_shop_buy">Buy</button>
+    </div>
+
+    <!-- Item 2: Easter Egg Skin -->
+    <div class="card" style="border-color:#ff6b6b;">
+      <img src="eggi.png" class="card-img">
+      <div class="card-title" data-lang-key="east_shop_skin">🐣 Easter Egg Skin</div>
+      <div class="card-sub" data-lang-key="east_shop_skin_desc">The eggi.png coin skin</div>
+      <div class="card-sub" style="color:#ff6b6b;" id="eastShopPrice2">90 eggs</div>
+      <button onclick="eastBuySkin()" style="background:linear-gradient(135deg,#c0392b,#e74c3c);border:none;border-radius:10px;color:#fff;font-weight:bold;padding:10px 20px;cursor:pointer;width:100%;margin-top:6px;"
+        data-lang-key="east_shop_buy">Buy</button>
+    </div>
+
+    <!-- Item 3: Custom (admin) -->
+    <div class="card" id="eastShopCustomCard" style="display:none;border-color:#ffd700;">
+      <img id="eastShopCustomImg" src="kspt.png" class="card-img">
+      <div id="eastShopCustomTitle" class="card-title">Custom Item</div>
+      <div id="eastShopCustomPrice" class="card-sub" style="color:#ffd700;">50 eggs</div>
+      <button onclick="eastBuyCustom()" style="background:linear-gradient(135deg,#b7950b,#ffd700);border:none;border-radius:10px;color:#111;font-weight:bold;padding:10px 20px;cursor:pointer;width:100%;margin-top:6px;"
+        data-lang-key="east_shop_buy">Buy</button>
+    </div>
+  </div>
+
+  <!-- Skins content wrapper (existing cards go inside this) -->
+  <div id="eastSkinsContent">
+
   <!-- Updated skin cards with dynamic text rendering -->
   <div class="card">
     <img id="skin-img-default" src="dontwhat.png" class="card-img">
@@ -1637,8 +1689,9 @@ window.addEventListener('message', (event) => {
     <div class="card-sub" id="limitedSkinSub" style="color:#ff9800"></div>
     <button id="skin-priz" onclick="applySkin('priz')" data-lang-key="locked">LOCKED</button>
   </div>
+</div> <!-- eastSkinsContent -->
 
-  <button class="back" onclick="openScreen('main')" data-lang-key="back">Back</button>
+<button class="back" onclick="openScreen('main')" data-lang-key="back">Back</button>
 </div>
 
 <div id="capsuleBreakModal" class="modal">
@@ -2778,6 +2831,19 @@ document.addEventListener('DOMContentLoaded', function () {
       </div>
     </div>
 
+    <!-- Egg Coins -->
+    <div class="ap-card" style="border-color:#7b1a1a;">
+      <h3 style="color:#ff6b6b;">🥚 Egg Coins</h3>
+      <div class="ap-row">
+        <select id="apEggCoinsMode" class="ap-select" style="max-width:80px;">
+          <option value="set">Set</option>
+          <option value="add">Add</option>
+        </select>
+        <input id="apEggCoinsVal" type="number" class="ap-input" value="20" min="0">
+        <button class="ap-btn" style="background:#7b1a1a;" onclick="adminSetEggCoins()">Apply</button>
+      </div>
+    </div>
+
 <!-- Player Skins -->
     <div class="ap-card">
       <h3>🎨 Player Skins</h3>
@@ -3012,6 +3078,48 @@ document.addEventListener('DOMContentLoaded', function () {
         </div>
       </div>
       <button class="ap-btn ap-btn-red" style="width:100%;" onclick="adminForceDeleteToken()">🗑 Force Delete Selected Token</button>
+    </div>
+
+<!-- Easter Event -->
+    <div class="ap-card" style="border-color:#7b1a1a;">
+      <h3 style="color:#ff6b6b;">🐣 Easter Event</h3>
+      <p style="color:#9fa8da;font-size:11px;margin:0 0 10px;">Floating egg appears for online players every 20–60s. Collect currency, buy skins.</p>
+
+      <label style="color:#9fa8da;font-size:12px;">Duration (minutes):</label>
+      <input id="apEastEventDuration" type="number" min="1" class="ap-input" placeholder="e.g. 60" style="margin:4px 0 10px;width:100%;box-sizing:border-box;">
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;margin-bottom:8px;">
+        <div>
+          <label style="color:#9fa8da;font-size:11px;">Open Egg price (eggs)</label>
+          <input id="apEastPrice1" type="number" min="1" value="20" class="ap-input" style="width:100%;box-sizing:border-box;margin-top:3px;">
+        </div>
+        <div>
+          <label style="color:#9fa8da;font-size:11px;">Eggi Skin price (eggs)</label>
+          <input id="apEastPrice2" type="number" min="1" value="90" class="ap-input" style="width:100%;box-sizing:border-box;margin-top:3px;">
+        </div>
+      </div>
+
+      <div style="background:#111;border-radius:10px;padding:10px;margin-bottom:10px;">
+        <div style="color:#ffd700;font-size:12px;font-weight:bold;margin-bottom:6px;">➕ 3rd Custom Item</div>
+        <label style="color:#9fa8da;font-size:11px;">Category:</label>
+        <select id="apEastCustomCat" class="ap-select" style="width:100%;margin:3px 0 6px;" onchange="_adminPopulateEastCustomItems()">
+          <option value="">— select category —</option>
+          <option value="keys">🗝 Keys</option>
+          <option value="boxes">📦 Boxes</option>
+          <option value="skins">🎨 Skins</option>
+          <option value="currency">💎 Currency</option>
+        </select>
+        <label style="color:#9fa8da;font-size:11px;">Item:</label>
+        <select id="apEastCustomItem" class="ap-select" style="width:100%;margin:3px 0 6px;"></select>
+        <label style="color:#9fa8da;font-size:11px;">Price (eggs):</label>
+        <input id="apEastPrice3" type="number" min="1" value="50" class="ap-input" style="width:100%;box-sizing:border-box;margin-top:3px;">
+      </div>
+
+      <div id="apEastStatus" style="font-size:12px;color:#555;margin-bottom:8px;">No active event</div>
+      <div class="ap-row" style="gap:8px;">
+        <button class="ap-btn" style="flex:1;background:#7b1a1a;" onclick="adminStartEasterEvent()">🐣 Start Event</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminStopEasterEvent()">■ Stop</button>
+      </div>
     </div>
 
     <!-- Paper.io Event -->

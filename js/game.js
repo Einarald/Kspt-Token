@@ -81,6 +81,27 @@ const translations = {
     'exclusive': 'Exclusive',
     'capsule_exclusive': 'Capsule Exclusive',
     'preview': 'Play 15s',
+    'east_shop_tab_skins': 'Skins',
+    'east_shop_tab_easter': 'Easter',
+    'east_shop_title': '🐣 Easter Shop',
+    'east_currency': 'Eggs',
+    'east_egg_collect': 'Collect!',
+    'east_egg_tap': 'Tap the egg!',
+    'east_shop_open_egg': '🥚 Open Egg',
+    'east_shop_open_egg_desc': 'Scratch open a bonus egg',
+    'east_shop_open_egg_price': '20 eggs',
+    'east_shop_open_egg_cooldown': 'Cooldown: 5 min',
+    'east_shop_skin': '🐣 Easter Egg Skin',
+    'east_shop_skin_desc': 'Egg Coin!',
+    'east_shop_skin_price': '90 eggs',
+    'east_shop_already_owned': 'Already owned',
+    'east_shop_buy': 'Buy',
+    'east_shop_cooldown_left': 'Cooldown: {0}s',
+    'east_balance_label': '🥚 Eggs: {0}',
+    'east_event_started': '🐣 Easter Event is live!',
+    'east_event_ended': 'Easter Event has ended.',
+    'east_admin_started': '🐣 Easter Event started!',
+    'east_admin_stopped': 'Easter Event stopped.',
     
     // Settings
     'settings': 'Settings',
@@ -607,6 +628,27 @@ const translations = {
 
     // Egg
     'easter_egg_box': 'Пасхальное яйцо',
+    'east_shop_tab_skins': 'Скины',
+    'east_shop_tab_easter': 'Пасха',
+    'east_shop_title': '🐣 Пасхальный магазин',
+    'east_currency': 'Яйца',
+    'east_egg_collect': 'Собрать!',
+    'east_egg_tap': 'Нажми на яйцо!',
+    'east_shop_open_egg': '🥚 Открыть яйцо',
+    'east_shop_open_egg_desc': 'Поскретчи бонусное яйцо',
+    'east_shop_open_egg_price': '20 яиц',
+    'east_shop_open_egg_cooldown': 'Кулдаун: 5 мин',
+    'east_shop_skin': '🐣 Скин Пасхальное яйцо',
+    'east_shop_skin_desc': 'Монетка-яйцо!',
+    'east_shop_skin_price': '90 яиц',
+    'east_shop_already_owned': 'Уже куплено',
+    'east_shop_buy': 'Купить',
+    'east_shop_cooldown_left': 'Кулдаун: {0}с',
+    'east_balance_label': '🥚 Яйца: {0}',
+    'east_event_started': '🐣 Пасхальный ивент запущен!',
+    'east_event_ended': 'Пасхальный ивент завершён.',
+    'east_admin_started': '🐣 Пасхальный ивент запущен!',
+    'east_admin_stopped': 'Пасхальный ивент остановлен.',
     'skin_eggi_name': 'Пасхальное яйцо',
     'skin_viking_name': 'Викинги',
     'skin_wheel_name': 'Колесо',
@@ -1560,25 +1602,24 @@ const capsuleRewards = [
   { type: 'puzzle', weight: 10, name: 'Puzzle Piece', img: 'puz.png' },
   { type: 'background', id: 'heaven', weight: 2, name: 'Background: Heaven', img: 'heaven.png' },
   { type: 'skin', id: 'capsule', weight: 1, name: 'Skin: Capsule Master', img: 'capskine.png' },
+  { type: 'skin', id: 'angel',   weight: 1, name: 'Skin: Angel', img: 'angel.png', requireSkin: 'capsule' },
   { type: 'music', id: 'calm', weight: 5, name: 'Music: Calm + Hush', img: 'calm.png' },
   { type: 'glitchFragment', weight: 4, name: 'Glitch Fragment', img: 'glitchbox.png' }
 ];
 
 // Helper function to get weighted random reward
 function getWeightedRandomReward() {
-  const totalWeight = capsuleRewards.reduce((sum, reward) => sum + reward.weight, 0);
+  const eligible = capsuleRewards.filter(r => {
+    if (r.requireSkin) return d.skins && d.skins[r.requireSkin];
+    return true;
+  });
+  const totalWeight = eligible.reduce((sum, r) => sum + r.weight, 0);
   let random = Math.random() * totalWeight;
-  let cumulativeWeight = 0;
-  
-  for (const reward of capsuleRewards) {
-    cumulativeWeight += reward.weight;
-    if (random < cumulativeWeight) {
-      return reward;
-    }
+  for (const reward of eligible) {
+    random -= reward.weight;
+    if (random <= 0) return reward;
   }
-  
-  // Fallback to first reward
-  return capsuleRewards[0];
+  return eligible[0];
 }
 
 // Проверка на перманентный бан при загрузке
@@ -8893,6 +8934,7 @@ function adminTab(tab) {
     adminLoadTokenList();
     _adminLoadVerifyList();
     updatePaperEventButton();
+    _adminUpdateEastStatus();
     window._firebaseDB.ref('paperEvent').once('value', snap => {
       const ev = snap.val();
       const status = document.getElementById('apPaperEventStatus');
@@ -9660,6 +9702,7 @@ _db.ref('admin/maintenance').on('value', snap => {
   // Personal actions (per-UID node)
   const myUid = typeof getMyUid === 'function' ? getMyUid() : null;
   if (myUid) {
+    _eastStartListening();
     _db.ref(`admin/modActions/${myUid}`).on('value', snap => {
       const v = snap.val();
       if (!v) return;
@@ -10687,6 +10730,13 @@ function _adminApplyModAction(v) {
       d.skins[v.skinId] = 1;
       save(); if (typeof ui==='function') ui();
       _adminShowOverlay(`🎨 Admin gave you skin: ${v.skinId}!`, '#c084fc', 5000);
+      break;
+    case 'eggCoins':
+      if (!d) return;
+      if (v.mode === 'set') d.eggCoins = v.val;
+      else d.eggCoins = Math.max(0, (d.eggCoins || 0) + v.val);
+      save(); if (typeof _eastUpdateEggBalanceUI === 'function') _eastUpdateEggBalanceUI();
+      _adminShowOverlay(`🥚 Egg Coins ${v.mode==='set'?'set to':'+ '}${v.val}`, '#ff6b6b', 5000);
       break;
     case 'verify':
       d.verified = v.grant ? true : false;
@@ -17090,6 +17140,56 @@ function renderGameRecordsLB() {
 }
 // ========== END GAME RECORDS LEADERBOARD ==========
 
+/* ─── Easter Shop Tab Switch ─── */
+function eastSwitchTab(tab) {
+  const skinsContent = document.getElementById('eastSkinsContent');
+  const eastPanel    = document.getElementById('eastShopPanel');
+  const btnS = document.getElementById('eastTabSkins');
+  const btnE = document.getElementById('eastTabEaster');
+  if (tab === 'easter') {
+    if (skinsContent) skinsContent.style.display = 'none';
+    if (eastPanel)    eastPanel.style.display    = 'block';
+    if (btnS) { btnS.style.background = '#111'; btnS.style.color = '#888'; }
+    if (btnE) { btnE.style.background = 'linear-gradient(135deg,#7b1a1a,#c0392b)'; btnE.style.color = '#fff'; }
+    // Update custom item card visibility
+    const item3 = window._eastShopItems?.item3;
+    const card = document.getElementById('eastShopCustomCard');
+    if (card) card.style.display = (item3 && item3.active) ? 'block' : 'none';
+    if (item3 && item3.active) {
+      const el = document.getElementById('eastShopCustomTitle');
+      if (el) el.textContent = item3.id;
+      const ep = document.getElementById('eastShopCustomPrice');
+      if (ep) ep.textContent = item3.price + ' eggs';
+      // Обновляем картинку
+      const imgEl = document.getElementById('eastShopCustomImg');
+      if (imgEl) {
+        const imgMap = {
+          keyYellow:'yellow.png', keyGreen:'green.png', keyRed:'red.png', keyBlue:'blue.png', keyBlack:'black.png',
+          noobBox:'noob.png', capsule:'capsule.png', goldCapsule:'cagold.png', glitchBox:'glitchbox.png',
+          bombBox:'bomb.png', keyBox:'keybox.png', safeNoob:'safe.png', safeIron:'safe.png', safeElite:'safe.png',
+          eggi:'eggi.png', crypto_heart:'heart.png', dragon:'dragon.png', angel:'angel.png', demon:'demon.png',
+          ufo:'ufo.png', doge:'doge.png', cyber_android:'cyber.png', goldcoin:'goldcoin.png', brb:'brb.png',
+          kspt:'kspt.png', ek:'ek.png'
+        };
+        imgEl.src = imgMap[item3.id] || 'kspt.png';
+      }
+    }
+    // Update prices from shopItems
+    const p1 = window._eastShopItems?.item1?.price || 20;
+    const p2 = window._eastShopItems?.item2?.price || 90;
+    const ep1 = document.getElementById('eastShopPrice1');
+    const ep2 = document.getElementById('eastShopPrice2');
+    if (ep1) ep1.textContent = p1 + ' eggs · 5 min cooldown';
+    if (ep2) ep2.textContent = p2 + ' eggs';
+    _eastUpdateEggBalanceUI();
+  } else {
+    if (skinsContent) skinsContent.style.display = 'block';
+    if (eastPanel)    eastPanel.style.display    = 'none';
+    if (btnS) { btnS.style.background = 'linear-gradient(135deg,#1a0a2e,#2d1b69)'; btnS.style.color = '#c084fc'; }
+    if (btnE) { btnE.style.background = '#111'; btnE.style.color = '#888'; }
+  }
+}
+
 // ── PAPER.IO EVENT ─────────────────────────────────────────────
 function adminSetPaperEvent() {
   const mins = parseInt(document.getElementById('apPaperEventDuration').value);
@@ -17138,6 +17238,289 @@ function updatePaperEventButton() {
 window._firebaseDB && window._firebaseDB.ref('paperEvent').once('value', () => updatePaperEventButton());
 setInterval(updatePaperEventButton, 60000);
 // ── /PAPER.IO EVENT ─────────────────────────────────────────────
+
+// ══════════════════════════════════════════════════════════════════
+// EASTER EVENT
+// ══════════════════════════════════════════════════════════════════
+let _eastEventTimer = null;
+let _eastEggEl = null;
+
+/* ─── Admin: Start / Stop ─── */
+function adminStartEasterEvent() {
+  if (!_isAdminUser()) return;
+  const mins = parseInt(document.getElementById('apEastEventDuration').value) || 0;
+  if (!mins || mins < 1) { showToast('Enter duration in minutes!'); return; }
+  const endTs = Date.now() + mins * 60000;
+  const shopItems = _adminGetEastShopItems();
+  window._firebaseDB.ref('easterEvent').set({ active: true, end: endTs, shopItems, ts: Date.now() }).then(() => {
+    showToast(t('east_admin_started'));
+    _adminUpdateEastStatus();
+  });
+}
+
+function adminStopEasterEvent() {
+  if (!_isAdminUser()) return;
+  window._firebaseDB.ref('easterEvent').remove().then(() => {
+    showToast(t('east_admin_stopped'));
+    _adminUpdateEastStatus();
+  });
+}
+
+function _adminGetEastShopItems() {
+  // Prices from admin inputs
+  const p1 = Math.max(1, parseInt(document.getElementById('apEastPrice1').value) || 20);
+  const p2 = Math.max(1, parseInt(document.getElementById('apEastPrice2').value) || 90);
+  // Third custom item
+  const cat  = document.getElementById('apEastCustomCat')?.value || '';
+  const item = document.getElementById('apEastCustomItem')?.value || '';
+  const p3   = Math.max(1, parseInt(document.getElementById('apEastPrice3').value) || 50);
+  return { item1: { id: 'openEgg', price: p1 }, item2: { id: 'eggi', price: p2 }, item3: { id: item, cat, price: p3, active: !!(cat && item) } };
+}
+
+function _adminUpdateEastStatus() {
+  window._firebaseDB.ref('easterEvent').once('value', snap => {
+    const ev = snap.val();
+    const el = document.getElementById('apEastStatus');
+    if (!el) return;
+    if (ev && ev.active && ev.end > Date.now()) {
+      const mins = Math.ceil((ev.end - Date.now()) / 60000);
+      el.textContent = '✅ Active — ' + mins + ' min left';
+      el.style.color = '#69f0ae';
+    } else {
+      el.textContent = 'No active event';
+      el.style.color = '#555';
+    }
+  });
+}
+
+/* ─── Custom item dropdown population ─── */
+const _EAST_CUSTOM_ITEMS = {
+  keys:  [['keyYellow','🟡 Yellow Key'],['keyGreen','🟢 Green Key'],['keyRed','🔴 Red Key'],['keyBlue','🔵 Blue Key'],['keyBlack','⚫ Black Key']],
+  boxes: [['noobBox','Noob Box'],['capsule','Capsule'],['goldCapsule','Gold Capsule'],['glitchBox','Glitch Box'],['bombBox','Bomb Box'],['keyBox','Key Box'],['safeNoob','Noob Safe'],['safeIron','Iron Safe'],['safeElite','Elite Safe']],
+  skins: [['eggi','Easter Egg'],['crypto_heart','Crypto Heart'],['dragon','Dragon'],['angel','Angel'],['demon','Demon'],['ufo','UFO Wood'],['doge','Doge'],['cyber_android','Cyber Android'],['goldcoin','Gold Coin'],['brb','Big Red Button']],
+  currency: [['kspt','KSPT tokens'],['ek','EK crystals']]
+};
+
+function _adminPopulateEastCustomItems() {
+  const cat = document.getElementById('apEastCustomCat')?.value;
+  const sel = document.getElementById('apEastCustomItem');
+  if (!sel || !cat) return;
+  const items = _EAST_CUSTOM_ITEMS[cat] || [];
+  sel.innerHTML = items.map(([v,l]) => `<option value="${v}">${l}</option>`).join('');
+}
+
+/* ─── Client: Listen for Easter Event ─── */
+function _eastStartListening() {
+  if (!window._firebaseDB) return;
+  window._firebaseDB.ref('easterEvent').on('value', snap => {
+    const ev = snap.val();
+    const now = Date.now();
+    if (ev && ev.active && ev.end > now) {
+      _eastActivate(ev);
+    } else {
+      _eastDeactivate();
+    }
+  });
+}
+
+function _eastActivate(ev) {
+  window._eastEventActive = true;
+  window._eastShopItems   = ev.shopItems || {};
+  // Schedule first egg drop
+  if (!_eastEventTimer) _eastScheduleNextEgg();
+  _eastUpdateSkinTabVisibility(true);
+  // Show notification once per session
+  if (!window._eastNotified) {
+    window._eastNotified = true;
+    _adminShowOverlay(t('east_event_started'), '#ff6b6b', 4000);
+  }
+}
+
+function _eastDeactivate() {
+  window._eastEventActive = false;
+  window._eastNotified   = false;
+  if (_eastEventTimer) { clearTimeout(_eastEventTimer); _eastEventTimer = null; }
+  if (_eastEggEl) { _eastEggEl.remove(); _eastEggEl = null; }
+  _eastUpdateSkinTabVisibility(false);
+}
+
+function _eastScheduleNextEgg() {
+  if (!window._eastEventActive) return;
+  // Random 20s–60s
+  const delay = 20000 + Math.random() * 40000;
+  _eastEventTimer = setTimeout(() => {
+    _eastSpawnEgg();
+    _eastEventTimer = null;
+    // Schedule next after egg is gone (or after 8s)
+    setTimeout(() => { if (window._eastEventActive) _eastScheduleNextEgg(); }, 8000);
+  }, delay);
+}
+
+function _eastSpawnEgg() {
+  if (_eastEggEl) { _eastEggEl.remove(); _eastEggEl = null; }
+  const el = document.createElement('img');
+  el.src = 'eggi.png';
+  el.id  = '_eastEgg';
+  // Size: ~70px, float animation
+  el.style.cssText = `
+    position:fixed; width:70px; height:70px; object-fit:contain;
+    z-index:39999; cursor:pointer;
+    animation: eastEggFloat 3s ease-in-out infinite;
+    filter: drop-shadow(0 0 8px rgba(255,180,50,0.8));
+    border-radius:50%; user-select:none;
+  `;
+  // Random position (avoid edges by 80px)
+  const vw = window.innerWidth,  vh = window.innerHeight;
+  el.style.left = (80 + Math.random() * (vw - 160)) + 'px';
+  el.style.top  = (100 + Math.random() * (vh - 200)) + 'px';
+  el.addEventListener('click', () => _eastCollectEgg(el));
+  el.addEventListener('touchstart', (e) => { e.preventDefault(); _eastCollectEgg(el); }, { passive: false });
+  document.body.appendChild(el);
+  _eastEggEl = el;
+  // Auto-remove after 12s if not tapped
+  setTimeout(() => { if (_eastEggEl === el) { el.remove(); _eastEggEl = null; } }, 12000);
+}
+
+function _eastCollectEgg(el) {
+  el.remove();
+  _eastEggEl = null;
+  // Add egg currency to player data
+  if (!d) return;
+  d.eggCoins = (d.eggCoins || 0) + 1;
+  save();
+  _eastUpdateEggBalanceUI();
+  // Floating +1 animation
+  const pop = document.createElement('div');
+  pop.textContent = '🥚 +1';
+  pop.style.cssText = `
+    position:fixed; left:${el.style.left}; top:${el.style.top};
+    font-size:22px; font-weight:bold; color:#fff;
+    pointer-events:none; z-index:40000;
+    animation: eastPopUp 1s ease-out forwards;
+  `;
+  document.body.appendChild(pop);
+  setTimeout(() => pop.remove(), 1000);
+}
+
+function _eastUpdateEggBalanceUI() {
+  const bal = (d && d.eggCoins) || 0;
+  document.querySelectorAll('.east-egg-balance').forEach(el => { el.textContent = formatTemplate(t('east_balance_label'), [bal]); });
+}
+
+function _eastUpdateSkinTabVisibility(show) {
+  const tabs = document.getElementById('eastShopTabs');
+  if (tabs) tabs.style.display = show ? 'flex' : 'none';
+  if (!show) {
+    // Revert to skins tab
+    document.getElementById('eastTabSkins')?.click();
+  }
+}
+
+/* ─── Easter Shop Buy Functions ─── */
+let _eastOpenEggCooldown = 0;
+
+function eastBuyOpenEgg() {
+  if (!window._eastEventActive) return;
+  if (!d) return;
+  const price = (window._eastShopItems?.item1?.price) || 20;
+  if ((d.eggCoins || 0) < price) { showToast('Not enough eggs! 🥚'); return; }
+  const now = Date.now();
+  if (now < _eastOpenEggCooldown) {
+    const left = Math.ceil((_eastOpenEggCooldown - now) / 1000);
+    showToast(formatTemplate(t('east_shop_cooldown_left'), [left]));
+    return;
+  }
+  d.eggCoins -= price;
+  save();
+  _eastUpdateEggBalanceUI();
+  // _eastOpenEggCooldown = now + 5 * 60 * 1000;
+  // Trigger Easter Egg opening
+  if (!d.easterEgg) d.easterEgg = { obtained: false, swipes: 0 };
+  d.easterEgg.obtained = true;
+  d.easterEgg.swipes = 0;
+  save();
+  if (typeof startEasterEggSequence === 'function') startEasterEggSequence();
+  else showToast('🥚 Easter Egg opened!');
+}
+
+function eastBuySkin() {
+  if (!window._eastEventActive) return;
+  if (!d) return;
+  const price = (window._eastShopItems?.item2?.price) || 90;
+  if (d.skins && d.skins['eggi']) { showToast(t('east_shop_already_owned')); return; }
+  if ((d.eggCoins || 0) < price) { showToast('Not enough eggs! 🥚'); return; }
+  d.eggCoins -= price;
+  if (!d.skins) d.skins = {};
+  d.skins['eggi'] = 1;
+  save();
+  _eastUpdateEggBalanceUI();
+  if (typeof updateSkinButtons === 'function') updateSkinButtons();
+  showToast(t('easter_egg_obtained'));
+}
+
+function eastBuyCustom() {
+  if (!window._eastEventActive) return;
+  if (!d) return;
+  const item3 = window._eastShopItems?.item3;
+  if (!item3 || !item3.active) return;
+  const price = item3.price || 50;
+  if ((d.eggCoins || 0) < price) { showToast('Not enough eggs! 🥚'); return; }
+  d.eggCoins -= price;
+  save();
+  _eastUpdateEggBalanceUI();
+  // Route by category
+  const itemId = item3.id, cat = item3.cat;
+  if (cat === 'skins') {
+    if (!d.skins) d.skins = {};
+    d.skins[itemId] = 1;
+    if (typeof updateSkinButtons === 'function') updateSkinButtons();
+    showToast('🎨 Skin obtained!');
+  } else if (cat === 'currency') {
+    if (itemId === 'ek') {
+      d.ek = (d.ek || 0) + 10;
+      d.ekLifetime = (d.ekLifetime || 0) + 10;
+      showToast('+10 EK!');
+    } else {
+      d.tokens = (d.tokens || 0) + 100;
+      showToast('+100 KSPT!');
+    }
+    ui();
+  } else {
+    // keys и boxes — через _adminApplyOpening
+    if (typeof _adminApplyOpening === 'function') _adminApplyOpening(itemId, {});
+    else showToast('🎁 Item granted: ' + itemId);
+  }
+  save();
+}
+
+/* ─── Admin: Mod Action for egg balance ─── */
+// (Admin queues via modActions, handled in _adminApplyModAction)
+async function adminSetEggCoins() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) return;
+  const val = Number(document.getElementById('apEggCoinsVal').value);
+  const mode = document.getElementById('apEggCoinsMode').value;
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'eggCoins', mode, val, ts: Date.now() });
+  showToast(`✅ Egg coins action queued`);
+}
+
+// ══ Inject CSS keyframes ══
+(function() {
+  const s = document.createElement('style');
+  s.textContent = `
+    @keyframes eastEggFloat {
+      0%,100%{transform:translateY(0) rotate(-4deg);}
+      50%{transform:translateY(-18px) rotate(4deg);}
+    }
+    @keyframes eastPopUp {
+      0%{opacity:1;transform:translateY(0);}
+      100%{opacity:0;transform:translateY(-60px);}
+    }
+  `;
+  document.head.appendChild(s);
+})();
+
+// ── /EASTER EVENT ──────────────────────────────────────────────────
 
 async function adminForceDeleteToken() {
   if (!_isAdminUser() || !window._firebaseDB) return;

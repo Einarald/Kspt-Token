@@ -662,7 +662,8 @@ function addGameCurrencyReward(amount, type = 'kspt', x = 0, y = 0) {
     d.ek = (Number(d.ek) || 0) + Number(amount || 0);
     d.ekLifetime = (Number(d.ekLifetime) || 0) + Number(amount || 0);
     d.questEkEarned = (Number(d.questEkEarned) || 0) + Number(amount || 0);
-    if (typeof checkQuestProgress === 'function') checkQuestProgress('earn_ek');
+    d.wQuestEkEarned = (Number(d.wQuestEkEarned) || 0) + Number(amount || 0);
+    if (typeof checkQuestProgress === 'function') { checkQuestProgress('earn_ek'); checkQuestProgress('w_ek'); }
     showToast(`+${Number(amount)} EK`);
   } else {
     d.tokens = (Number(d.tokens) || 0) + Number(amount || 0);
@@ -705,7 +706,8 @@ function addGameCurrencyReward(amount, type = 'kspt', x = 0, y = 0) {
           d.ek = (Number(d.ek) || 0) + amount;
           d.ekLifetime = (Number(d.ekLifetime) || 0) + amount;
           d.questEkEarned = (Number(d.questEkEarned) || 0) + amount;
-          if (typeof checkQuestProgress === 'function') try { checkQuestProgress('earn_ek'); } catch(e){}
+          d.wQuestEkEarned = (Number(d.wQuestEkEarned) || 0) + amount;
+          if (typeof checkQuestProgress === 'function') try { checkQuestProgress('earn_ek'); checkQuestProgress('w_ek'); } catch(e){}
           if (typeof ui === 'function') try { ui(); } catch(e){}
           if (typeof save === 'function') try { save(); } catch(e){}
         }

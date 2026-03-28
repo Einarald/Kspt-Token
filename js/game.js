@@ -151,6 +151,28 @@ const translations = {
     'maintenance_reason_update': 'System update',
     'maintenance_reason_database': 'Database maintenance',
     'maintenance_reason_security': 'Security patch',
+    'diamond_capsule': 'Diamond Capsule',
+    'diamond_capsule_sub': 'Every 7th regular capsule',
+    'diamond_key': '💎 Diamond Key',
+    'diamond_key_obtained': 'Diamond Key obtained!',
+    'diamond_bg': 'Diamond Background',
+    'diamond_bg_unlocked': 'Diamond Background unlocked!',
+    'skin_diamond_kspt': 'Diamond KSPT',
+    'skin_precious_coin': 'Precious Coin',
+    'music_diamond': 'Diamond Melody',
+    'mili_box': 'Cuteness Box',
+    'mili_box_sub': 'A box full of cuteness',
+    'skin_mops': 'Pug',
+    'skin_bulldog': 'Bulldog',
+    'bg_zoo': 'Zoo',
+    'bg_zoo_unlocked': 'Zoo background unlocked!',
+    'tap_emote': 'Tap Emote',
+    'tap_emote_desc': 'Floating emote on coin tap',
+    'tap_emote_section': 'Tap Animation',
+    'emote_heart': 'Emote With Heart',
+    'tap_emote_none': 'None',
+    'dkey_milicuteness': 'Cuteness Box x2',
+    'dkey_tokens': '+20 Tokens',
     
     // Backgrounds
     'customize_menu': 'Customize your main menu',
@@ -707,6 +729,28 @@ const translations = {
     'maintenance_reason_update': 'Обновление системы',
     'maintenance_reason_database': 'Обслуживание базы данных',
     'maintenance_reason_security': 'Патч безопасности',
+    'diamond_capsule': 'Алмазная капсула',
+    'diamond_capsule_sub': 'Каждая 7-я обычная капсула',
+    'diamond_key': '💎 Алмазный ключ',
+    'diamond_key_obtained': 'Алмазный ключ получен!',
+    'diamond_bg': 'Алмазный фон',
+    'diamond_bg_unlocked': 'Алмазный фон разблокирован!',
+    'skin_diamond_kspt': 'Алмазный KSPT',
+    'skin_precious_coin': 'Драгоценная монета',
+    'music_diamond': 'Алмазная мелодия',
+    'mili_box': 'Сундук Милоты',
+    'mili_box_sub': 'Сундук, полный милоты',
+    'skin_mops': 'Мопс',
+    'skin_bulldog': 'Бульдог',
+    'bg_zoo': 'Зоопарк',
+    'bg_zoo_unlocked': 'Фон «Зоопарк» разблокирован!',
+    'tap_emote': 'Эмоут при тапе',
+    'tap_emote_desc': 'Летящий эмоут при нажатии на монету',
+    'tap_emote_section': 'Анимация Тапа',
+    'emote_heart': 'Эмоут с сердечком',
+    'tap_emote_none': 'Нет',
+    'dkey_milicuteness': 'Сундук Милоты x2',
+    'dkey_tokens': '+20 жетонов',
     
     // Backgrounds
     'customize_menu': 'Настройте главное меню',
@@ -940,9 +984,8 @@ const translations = {
 'temp_reward': 'Временная награда',
     'hurry_reward': 'Срочная награда!',
     'bg_code': 'Матрица Кода',
-    'locked_glitch': 'Заблокировано (Ищи в Глитч Боксе)',
+    'locked_glitch': 'Заблокировано',
     'music_glitch': 'Глитч Мелодия',
-    'locked_glitch': 'Заблокировано (Ищи в Глитч Боксе)',
 'skin_corrupted': 'Скин: Поврежденный',
 'skin_failed': 'Скин: Системный сбой',
 
@@ -1483,7 +1526,8 @@ const musicMap = {
   'calm': 'calm.mp3',
   'siulai': 'siulai.mp3',
   'funny': 'funny.mp3',
-  'code': 'code.mp3'
+  'code': 'code.mp3',
+  'diamond': 'diamond.mp3'
 };
 
 // Global variables
@@ -1626,6 +1670,287 @@ function getWeightedRandomReward() {
 if(cheatStage >= 3) {
   document.getElementById("redScreen").style.display = "flex";
 }
+
+// ===== DIAMOND CAPSULE =====
+const diamondCapsuleRewards = [
+  { type: 'kspt_hours', hours: 2.5, chance: 20, name: '+2.5h Income',        img: 'kspt.png' },
+  { type: 'kspt_hours', hours: 4.0, chance: 16, name: '+4.0h Income',        img: 'kspt.png' },
+  { type: 'kspt_hours', hours: 6.0, chance: 12, name: '+6.0h Income',        img: 'kspt.png' },
+  { type: 'puzzle',               chance: 11, name: 'Puzzle Piece',          img: 'puz.png' },
+  { type: 'key', color: 'yellow', chance: 6,  name: '🟡 Yellow Key',         img: 'yellow.png' },
+  { type: 'key', color: 'red',    chance: 5,  name: '🔴 Red Key',            img: 'red.png' },
+  { type: 'key', color: 'green',  chance: 3,  name: '🟢 Green Key',          img: 'green.png' },
+  { type: 'key', color: 'blue',   chance: 2,  name: '🔵 Blue Key',           img: 'blue.png' },
+  { type: 'key', color: 'diamond',chance: 1,  name: '💎 Diamond Key',        img: 'dkey.png' },
+  { type: 'glitchFragment',       chance: 8,  name: '🌀 Glitch Fragment',    img: 'glitchbox.png' },
+  { type: 'bg', id: 'diamond',    chance: 2,  name: t('diamond_bg'),         img: 'diamf.png' },
+  { type: 'music', id: 'diamond', chance: 3,  name: t('music_diamond'),      img: 'songdi.png' },
+  { type: 'skin', id: 'diamond_kspt',   chance: 4, name: t('skin_diamond_kspt'),  img: 'ksd.png' },
+  { type: 'skin', id: 'precious_coin',  chance: 3, name: t('skin_precious_coin'), img: 'codiam.png' },
+];
+
+function getDiamondCapsuleReward() {
+  const total = diamondCapsuleRewards.reduce((s, r) => s + r.chance, 0);
+  let rand = Math.random() * total;
+  for (const r of diamondCapsuleRewards) { rand -= r.chance; if (rand <= 0) return r; }
+  return diamondCapsuleRewards[0];
+}
+
+let diamondCapsuleTaps = 0;
+let diamondCapsuleOpening = false;
+
+function startDiamondCapsuleSequence() {
+  if (diamondCapsuleOpening) return;
+  if (!d.diamondCapsule || !d.diamondCapsule.obtained) { return; }
+  diamondCapsuleOpening = true;
+  diamondCapsuleTaps = d.diamondCapsule.taps || 0;
+  const modal = document.getElementById('diamondCapsuleModal');
+  const img   = document.getElementById('diamondCapsuleImg');
+  const hint  = document.getElementById('diamondCapsuleHint');
+  if (!modal || !img) { diamondCapsuleOpening = false; return; }
+  img.src = 'cd.png';
+  hint.textContent = `Tap to open! (${diamondCapsuleTaps}/20)`;
+  modal.classList.add('active');
+  img.removeEventListener('click', _diamondCapsuleTapHandler);
+  img.addEventListener('click', _diamondCapsuleTapHandler);
+}
+
+function _diamondCapsuleTapHandler() {
+  const now = Date.now();
+  if (lastCapsuleTapTime && now - lastCapsuleTapTime < 120) return;
+  lastCapsuleTapTime = now;
+  diamondCapsuleTaps++;
+  d.diamondCapsule.taps = diamondCapsuleTaps;
+  const img  = document.getElementById('diamondCapsuleImg');
+  const hint = document.getElementById('diamondCapsuleHint');
+  img.classList.add('tap-anim');
+  setTimeout(() => img.classList.remove('tap-anim'), 220);
+  // спрайт меняется каждые 5 тапов: cd → cd1 → cd2 → cd3 → cd4
+  const stage = Math.min(4, Math.floor(diamondCapsuleTaps / 5));
+  img.src = stage === 0 ? 'cd.png' : `cd${stage}.png`;
+  hint.textContent = `Tap to open! (${diamondCapsuleTaps}/20)`;
+  if (diamondCapsuleTaps >= 20) {
+    img.removeEventListener('click', _diamondCapsuleTapHandler);
+    hint.textContent = 'Opening...';
+    setTimeout(() => _openDiamondCapsule(), 350);
+  }
+  save();
+}
+
+function _openDiamondCapsule() {
+  const modal = document.getElementById('diamondCapsuleModal');
+  if (modal) modal.classList.remove('active');
+  d.diamondCapsule.obtained = false;
+  d.diamondCapsule.taps = 0;
+  diamondCapsuleOpening = false;
+  diamondCapsuleTaps = 0;
+  const reward = getDiamondCapsuleReward();
+  let rewardText = reward.name;
+  let rewardImg  = reward.img;
+  switch (reward.type) {
+    case 'kspt_hours':
+      const val = Math.floor(getHourlyRate() * reward.hours / 100) * 100;
+      d.tokens += val;
+      rewardText = `+${formatNumber(val)} KSPT (${reward.hours}h)`;
+      break;
+    case 'puzzle':
+      giveRandomPuzzlePiece();
+      break;
+    case 'key':
+      if (!d.keys) d.keys = {};
+      if (reward.color === 'diamond') {
+        d.keys.diamond = Math.min(1, (d.keys.diamond || 0) + 1);
+      } else {
+        d.keys[reward.color] = (d.keys[reward.color] || 0) + 1;
+      }
+      rewardText = reward.name + ' obtained!';
+      break;
+    case 'glitchFragment':
+      _giveGlitchFragment();
+      rewardImg = `oblom${_lastGlitchFragmentIdx + 1}.png`;
+      break;
+    case 'bg':
+      if (!d.ownedBgs) d.ownedBgs = ['default'];
+      if (!d.ownedBgs.includes(reward.id)) {
+        d.ownedBgs.push(reward.id);
+        rewardText = t('diamond_bg_unlocked');
+      } else {
+        d.tokens += Math.floor(getHourlyRate() * 3);
+        rewardText = '+3h KSPT (bg duplicate)';
+        rewardImg = 'kspt.png';
+      }
+      break;
+    case 'music':
+      if (!d.ownedMusic) d.ownedMusic = [];
+      if (!d.ownedMusic.includes(reward.id)) {
+        d.ownedMusic.push(reward.id);
+      } else {
+        d.tokens += Math.floor(getHourlyRate() * 3);
+        rewardText = '+3h KSPT (music duplicate)';
+        rewardImg = 'kspt.png';
+      }
+      break;
+    case 'skin':
+      if (!d.skins) d.skins = {};
+      if (!d.skins[reward.id]) {
+        d.skins[reward.id] = 1;
+        if (typeof updateSkinButtons === 'function') updateSkinButtons();
+      } else {
+        d.tokens += Math.floor(getHourlyRate() * 5);
+        rewardText = '+5h KSPT (skin duplicate)';
+        rewardImg = 'kspt.png';
+      }
+      break;
+  }
+  save();
+  showReward(rewardText, rewardImg);
+  ui();
+  if (typeof updateKeysUI === 'function') updateKeysUI();
+}
+// ===== /DIAMOND CAPSULE =====
+
+// ===== MILI BOX (Cuteness Box) =====
+const miliBoxRewards = [
+  { type: 'kspt_hours', hours: 2.5, chance: 17, name: '+2.5h Income',   img: 'kspt.png' },
+  { type: 'kspt_hours', hours: 4.5, chance: 15, name: '+4.5h Income',   img: 'kspt.png' },
+  { type: 'tokens',     value: 5,   chance: 15, name: '+5 Tokens',      img: 'zneton.png' },
+  { type: 'tickets',    value: 8,   chance: 15, name: '+8 Tickets',     img: 'ticket.png' },
+  { type: 'ek',         value: 10,  chance: 10, name: '+10 EK',         img: 'ek.png' },
+  { type: 'puzzle',               chance: 10, name: 'Puzzle Piece',    img: 'puz.png' },
+  { type: 'key', color:'yellow',  chance: 5,  name: '🟡 Yellow Key',   img: 'yellow.png' },
+  { type: 'key', color:'green',   chance: 7,  name: '🟢 Green Key',    img: 'green.png' },
+  { type: 'skin', id:'mops',      chance: 3,  name: 'Skin: Pug',       img: 'mops.png' },
+  { type: 'skin', id:'bulldog',   chance: 3,  name: 'Skin: Bulldog',   img: 'bul.png' },
+  { type: 'bg',   id:'zoo',       chance: 3,  name: 'Background: Zoo', img: 'zoo.png' },
+  { type: 'tapEmote', id:'milo',  chance: 2,  name: 'Emote With Heart',img: 'milo.png' },
+];
+
+function getMiliBoxReward() {
+  const total = miliBoxRewards.reduce((s, r) => s + r.chance, 0);
+  let rand = Math.random() * total;
+  for (const r of miliBoxRewards) { rand -= r.chance; if (rand <= 0) return r; }
+  return miliBoxRewards[0];
+}
+
+let miliBoxTaps = 0;
+let miliBoxOpening = false;
+
+function startMiliBoxSequence() {
+  if (miliBoxOpening) return;
+  if (!d.miliBox || !d.miliBox.obtained) { return; }
+  miliBoxOpening = true;
+  miliBoxTaps = d.miliBox.taps || 0;
+  const modal = document.getElementById('miliBoxModal');
+  const img   = document.getElementById('miliBoxImg');
+  const hint  = document.getElementById('miliBoxHint');
+  if (!modal || !img) { miliBoxOpening = false; return; }
+  img.src = 'mili.png';
+  hint.textContent = `Tap to open! (${miliBoxTaps}/15)`;
+  modal.classList.add('active');
+  img.removeEventListener('click', _miliBoxTapHandler);
+  img.addEventListener('click', _miliBoxTapHandler);
+}
+
+function _miliBoxTapHandler() {
+  const now = Date.now();
+  if (lastCapsuleTapTime && now - lastCapsuleTapTime < 120) return;
+  lastCapsuleTapTime = now;
+  miliBoxTaps++;
+  d.miliBox.taps = miliBoxTaps;
+  const img  = document.getElementById('miliBoxImg');
+  const hint = document.getElementById('miliBoxHint');
+  img.classList.add('tap-anim');
+  setTimeout(() => img.classList.remove('tap-anim'), 220);
+  hint.textContent = `Tap to open! (${miliBoxTaps}/15)`;
+  if (miliBoxTaps >= 15) {
+    img.src = 'mili1.png';
+    img.removeEventListener('click', _miliBoxTapHandler);
+    hint.textContent = 'Opening...';
+    setTimeout(() => _openMiliBox(), 350);
+  }
+  save();
+}
+
+function _openMiliBox() {
+  const modal = document.getElementById('miliBoxModal');
+  if (modal) modal.classList.remove('active');
+  d.miliBox.pending = Math.max(0, (d.miliBox.pending || 1) - 1);
+  d.miliBox.obtained = d.miliBox.pending > 0;
+  d.miliBox.taps = 0;
+  miliBoxOpening = false;
+  miliBoxTaps = 0;
+  if (d.miliBox.obtained) setTimeout(() => startMiliBoxSequence(), 800);
+  const reward = getMiliBoxReward();
+  let rewardText = reward.name;
+  let rewardImg  = reward.img;
+  switch (reward.type) {
+    case 'kspt_hours':
+      const val = Math.floor(getHourlyRate() * reward.hours / 100) * 100;
+      d.tokens += val;
+      rewardText = `+${formatNumber(val)} KSPT (${reward.hours}h)`;
+      break;
+    case 'tokens':
+      if (!d.quests) d.quests = {};
+      d.quests.znetons = (d.quests.znetons || 0) + reward.value;
+      rewardText = `+${reward.value} Tokens!`;
+      break;
+    case 'tickets':
+      if (typeof gameTickets !== 'undefined') {
+        gameTickets.current = (gameTickets.current || 0) + reward.value;
+        if (typeof saveTickets === 'function') saveTickets();
+      } else {
+        d.tickets = (d.tickets || 0) + reward.value;
+      }
+      rewardText = `+${reward.value} Tickets!`;
+      break;
+    case 'ek':
+      d.ek = (d.ek || 0) + reward.value;
+      d.ekLifetime = (d.ekLifetime || 0) + reward.value;
+      rewardText = `+${reward.value} EK!`;
+      break;
+    case 'puzzle':
+      giveRandomPuzzlePiece();
+      break;
+    case 'key':
+      if (!d.keys) d.keys = {};
+      d.keys[reward.color] = (d.keys[reward.color] || 0) + 1;
+      rewardText = reward.name + ' obtained!';
+      break;
+    case 'skin':
+      if (!d.skins) d.skins = {};
+      if (!d.skins[reward.id]) {
+        d.skins[reward.id] = 1;
+        if (typeof updateSkinButtons === 'function') updateSkinButtons();
+      } else {
+        d.tokens += Math.floor(getHourlyRate() * 3);
+        rewardText = '+3h KSPT (skin duplicate)';
+        rewardImg = 'kspt.png';
+      }
+      break;
+    case 'bg':
+      if (!d.ownedBgs) d.ownedBgs = ['default'];
+      if (!d.ownedBgs.includes(reward.id)) {
+        d.ownedBgs.push(reward.id);
+        rewardText = t('bg_zoo_unlocked');
+      } else {
+        d.tokens += Math.floor(getHourlyRate() * 3);
+        rewardText = '+3h KSPT (bg duplicate)';
+        rewardImg = 'kspt.png';
+      }
+      break;
+    case 'tapEmote':
+      if (!d.tapEmote) d.tapEmote = { enabled: false, emote: 'milo' };
+      d.tapEmote.emote = reward.id;
+      if (!d.unlockedEmotes) d.unlockedEmotes = [];
+      if (!d.unlockedEmotes.includes(reward.id)) d.unlockedEmotes.push(reward.id);
+      rewardText = reward.name + ' unlocked!';
+      break;
+  }
+  save();
+  showReward(rewardText, rewardImg);
+  ui();
+}
+// ===== /MILI BOX =====
 
 const easterEggRewards = [
   { type: 'kspt3h',    weight: 30, name: '3h Offline Income',  img: 'kspt.png' },
@@ -1781,7 +2106,12 @@ keys: {
     duplicates: 0 // сколько раз удваивалось в текущей сессии
   },
   glitchRewards: [], // полученные награды из текущей сессии
-  glitchFragments: [false, false, false], // 3 кусочка глитч-бокса
+  glitchFragments: [false, false, false],
+  diamondCapsule: { obtained: false, taps: 0 },
+  capsuleOpenCount: 0,
+  miliBox: { obtained: false, taps: 0 },
+  keys: { yellow: 0, red: 0, green: 0, blue: 0, black: 0, admin: 0, diamond: 0 },
+  tapEmote: { enabled: false, emote: 'milo' },
   // Таймеры бустов
   tapBoostEnd: 0, // время окончания tap boost
   offlineMultiplierEnd: 0, // время окончания x2 offline буста
@@ -2018,6 +2348,12 @@ if (typeof d.puzzle5Done === 'undefined') d.puzzle5Done = false;
 
 if (!d.glitchFragments) d.glitchFragments = [false, false, false];
 
+if (!d.diamondCapsule) d.diamondCapsule = { obtained: false, taps: 0 };
+if (typeof d.capsuleOpenCount === 'undefined') d.capsuleOpenCount = 0;
+if (!d.miliBox) d.miliBox = { obtained: false, taps: 0 };
+if (typeof d.keys.diamond === 'undefined') d.keys.diamond = 0;
+if (!d.tapEmote) d.tapEmote = { enabled: false, emote: 'milo' };
+
 if (!d.tapBoostEnd) d.tapBoostEnd = 0;
 if (!d.offlineMultiplierEnd) d.offlineMultiplierEnd = 0;
 
@@ -2170,6 +2506,10 @@ const SKIN_INCOME = {
   bird: 30,
   greatjoost: 5,
   angel: 25,
+  diamond_kspt: 15,
+  precious_coin: 25,
+  mops: 20,
+  bulldog: 15,
   demon: 25
   };
 
@@ -2628,6 +2968,10 @@ function getSkinImage(skinId, euroVar = 1, artemVar = 0) {
     'bird': 'bird.png',
     'greatjoost': 'just.png',
     'angel': 'angel.png',
+    'diamond_kspt': 'ksd.png',
+    'precious_coin': 'codiam.png',
+    'mops': 'mops.png',
+    'bulldog': 'bul.png',
     'demon': 'demon.png'
   };
   return skinImages[skinId] || 'kspt.png';
@@ -3120,6 +3464,26 @@ function handleTapSkinAnimation() {
       coin.src = coin.dataset.toggle === "1" ? "angel1.png" : "angel.png";
       break;
     }
+    case "diamond_kspt": {
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "ksd1.png" : "ksd.png";
+      break;
+    }
+    case "precious_coin": {
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "codiam1.png" : "codiam.png";
+      break;
+    }
+    case "mops": {
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "mops1.png" : "mops.png";
+      break;
+    }
+    case "bulldog": {
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "bul1.png" : "bul.png";
+      break;
+    }
     case "demon": {
       coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
       coin.src = coin.dataset.toggle === "1" ? "demon1.png" : "demon.png";
@@ -3286,6 +3650,22 @@ case "brb":
       coin.src = tf[tS];
       break;
     }
+    case "diamond_kspt":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "ksd1.png" : "ksd.png";
+      break;
+    case "precious_coin":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "codiam1.png" : "codiam.png";
+      break;
+    case "mops":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "mops1.png" : "mops.png";
+      break;
+    case "bulldog":
+      coin.dataset.toggle = coin.dataset.toggle === "1" ? "0" : "1";
+      coin.src = coin.dataset.toggle === "1" ? "bul1.png" : "bul.png";
+      break;
     default:
       break;
   }
@@ -3318,6 +3698,10 @@ function updateSkinButtons() {
     "skinCardTarget": 'target',
     "skinCardGreatJoost": 'greatjoost',
     "skinCardAngel": 'angel',
+    "skinCardDiamondKspt": 'diamond_kspt',
+    "skinCardPreciousCoin": 'precious_coin',
+    "skinCardMops": 'mops',
+    "skinCardBulldog": 'bulldog',
     "skinCardDemon": 'demon'
   };
   
@@ -3329,7 +3713,7 @@ function updateSkinButtons() {
     }
   }
   
-  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "wheel", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android", "brb", "doge", "corrupted", "failed", "goldensafe", "bhole", "toilet", "capsulememe", "ufo", "dragon", "crypto_heart", "eggi", "viking", "target", "greatjoost", "angel", "demon"];
+  const skins = ["default", "what", "burger", "joost", "dog", "diam", "tung", "priz", "euro", "space", "wheel", "kostia", "pixe", "onion", "cookie", "metka", "seri", "mystic", "capsule", "siulai", "artem", "ruka", "banditx", "dirty", "goldcoin", "gkspt", "cyber_android", "brb", "doge", "corrupted", "failed", "goldensafe", "bhole", "toilet", "capsulememe", "ufo", "dragon", "crypto_heart", "eggi", "viking", "target", "greatjoost", "angel", "diamond_kspt", "precious_coin", "mops", "bulldog", "demon"];
   
   skins.forEach(s => {
     const button = document.getElementById("skin-" + s);
@@ -3580,6 +3964,10 @@ function updateSkinPreviews() {
     'bird': 'bird.png',
     'greatjoost': 'just.png',
     'angel': 'angel.png',
+    'diamond_kspt': 'ksd.png',
+    'precious_coin': 'codiam.png',
+    'mops': 'mops.png',
+    'bulldog': 'bul.png',
     'demon': 'demon.png'
   };
   
@@ -3741,6 +4129,22 @@ function updateBackground() {
         break;
       case "bunny":
         body.style.backgroundImage = "url('bunn.png')";
+        body.style.backgroundColor = "transparent";
+        break;
+      case "zoo":
+        body.style.backgroundImage = "url('zoo.png')";
+        body.style.backgroundColor = "transparent";
+        break;
+      case "diamond":
+        body.style.backgroundImage = "url('diamf.png')";
+        body.style.backgroundColor = "transparent";
+        break;
+      case "beach":
+        body.style.backgroundImage = "url('beach.png')";
+        body.style.backgroundColor = "transparent";
+        break;
+      case "kebab":
+        body.style.backgroundImage = "url('kebab.png')";
         body.style.backgroundColor = "transparent";
         break;
       case "bg_pixel_games":
@@ -5141,6 +5545,10 @@ function updateSettingsUI() {
     {id: 'bg-btn-bank',      key: 'bank',      price: 0},
     {id: 'bg-btn-elit',      key: 'elit',      price: 0},
     {id: 'bg-btn-bunny',     key: 'bunny',     price: 0},
+    {id: 'bg-btn-zoo',       key: 'zoo',        price: 0},
+    {id: 'bg-btn-diamond',   key: 'diamond',    price: 0},
+    {id: 'bg-btn-beach',     key: 'beach',      price: 174000},
+    {id: 'bg-btn-kebab',     key: 'kebab',      price: 568000},
   ];
   
   bgButtons.forEach(bg => {
@@ -5238,6 +5646,26 @@ function updateSettingsUI() {
              btn.onclick = () => equipBackground('bunny');
          } else {
              btn.textContent = '🔒 Easter Egg Only';
+             btn.className = "owned";
+             btn.onclick = null;
+         }
+      } else if (bg.key === 'zoo') {
+         if (d.ownedBgs.includes('zoo')) {
+             btn.textContent = t('select');
+             btn.className = "";
+             btn.onclick = () => equipBackground('zoo');
+         } else {
+             btn.textContent = '🔒 Cuteness Box Only';
+             btn.className = "owned";
+             btn.onclick = null;
+         }
+      } else if (bg.key === 'diamond') {
+         if (d.ownedBgs.includes('diamond')) {
+             btn.textContent = t('select');
+             btn.className = "";
+             btn.onclick = () => equipBackground('diamond');
+         } else {
+             btn.textContent = '🔒 Diamond Capsule Only';
              btn.className = "owned";
              btn.onclick = null;
          }
@@ -5412,6 +5840,25 @@ function updateMusicUI() {
       codeMusicBtn.textContent = t('locked_glitch');
       codeMusicBtn.className = "owned";
       codeMusicBtn.onclick = null;
+    }
+  }
+
+  const diamondMusicBtn = document.getElementById('btn-music-diamond');
+  if (diamondMusicBtn) {
+    if (d.ownedMusic && d.ownedMusic.includes('diamond')) {
+      if (d.music === 'diamond' && !d.musicMuted) {
+        diamondMusicBtn.textContent = t('active');
+        diamondMusicBtn.className = "active";
+        diamondMusicBtn.onclick = null;
+      } else {
+        diamondMusicBtn.textContent = t('select');
+        diamondMusicBtn.className = "";
+        diamondMusicBtn.onclick = () => setMusic('diamond');
+      }
+    } else {
+      diamondMusicBtn.textContent = t('locked');
+      diamondMusicBtn.className = "owned";
+      diamondMusicBtn.onclick = null;
     }
   }
 }
@@ -7198,10 +7645,11 @@ function updateNotificationBadges() {
   const canBuySkin = Object.entries(skinPrices).some(([s, p]) => !d.skins[s] && d.tokens >= p);
   if (canBuySkin) mainCount++;
 
-  // 5. Tickets refilled (in games.js gameTickets)
+  // 5. Tickets refilled — показываем только если nextRefill = 0 и current = max (т.е. только что пополнились)
   if (typeof gameTickets !== 'undefined' && gameTickets) {
-    const MAX_T = 10;
-    if ((gameTickets.current || 0) >= MAX_T) gamesCount++;
+    const isFull = (gameTickets.current || 0) >= gameTickets.max;
+    const wasSpent = (d.ticketsLifetime || 0) > 0;
+    if (isFull && wasSpent && !gameTickets.nextRefill) gamesCount++;
   }
 
   // 6. Active event
@@ -7268,16 +7716,8 @@ function updateNotificationBadges() {
       el.textContent = count > 9 ? '9+' : String(count);
       el.style.display = 'flex';
       if (reasonArr && reasonArr.length) el.title = reasonArr.join('\n');
-      // Pulse the parent button
-      const parent = el.closest('.long-btn, .nav-item');
-      if (parent) {
-        parent.style.outline = '2px solid rgba(229,57,53,0.45)';
-        parent.style.outlineOffset = '-2px';
-      }
     } else {
       el.style.display = 'none';
-      const parent = el.closest('.long-btn, .nav-item');
-      if (parent) { parent.style.outline = ''; parent.style.outlineOffset = ''; }
     }
   }
 
@@ -7289,6 +7729,10 @@ function updateNotificationBadges() {
 }
 
 function openScreen(id) {
+  if (id === 'games') {
+    const el = document.getElementById('badge-games');
+    if (el) el.style.display = 'none';
+  }
 updateNotificationBadges();
   if (d.settings && d.settings.animation && !d.settings.animation.transitions) {
     document.querySelectorAll(".screen").forEach(s => {
@@ -7414,7 +7858,7 @@ function _applyProfileTabLocation(loc) {
 }
 
 function initProfileSettingsUI() {
-  const loc = d.settings?.profileTabLocation || 'bottom';
+  const loc = d.settings?.profileTabLocation || 'settings';
   _applyProfileTabLocation(loc);
 
   const privacy = d.settings?.privacy || {};
@@ -7434,6 +7878,13 @@ function showSettingsSub(sub) {
   const target = document.getElementById("settings-" + sub);
   if (target) target.style.display = "block";
   if (sub === 'profile') initProfileSettingsUI();
+  if (sub === 'animation') {
+    const te = document.getElementById('toggleTapEmote');
+    if (te) te.checked = !!(d.tapEmote?.enabled);
+    const opts = document.getElementById('tapEmoteOptions');
+    if (opts) opts.style.display = d.tapEmote?.enabled ? 'flex' : 'none';
+    _renderTapEmoteOptions();
+  }
 }
 
 function toggleAnimationSetting(setting, value) {
@@ -7444,7 +7895,6 @@ function toggleAnimationSetting(setting, value) {
   save();
 }
 
-  // Если меняем именно анимацию скинов — старт/стоп таймера
   // Если меняем именно анимацию скинов — старт/стоп таймера
 // УДАЛЕНО для фикса проблемы с тапами
 // if (setting === 'skins') {
@@ -7561,6 +8011,7 @@ if (d.tapBoostEnd > now) {
     checkQuestProgress('tap_coin');
     
     showTapFloat(e, earned);
+    _spawnTapEmote(e.clientX, e.clientY);
     
     // Handle skin animation only on tap if enabled
 if (d.settings && d.settings.animation && d.settings.animation.skins) {
@@ -10346,7 +10797,7 @@ function _adminApplyTapEvent(v) {
       default:'none', forest:"url('forest.png')", space:"url('star.png')",
       ric:"url('ric.png')", heaven:"url('heaven.png')", bug:"url('bug.png')",
       chrisp:"url('chrisp.png')", hell:"url('hell.png')", math:"url('math.png')",
-      xfone:"url('xfone.png')", code:"url('code.png')", cosmops:"url('cosmops.png')",
+      xfone:"url('xfone.png')", code:"url('code.png')", cosmops:"url('cosmops.png')", zoo:"url('zoo.png')", diamond:"url('diamf.png')",
       ligting:"url('ligting.png')", fire:"url('fire.png')", ogon:"url('ogon.png')",
       king:"url('king.png')", castle:"url('castle.png')", admin:"url('admin.png')",
       meme:"url('meme.png')", hole:"url('hole.png')",
@@ -10471,6 +10922,20 @@ function _adminApplyOpening(type, v) {
       _giveGlitchFragment();
       _adminShowOverlay('🌀 Glitch Fragment from Admin!', '#ff00ff', 3000);
       break;
+    case 'diamondCapsule':
+      if (!d.diamondCapsule) d.diamondCapsule = { obtained: false, taps: 0 };
+      d.diamondCapsule.obtained = true; d.diamondCapsule.taps = 0;
+      save(); if (typeof ui === 'function') ui();
+      _adminShowOverlay('💎 Diamond Capsule from Admin!', '#00bfff', 4000);
+      setTimeout(() => startDiamondCapsuleSequence(), 500);
+      break;
+    case 'miliBox':
+      if (!d.miliBox) d.miliBox = { obtained: false, taps: 0 };
+      d.miliBox.obtained = true; d.miliBox.taps = 0;
+      save(); if (typeof ui === 'function') ui();
+      _adminShowOverlay('🎀 Cuteness Box from Admin!', '#ff69b4', 4000);
+      setTimeout(() => startMiliBoxSequence(), 500);
+      break;
     case 'glitchBox':
       if (!d.glitchBox) d.glitchBox = { taps: 0, doubled: 1, duplicates: 0, cooldownDays: 20, lastOpen: 0, firstOpen: true };
       d.glitchBox.firstOpen = true;
@@ -10556,7 +11021,7 @@ function _adminApplyOpening(type, v) {
     case 'keyBlack':
     case 'keyAdmin': {
       if (!d.keys) d.keys = {};
-      const keyMap = { keyYellow:'yellow', keyGreen:'green', keyRed:'red', keyBlue:'blue', keyBlack:'black', keyAdmin:'admin' };
+      const keyMap = { keyYellow:'yellow', keyGreen:'green', keyRed:'red', keyBlue:'blue', keyBlack:'black', keyAdmin:'admin', keyDiamond:'diamond' };
       const k = keyMap[type];
       if (k === 'admin') {
         d.keys.admin = 1; // максимум 1
@@ -12054,6 +12519,13 @@ if (siulaiTopBtn) {
       if (d.capsule.firstOpen) {
         d.capsule.firstOpen = false;
       }
+      // Счётчик для алмазной капсулы
+      d.capsuleOpenCount = (d.capsuleOpenCount || 0) + 1;
+      if (d.capsuleOpenCount % 7 === 0) {
+        d.diamondCapsule.obtained = true;
+        d.diamondCapsule.taps = 0;
+        setTimeout(() => showToast('💎 Diamond Capsule unlocked!'), 1500);
+      }
       
       // Show reward
       showReward(rewardText, rewardImg);
@@ -12906,7 +13378,7 @@ function initGame() {
     // Streak check
     try { checkStreak(); } catch(e) { console.warn('streak error', e); }
     // Apply profile tab location on startup
-    try { _applyProfileTabLocation(d.settings?.profileTabLocation || 'bottom'); } catch(e) {}
+    try { _applyProfileTabLocation(d.settings?.profileTabLocation || 'settings'); } catch(e) {}
 
     // Initial UI update
     ui();
@@ -13395,6 +13867,7 @@ const keyColors = ['blue', 'red', 'green', 'yellow', 'black'];
 function getVisibleKeyColors() {
   const base = ['blue', 'red', 'green', 'yellow'];
   if (d.keys && d.keys.black > 0) base.push('black');
+  if (d.keys && d.keys.diamond > 0) base.push('diamond');
   if (d.keys && d.keys.admin > 0) base.push('admin');
   return base;
 }
@@ -13464,12 +13937,12 @@ function updateKeysUI() {
   if (currentKeyIndex >= visibleKeys.length) currentKeyIndex = 0;
   const currentKey = visibleKeys[currentKeyIndex];
   const keyCount = (d.keys && d.keys[currentKey]) ? d.keys[currentKey] : 0;
-  const maxKeys = currentKey === 'admin' || currentKey === 'black' ? 1 : 4;
+  const maxKeys = (currentKey === 'admin' || currentKey === 'black' || currentKey === 'diamond') ? 1 : 4;
   
   const keyImg = document.getElementById('currentKeyImg');
   const keyCounter = document.getElementById('keyCounter');
 
-  if (keyImg) keyImg.src = currentKey === 'admin' ? 'adminkey.png' : `${currentKey}.png`;
+  if (keyImg) keyImg.src = currentKey === 'admin' ? 'adminkey.png' : currentKey === 'diamond' ? 'dkey.png' : `${currentKey}.png`;
   if (keyCounter) keyCounter.textContent = `${keyCount} / ${maxKeys}`;
   
   // Обновляем магазин
@@ -13544,6 +14017,10 @@ function getShopItems(keyColor) {
       { name: '+20h Income', type: 'income', value: 20, desc: 'Get 20h KSPT income' },
       { name: 'Puzzle Piece', type: 'puzzle', value: 1, desc: 'Get random puzzle piece' },
       { name: '+25 EK', type: 'ek', value: 25, desc: 'Get 25 EK coins' }
+    ],
+    diamond: [
+      { name: t('dkey_milicuteness'), type: 'miliBox2', value: 2, desc: 'Get 2 Cuteness Boxes' },
+      { name: t('dkey_tokens'),       type: 'dkeyTokens', value: 20, desc: 'Get 20 Tokens' },
     ],
     admin: [
       { name: 'Noob Box', type: 'adminNoobBox', value: 1, desc: 'Open Noob Box' },
@@ -13676,6 +14153,21 @@ function applyKeyReward(keyColor, item) {
       d.ek += item.value;
       d.ekLifetime = (d.ekLifetime || 0) + item.value;
       showToast(`+${item.value} EK coins!`);
+      break;
+
+    case 'miliBox2':
+      if (!d.miliBox) d.miliBox = { obtained: false, taps: 0, pending: 0 };
+      d.miliBox.pending = (d.miliBox.pending || 0) + 2;
+      d.miliBox.obtained = true; d.miliBox.taps = 0;
+      save();
+      showToast('🎀 2 Cuteness Boxes!');
+      setTimeout(() => startMiliBoxSequence(), 200);
+      break;
+    case 'dkeyTokens':
+      if (!d.quests) d.quests = {};
+      d.quests.znetons = (d.quests.znetons || 0) + 20;
+      save(); if (typeof ui === 'function') ui();
+      showToast('+20 Tokens!');
       break;
 
     case 'adminNoobBox':
@@ -13898,6 +14390,74 @@ function _giveGlitchFragment() {
     updateGlitchBoxUI();
   }
 }
+
+// ===== TAP EMOTE =====
+function _spawnTapEmote(x, y) {
+  if (!d.tapEmote || !d.tapEmote.enabled || !d.tapEmote.emote) return;
+  const el = document.createElement('img');
+  el.src = d.tapEmote.emote + '.png';
+  el.style.cssText = `
+    position:fixed; left:${x - 20}px; top:${y - 20}px;
+    width:40px; height:40px; object-fit:contain;
+    pointer-events:none; z-index:50000;
+    animation: tapEmoteFloat 0.9s ease-out forwards;
+  `;
+  document.body.appendChild(el);
+  setTimeout(() => el.remove(), 900);
+}
+// CSS для анимации — инжектируется один раз
+(function(){
+  if (document.getElementById('_tapEmoteStyle')) return;
+  const s = document.createElement('style');
+  s.id = '_tapEmoteStyle';
+  s.textContent = `@keyframes tapEmoteFloat {
+    0%   { opacity:1; transform: translateY(0) scale(1) rotate(-10deg); }
+    60%  { opacity:1; transform: translateY(-50px) scale(1.2) rotate(10deg); }
+    100% { opacity:0; transform: translateY(-90px) scale(0.8) rotate(-5deg); }
+  }`;
+  document.head.appendChild(s);
+})();
+function toggleTapEmoteSetting(val) {
+  if (!d.tapEmote) d.tapEmote = { enabled: false, emote: 'milo' };
+  d.tapEmote.enabled = val;
+  const opts = document.getElementById('tapEmoteOptions');
+  if (opts) opts.style.display = val ? 'flex' : 'none';
+  save();
+}
+
+function _renderTapEmoteOptions() {
+  const list = document.getElementById('tapEmoteList');
+  if (!list) return;
+  const emotes = [
+    { id: 'milo', name: t('emote_heart'), img: 'milo.png' }
+  ];
+  // только разблокированные
+  const owned = emotes.filter(e => {
+    if (e.id === 'milo') return d.unlockedEmotes && d.unlockedEmotes.includes('milo');
+    return false;
+  });
+  list.innerHTML = owned.map(e => `
+    <div onclick="selectTapEmote('${e.id}')" style="
+      cursor:pointer;padding:8px;border-radius:10px;text-align:center;
+      border:2px solid ${d.tapEmote?.emote===e.id?'#c084fc':'#333'};
+      background:${d.tapEmote?.emote===e.id?'#1a0a2e':'#111'};
+      transition:.2s;">
+      <img src="${e.img}" style="width:36px;height:36px;object-fit:contain;">
+      <div style="font-size:10px;color:#aaa;margin-top:4px;">${e.name}</div>
+    </div>
+  `).join('') || `<div style="color:#555;font-size:12px;">${t('tap_emote_none')}</div>`;
+}
+
+function selectTapEmote(id) {
+  if (!d.tapEmote) d.tapEmote = { enabled: true, emote: id };
+  d.tapEmote.emote = id;
+  save();
+  _renderTapEmoteOptions();
+}
+
+// Инициализация настроек анимации при открытии
+const _origShowSettingsSub = typeof showSettingsSub === 'function' ? showSettingsSub : null;
+// ===== /TAP EMOTE =====
 
 // Активировать tap boost
 function activateTapBoost(durationSeconds) {
@@ -17986,7 +18546,7 @@ function renderProfileTab() {
 }
 
 // Скины которые считаются секретными по смыслу (не продаются, находятся особым способом)
-const SECRET_SKIN_IDS = new Set(['doge','kostia','metka','seri','artem','mystic','capsule','siulai','gkspt','cyber_android','dirty','crypto_heart','corrupted','failed','goldensafe','bhole','toilet','capsulememe','ufo','dragon','eggi','viking']);
+const SECRET_SKIN_IDS = new Set(['doge','kostia','metka','seri','artem','mystic','capsule','siulai','gkspt','cyber_android','dirty','crypto_heart','corrupted','failed','goldensafe','bhole','toilet','capsulememe','ufo','dragon','eggi','viking', 'diamond_kspt','precious_coin','mops','bulldog']);
 
 function _getOwnedSkinsList() {
   const result = [];

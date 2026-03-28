@@ -926,6 +926,24 @@ window.addEventListener('message', (event) => {
     <span class="toggle-slider"></span>
   </label>
 </div>
+
+<!-- Tap Animation section -->
+<div class="card-title" style="margin-top:18px;" data-lang-key="tap_emote_section">Tap Animation</div>
+<div class="card-sub" data-lang-key="tap_emote_desc">Floating emote on coin tap</div>
+<div class="settings-checkbox" style="margin-top:10px;">
+  <div style="flex:1;">
+    <label for="toggleTapEmote" data-lang-key="tap_emote">Tap Emote</label>
+  </div>
+  <label class="toggle-switch">
+    <input type="checkbox" id="toggleTapEmote" onchange="toggleTapEmoteSetting(this.checked)">
+    <span class="toggle-slider"></span>
+  </label>
+</div>
+<div id="tapEmoteOptions" style="display:none;margin-top:10px;flex-direction:column;gap:8px;">
+  <div id="tapEmoteList" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:4px;">
+    <!-- Populated by JS -->
+  </div>
+</div>
     </div>
     <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
   </div>
@@ -1065,6 +1083,17 @@ window.addEventListener('message', (event) => {
   <button onclick="previewMusic('code')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;" data-lang-key="preview">Play 15s</button>
   <button id="btn-music-code" class="owned" style="width:auto; padding:5px 10px; font-size:11px;">Locked</button>
 </div>
+
+<!-- Diamond Melody (Diamond Capsule Exclusive) -->
+<div style="display:flex; align-items:center; gap:10px; margin-bottom:10px; border-top:1px solid #333; padding-top:10px;">
+  <img src="songdi.png" style="width:30px; height:30px; border-radius:5px;">
+  <div style="flex:1;">
+    <div style="font-weight:bold; font-size:14px;" data-lang-key="music_diamond">Diamond Melody</div>
+    <div style="font-size:11px; opacity:0.6;">Diamond Capsule Exclusive</div>
+  </div>
+  <button onclick="previewMusic('diamond')" style="width:auto; padding:5px 10px; font-size:11px; margin-right:5px;" data-lang-key="preview">Play 15s</button>
+  <button id="btn-music-diamond" class="owned" style="width:auto; padding:5px 10px; font-size:11px;">Locked</button>
+</div>
     </div>
     <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
   </div>
@@ -1190,8 +1219,35 @@ window.addEventListener('message', (event) => {
   <button id="bg-btn-bunny" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
 </div>
 
-      <button class="back" onclick="showSettingsSub('main')" data-lang-key="back">Back</button>
-  </div>
+      <div class="settings-section">
+  <div class="bg-preview" style="background-image: url('zoo.png'); background-size:cover;"></div>
+  <div class="card-title">Zoo</div>
+  <div class="card-sub">🐾 Cuteness Box Exclusive</div>
+  <button id="bg-btn-zoo" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
+</div>
+
+      <div class="settings-section">
+  <div class="bg-preview" style="background-image: url('diamf.png'); background-size:cover;"></div>
+  <div class="card-title" data-lang-key="diamond_bg">Diamond Background</div>
+  <div class="card-sub">💎 Diamond Capsule Exclusive</div>
+  <button id="bg-btn-diamond" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
+</div>
+
+      <div class="settings-section">
+  <div class="bg-preview" style="background-image: url('beach.png'); background-size:cover;"></div>
+  <div class="card-title">Beach</div>
+  <div class="card-sub">174,000 KSPT</div>
+  <button id="bg-btn-beach" onclick="buyBackground('beach', 174000)">Buy 174,000 KSPT</button>
+</div>
+
+      <div class="settings-section">
+  <div class="bg-preview" style="background-image: url('kebab.png'); background-size:cover;"></div>
+  <div class="card-title">Kebab Restaurant</div>
+  <div class="card-sub">568,000 KSPT</div>
+  <button id="bg-btn-kebab" onclick="buyBackground('kebab', 568000)">Buy 568,000 KSPT</button>
+</div>
+
+  </div><!-- /settings-bg -->
 
 <!-- LEADERBOARD MODAL -->
   <div id="leaderboardModal" style="display:none; position:fixed; inset:0; z-index:99999; background:rgba(0,0,0,0.85); overflow-y:auto;">
@@ -1456,6 +1512,34 @@ window.addEventListener('message', (event) => {
     <div class="card-title">Target</div>
     <div class="card-sub">Quest Master reward · 30 KSPT/h</div>
     <button id="skin-target" onclick="applySkin('target')">Select</button>
+  </div>
+
+  <div class="card" id="skinCardDiamondKspt" style="display:none">
+    <img id="skin-img-diamond_kspt" src="ksd.png" class="card-img">
+    <div class="card-title" data-lang-key="skin_diamond_kspt">Diamond KSPT</div>
+    <div class="card-sub">Diamond Capsule Exclusive</div>
+    <button id="skin-diamond_kspt" onclick="applySkin('diamond_kspt')">Select</button>
+  </div>
+
+  <div class="card" id="skinCardPreciousCoin" style="display:none">
+    <img id="skin-img-precious_coin" src="codiam.png" class="card-img">
+    <div class="card-title" data-lang-key="skin_precious_coin">Precious Coin</div>
+    <div class="card-sub">Diamond Capsule Exclusive</div>
+    <button id="skin-precious_coin" onclick="applySkin('precious_coin')">Select</button>
+  </div>
+
+  <div class="card" id="skinCardMops" style="display:none">
+    <img id="skin-img-mops" src="mops.png" class="card-img">
+    <div class="card-title" data-lang-key="skin_mops">Pug</div>
+    <div class="card-sub">Cuteness Box Exclusive</div>
+    <button id="skin-mops" onclick="applySkin('mops')">Select</button>
+  </div>
+
+  <div class="card" id="skinCardBulldog" style="display:none">
+    <img id="skin-img-bulldog" src="bul.png" class="card-img">
+    <div class="card-title" data-lang-key="skin_bulldog">Bulldog</div>
+    <div class="card-sub">Cuteness Box Exclusive</div>
+    <button id="skin-bulldog" onclick="applySkin('bulldog')">Select</button>
   </div>
 
   <div class="card">
@@ -2033,6 +2117,18 @@ document.addEventListener('DOMContentLoaded', function () {
   </div>
 </div>
 
+<!-- Diamond Capsule Modal -->
+<div id="diamondCapsuleModal" class="capsule-modal" style="background:rgba(0,0,8,0.97);">
+  <div id="diamondCapsuleHint" style="margin-bottom:20px;font-size:24px;font-weight:bold;color:#b9f2ff;">Tap to open!</div>
+  <img id="diamondCapsuleImg" src="cd.png" class="capsule-center" style="filter:drop-shadow(0 0 18px #00bfff);">
+</div>
+
+<!-- Mili Box Modal -->
+<div id="miliBoxModal" class="capsule-modal" style="background:rgba(8,0,8,0.97);">
+  <div id="miliBoxHint" style="margin-bottom:20px;font-size:24px;font-weight:bold;color:#ffb3de;">Tap to open!</div>
+  <img id="miliBoxImg" src="mili.png" class="capsule-center" style="filter:drop-shadow(0 0 18px #ff69b4);">
+</div>
+
 <!-- Glitch Reward Modal -->
 <div id="glitchRewardModal" class="reward-popup" style="display: none;">
   <h2 style="color: #ff00ff;">GLITCH REWARD!</h2>
@@ -2275,6 +2371,11 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="dirt">🟫 Dirt</option>
           <option value="bank">🏦 Bank</option>
           <option value="elit">💎 Elite</option>
+          <option value="bunny">🐰 Easter Bunny</option>
+          <option value="zoo">🐾 Zoo</option>
+          <option value="diamond">💎 Diamond</option>
+          <option value="beach">🏖 Beach</option>
+          <option value="kebab">🥙 Kebab Restaurant</option>
           <optgroup label="─── Admin Only ───">
             <option value="king">👑 King Street</option>
             <option value="castle">🏰 Big Castle</option>
@@ -2341,6 +2442,8 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="goldCapsule">Gold Capsule</option>
           <option value="glitchBox">Glitch Box</option>
           <option value="glitchFragment">🌀 Glitch Fragment</option>
+          <option value="diamondCapsule">💎 Diamond Capsule</option>
+          <option value="miliBox">🎀 Cuteness Box</option>
           <option value="keyBox">Key Box</option>
           <option value="fortuneWheel">Fortune Wheel Spin</option>
           <option value="bombBox">💣 Bomb Box</option>
@@ -2361,6 +2464,7 @@ document.addEventListener('DOMContentLoaded', function () {
             <option value="keyRed">🔴 Red Key</option>
             <option value="keyBlue">🔵 Blue Key</option>
             <option value="keyBlack">⚫ Black Key</option>
+            <option value="keyDiamond">💎 Diamond Key</option>
             <option value="keyAdmin">👑 Admin Key</option>
           </optgroup>
         </select>
@@ -2462,6 +2566,10 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="angel">Angel Coin</option>
           <option value="demon">Demon Coin</option>
           <option value="goldensafe">Golden Safe</option>
+          <option value="diamond_kspt">Diamond KSPT</option>
+          <option value="precious_coin">Precious Coin</option>
+          <option value="mops">Pug</option>
+          <option value="bulldog">Bulldog</option>
           <optgroup label="─── Admin Only ───">
             <option value="capsulememe">💊 Capsule Meme</option>
             <option value="toilet">🚽 Skibidi Toilet</option>
@@ -2507,6 +2615,7 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="siulai">Cat's Yarn</option>
           <option value="funny">Funny</option>
           <option value="code">Code</option>
+          <option value="diamond">Diamond Melody</option>
         </optgroup>
         <optgroup label="🔒 Admin only">
           <option value="catito">Ai My Catito</option>
@@ -2883,6 +2992,10 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="greatjoost">GreatJoost</option>
           <option value="angel">Angel Coin</option>
           <option value="demon">Demon Coin</option>
+          <option value="diamond_kspt">Diamond KSPT</option>
+          <option value="precious_coin">Precious Coin</option>
+          <option value="mops">Pug</option>
+          <option value="bulldog">Bulldog</option>
         </select>
         <button class="ap-btn ap-btn-green ap-btn-sm" onclick="adminModGiveSkin()">+ Give</button>
         <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminModTakeSkin()">− Take</button>
@@ -2916,6 +3029,8 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="goldCapsule">Gold Capsule</option>
           <option value="glitchBox">Glitch Box</option>
           <option value="glitchFragment">🌀 Glitch Fragment</option>
+          <option value="diamondCapsule">💎 Diamond Capsule</option>
+          <option value="miliBox">🎀 Cuteness Box</option>
           <option value="keyBox">Key Box</option>
           <option value="fortuneWheel">Fortune Wheel Spin</option>
           <option value="bombBox">💣 Bomb Box</option>

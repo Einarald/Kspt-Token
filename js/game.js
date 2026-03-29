@@ -151,6 +151,8 @@ const translations = {
     'maintenance_reason_update': 'System update',
     'maintenance_reason_database': 'Database maintenance',
     'maintenance_reason_security': 'Security patch',
+    'profile_total_taps': 'Total Taps',
+    'profile_diamond_capsule': 'Next 💎',
     'diamond_capsule': 'Diamond Capsule',
     'diamond_capsule_sub': 'Every 7th regular capsule',
     'diamond_key': '💎 Diamond Key',
@@ -729,6 +731,8 @@ const translations = {
     'maintenance_reason_update': 'Обновление системы',
     'maintenance_reason_database': 'Обслуживание базы данных',
     'maintenance_reason_security': 'Патч безопасности',
+    'profile_total_taps': 'Всего тапов',
+    'profile_diamond_capsule': 'След. 💎',
     'diamond_capsule': 'Алмазная капсула',
     'diamond_capsule_sub': 'Каждая 7-я обычная капсула',
     'diamond_key': '💎 Алмазный ключ',
@@ -1744,6 +1748,7 @@ function _openDiamondCapsule() {
   d.diamondCapsule.taps = 0;
   diamondCapsuleOpening = false;
   diamondCapsuleTaps = 0;
+  d.capsuleOpenCount = (d.capsuleOpenCount || 0) + 1;
   const reward = getDiamondCapsuleReward();
   let rewardText = reward.name;
   let rewardImg  = reward.img;
@@ -2444,6 +2449,36 @@ function tryRestoreFromCloud() {
     }
   });
 }
+
+// ===== FIREBASE CLEANUP =====
+function _cleanupOldFirebaseData() {
+  if (!window._firebaseReady || !window._firebaseDB) return;
+  const myUid = getMyUid();
+  if (!myUid || myUid === 'local') return;
+  const weekAgo = Date.now() - 7 * 24 * 3600 * 1000;
+
+  // Чистим старые friendRequests (старше 7 дней)
+  window._firebaseRef(window._firebaseDB, `friendRequests/${myUid}`).once('value', snap => {
+    const data = snap?.val();
+    if (!data) return;
+    Object.entries(data).forEach(([key, val]) => {
+      if (val.ts && val.ts < weekAgo) {
+        window._firebaseRef(window._firebaseDB, `friendRequests/${myUid}/${key}`).remove();
+      }
+    });
+  });
+
+  // Чистим свои старые реакции если вдруг не удалились
+  window._firebaseRef(window._firebaseDB, `reactions/${myUid}`).once('value', snap => {
+    if (snap?.val()) {
+      window._firebaseRef(window._firebaseDB, `reactions/${myUid}`).remove();
+    }
+  });
+}
+
+// Запускаем чистку через 10 сек после загрузки (чтобы не мешать старту)
+setTimeout(_cleanupOldFirebaseData, 10000);
+// ===== /FIREBASE CLEANUP =====
 
 // Auto-save to Firebase every 30 seconds
 setInterval(() => {
@@ -5476,6 +5511,16 @@ function updateCapsuleUI() {
   const btn = document.getElementById("btnOpenCapsule");
   const txt = document.getElementById("capsuleTimer");
   if (!btn || !txt) return;
+
+  // Diamond capsule hint
+  const hint2 = document.getElementById('diamondCapsuleHint2');
+  if (hint2) {
+    const cnt = d.capsuleOpenCount || 0;
+    const till = cnt % 7 === 0 && cnt > 0 ? 7 : 7 - (cnt % 7);
+    hint2.textContent = till === 1
+      ? '💎 Next capsule is Diamond!'
+      : `💎 Diamond in ${till} capsules`;
+  }
   
   const now = Date.now();
   const cooldownTime = 23 * 60 * 60 * 1000;
@@ -18345,6 +18390,8 @@ function renderProfileTab() {
   const income = Math.round(getHourlyRate());
   const playtime = _formatPlaytime(d.playtimeMs || 0);
   const ticketsSpent = d.ticketsLifetime || 0;
+  const totalTaps = d.totalTaps || 0;
+  const capsCount = d.capsuleOpenCount || 0;
 
   const totalSkins = Object.keys(SKIN_INCOME).length;
 
@@ -18490,6 +18537,23 @@ function renderProfileTab() {
       <div class="profile-stat">
         <div class="profile-stat-val">${playtime}</div>
         <div class="profile-stat-lbl">${t('profile_playtime')}</div>
+      </div>
+      <div class="profile-stat">
+        <div class="profile-stat-val" style="font-size:15px;">
+          ${totalTaps >= 1000000
+            ? (totalTaps/1000000).toFixed(1)+'M'
+            : totalTaps >= 1000
+            ? (totalTaps/1000).toFixed(1)+'K'
+            : totalTaps}
+        </div>
+        <div class="profile-stat-lbl">${t('profile_total_taps')}</div>
+      </div>
+      <div class="profile-stat">
+        <div class="profile-stat-val">
+          ${[d.puzzleDone,d.puzzle2Done,d.puzzle3Done,d.puzzle4Done,d.puzzle5Done].filter(Boolean).length}
+          <span style="font-size:11px;color:#555;">/ 5</span>
+        </div>
+        <div class="profile-stat-lbl">Puzzles done</div>
       </div>
     </div>
 

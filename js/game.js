@@ -2016,18 +2016,18 @@ const FUSE_SKIN_NAMES = {
 };
 
 function _fuseGetOwnedSelectableSkins() {
-  // Все скины игрока кроме frozen в fuse и default
   const frozen = [d.fuse?.slot1, d.fuse?.slot2].filter(Boolean);
   const result = [];
   const all = Object.keys(SKIN_INCOME).filter(id => id !== 'default');
   const ekOwned = JSON.parse(localStorage.getItem('ekshop_owned') || '{}');
   all.forEach(id => {
     if (frozen.includes(id)) return;
+    // Fuse-скины нельзя класть в машину
+    if (FUSE_SKIN_IDS.includes(id)) return;
     const owned = (d.skins && d.skins[id]) ||
                   (d.secretSkins && d.secretSkins[id]) ||
                   (d.wonX10 && id === 'priz') ||
-                  ekOwned[id] ||
-                  (d.fuseSkins && d.fuseSkins[id]);
+                  ekOwned[id];
     if (owned) result.push(id);
   });
   return result;
@@ -2066,9 +2066,10 @@ function _fuseGetWeights(pool, slot1, slot2) {
   const hasBonus = pool.length === 4;
 
   function _slotRarityBoost(id) {
+    // Fuse-скин в слоте всегда считается как эпик (3)
+    if (FUSE_SKIN_IDS.includes(id)) return 3;
     const fuseRar = FUSE_RARITY[id];
     if (fuseRar) {
-      // fuse-редкости: common=0, rare=1, champion=2, secret=4, god=5
       const fuseMap = { common:0, rare:1, champion:2, secret:5, god:6 };
       return fuseMap[fuseRar] || 0;
     }

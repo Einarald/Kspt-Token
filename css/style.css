@@ -1,4 +1,3 @@
-
 <style>
 *{box-sizing:border-box}
 body{
@@ -2308,3 +2307,312 @@ body.kspt-game-active{
 </head>
 
 <body>
+/* ============================================
+   DESIGN IMPROVEMENTS + FUSE MACHINE STYLES
+   ============================================ */
+
+/* ── Global font upgrade ── */
+body {
+  font-family: 'Outfit', 'Segoe UI', sans-serif;
+}
+
+/* ── Smoother screen transitions ── */
+.screen.active {
+  animation: screenIn 0.22s cubic-bezier(.22,1,.36,1);
+}
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(6px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── Balance ── */
+.balance-main {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  text-align: center;
+  margin: 12px 0 4px;
+}
+.offline-info {
+  font-size: 13px;
+  color: #666;
+  letter-spacing: 0.2px;
+  margin-bottom: 20px;
+}
+
+/* ── Cards ── */
+.card {
+  background: #111;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 20px;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+.card-title {
+  font-weight: 700;
+  font-size: 15px;
+  letter-spacing: -0.1px;
+}
+
+/* ── Buttons ── */
+button {
+  font-family: 'Outfit', 'Segoe UI', sans-serif;
+  font-weight: 500;
+  border-radius: 14px;
+  transition: transform 0.1s ease, opacity 0.1s ease, background 0.15s ease;
+}
+button:active {
+  transform: scale(0.97);
+  opacity: 0.9;
+}
+button.active {
+  background: #1b5e20;
+}
+
+/* ── Long nav buttons ── */
+.long-btn {
+  border-radius: 20px;
+  background: #141414;
+  border: 1px solid rgba(255,255,255,0.05);
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+.long-btn:active {
+  transform: scale(0.91);
+  opacity: 0.75;
+}
+
+/* ── Settings button ── */
+.settings-btn {
+  background: #141414;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 18px;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+.settings-btn:active {
+  transform: scale(0.88);
+  opacity: 0.7;
+}
+
+/* ── Settings section ── */
+.settings-section {
+  background: #111;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 18px;
+  padding: 16px;
+}
+.settings-checkbox {
+  background: #181818;
+  border-radius: 12px;
+  border: 1px solid rgba(255,255,255,0.04);
+  padding: 10px 12px;
+  margin-bottom: 8px;
+}
+.settings-checkbox label {
+  font-weight: 500;
+  font-size: 14px;
+  color: #ddd;
+}
+.settings-checkbox .subtext {
+  color: #555;
+  font-size: 11px;
+  line-height: 1.4;
+}
+
+/* ── Toggle switch — green → purple accent ── */
+input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #7c3aed, #a855f7);
+}
+
+/* ── Toast ── */
+.toast {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: 16px;
+  padding: 11px 22px;
+  background: rgba(18,18,18,0.88);
+  border: 1px solid rgba(255,255,255,0.09);
+  backdrop-filter: blur(12px);
+  box-shadow: 0 4px 24px rgba(0,0,0,0.5);
+  letter-spacing: 0.1px;
+}
+
+/* ── Reward popup ── */
+.reward-popup {
+  background: #181818;
+  border: 1px solid rgba(255,152,0,0.25);
+  border-radius: 26px;
+  box-shadow: 0 0 0 1px rgba(255,152,0,0.08), 0 30px 80px rgba(0,0,0,0.8);
+}
+.reward-img {
+  filter: drop-shadow(0 4px 16px rgba(255,152,0,0.2));
+}
+
+/* ── Energy box ── */
+.energy-box {
+  background: rgba(255,255,255,0.05);
+  border: 1px solid rgba(255,255,255,0.07);
+  border-radius: 20px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #bbb;
+  backdrop-filter: blur(4px);
+}
+
+/* ── Top bar ── */
+.top-bar {
+  padding-bottom: 12px;
+  border-bottom: 1px solid rgba(255,255,255,0.05);
+  margin-bottom: 14px;
+}
+.top-bar span {
+  font-weight: 600;
+  font-size: 15px;
+  letter-spacing: 0.1px;
+}
+.close-x {
+  opacity: 0.5;
+  transition: opacity 0.15s;
+}
+.close-x:active { opacity: 0.9; }
+
+/* ── Back button ── */
+.back {
+  color: #555;
+  font-size: 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid rgba(255,255,255,0.07);
+  margin-top: 16px;
+  opacity: 1;
+}
+.back:active { background: rgba(255,255,255,0.08); }
+
+/* ── Leaderboard badge ── */
+.notif-badge {
+  box-shadow: 0 0 8px rgba(229,57,53,0.6);
+  font-weight: 700;
+}
+
+/* ── Profile stats ── */
+.profile-stat {
+  background: #181818;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 12px;
+}
+.profile-stat-val {
+  font-weight: 700;
+  font-size: 17px;
+}
+.profile-card {
+  background: #111;
+  border: 1px solid rgba(255,255,255,0.06);
+  border-radius: 16px;
+}
+
+/* ── Market items ── */
+.market-list-item {
+  background: #111;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 14px;
+  transition: background 0.15s;
+}
+.market-list-item:active { background: #181818; }
+
+/* ── Friend items ── */
+.friend-item {
+  background: #111;
+  border: 1px solid rgba(255,255,255,0.05);
+  border-radius: 14px;
+  transition: background 0.15s;
+}
+
+/* ─────────────────────────────────────────
+   ⚗️  FUSE MACHINE
+   ───────────────────────────────────────── */
+
+/* Контейнер всего fuse-экрана */
+#fuseMachineContent {
+  padding-bottom: 24px;
+}
+
+/* Слоты (уже рендерятся в JS, но добавим hover/active) */
+#fuseMachineContent .long-btn,
+#fuseMachineContent [onclick*="_fuseOpenSlotPicker"] {
+  transition: transform 0.12s ease, box-shadow 0.12s ease;
+}
+#fuseMachineContent [onclick*="_fuseOpenSlotPicker"]:active {
+  transform: scale(0.95);
+}
+
+/* Тиры — pulse при выборе */
+@keyframes fuseTierSelect {
+  0%   { box-shadow: 0 0 0 0 rgba(124,58,237,0.6); }
+  50%  { box-shadow: 0 0 0 6px rgba(124,58,237,0.0); }
+  100% { box-shadow: 0 0 0 0 rgba(124,58,237,0); }
+}
+
+/* Карточки результата (possible outcome) */
+#fuseMachineContent [style*="rarity"] img,
+#fuseMachineContent img[style*="40px"] {
+  transition: transform 0.2s ease;
+}
+#fuseMachineContent [style*="rarity"]:active img {
+  transform: scale(1.08);
+}
+
+/* Коллекция fuse-скинов — анимация owned */
+@keyframes fuseOwned {
+  0%,100% { box-shadow: 0 0 6px rgba(192,132,252,0.4); }
+  50%     { box-shadow: 0 0 14px rgba(192,132,252,0.8); }
+}
+
+/* Кнопки оплаты fuse */
+#fuseMachineContent button[onclick*="_fuseStart"] {
+  font-family: 'Outfit', 'Segoe UI', sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.3px;
+  border-radius: 14px;
+  transition: transform 0.1s ease, box-shadow 0.15s ease;
+}
+#fuseMachineContent button[onclick*="_fuseStart('kspt')"]:active {
+  transform: scale(0.96);
+  box-shadow: 0 2px 12px rgba(124,58,237,0.4);
+}
+#fuseMachineContent button[onclick*="_fuseStart('ek')"]:active {
+  transform: scale(0.96);
+  box-shadow: 0 2px 12px rgba(0,229,255,0.3);
+}
+
+/* Тир-карточки */
+#fuseMachineContent [onclick*="_fuseSelectTier"] {
+  transition: transform 0.12s ease, border-color 0.15s ease, background 0.15s ease;
+}
+#fuseMachineContent [onclick*="_fuseSelectTier"]:active {
+  transform: scale(0.95);
+}
+
+/* Анимация иконки fuse когда идёт слияние */
+@keyframes fuseRotate {
+  0%   { filter: drop-shadow(0 0 8px #7c3aed); }
+  50%  { filter: drop-shadow(0 0 20px #c084fc); }
+  100% { filter: drop-shadow(0 0 8px #7c3aed); }
+}
+#fuseMachineContent img[src="fuseak.png"] {
+  animation: fuseRotate 2s ease-in-out infinite;
+}
+
+/* Скролл коллекции fuse */
+#fuseMachineContent [style*="flex-wrap:wrap"] {
+  scrollbar-width: none;
+}
+
+/* Picker modal — скины выбора */
+#fusePickerModal [onclick*="_fusePickSkin"] {
+  transition: transform 0.1s ease, border-color 0.15s ease;
+}
+#fusePickerModal [onclick*="_fusePickSkin"]:active {
+  transform: scale(0.92);
+}
+
+/* ── END FUSE MACHINE ── */

@@ -1235,6 +1235,13 @@ window.addEventListener('message', (event) => {
 </div>
 
       <div class="settings-section">
+  <div class="bg-preview" style="background-image: url('lab.png'); background-size:cover; border:2px solid #c084fc;"></div>
+  <div class="card-title" style="color:#c084fc;">⚗️ Freak's Lab</div>
+  <div class="card-sub" data-lang-key="fuse_bg_reward">🔬 Collect all 20 Fuse skins</div>
+  <button id="bg-btn-lab" onclick="equipBackground('lab')" style="background:#333; opacity:0.6; color:#fff;">Locked</button>
+</div>
+
+      <div class="settings-section">
   <div class="bg-preview" style="background-image: url('beach.png'); background-size:cover;"></div>
   <div class="card-title">Beach</div>
   <div class="card-sub">174,000 KSPT</div>
@@ -1378,11 +1385,15 @@ window.addEventListener('message', (event) => {
   <!-- Easter Event Tab Bar (hidden by default) -->
   <div id="eastShopTabs" style="display:none;flex-direction:row;gap:0;margin:0 0 10px;border-radius:12px;overflow:hidden;border:1px solid #333;">
     <button id="eastTabSkins"  onclick="eastSwitchTab('skins')"
-      style="flex:1;padding:9px;background:#1a1a2e;color:#c084fc;border:none;cursor:pointer;font-size:13px;font-weight:bold;border-right:1px solid #333;">
+      style="flex:1;padding:9px;background:linear-gradient(135deg,#1a0a2e,#2d1b69);color:#c084fc;border:none;cursor:pointer;font-size:13px;font-weight:bold;border-right:1px solid #333;">
       🎨 <span data-lang-key="east_shop_tab_skins">Skins</span>
     </button>
+    <button id="eastTabFuse" onclick="eastSwitchTab('fuse')"
+      style="flex:1;padding:9px;background:#111;color:#7c3aed;border:none;cursor:pointer;font-size:13px;font-weight:bold;border-right:1px solid #333;">
+      ⚗️ <span data-lang-key="fuse_tab">Fuse</span>
+    </button>
     <button id="eastTabEaster" onclick="eastSwitchTab('easter')"
-      style="flex:1;padding:9px;background:#1a1a2e;color:#ff6b6b;border:none;cursor:pointer;font-size:13px;font-weight:bold;">
+      style="flex:1;padding:9px;background:#111;color:#ff6b6b;border:none;cursor:pointer;font-size:13px;font-weight:bold;">
       🐣 <span data-lang-key="east_shop_tab_easter">Easter</span>
     </button>
   </div>
@@ -1422,6 +1433,11 @@ window.addEventListener('message', (event) => {
       <button onclick="eastBuyCustom()" style="background:linear-gradient(135deg,#b7950b,#ffd700);border:none;border-radius:10px;color:#111;font-weight:bold;padding:10px 20px;cursor:pointer;width:100%;margin-top:6px;"
         data-lang-key="east_shop_buy">Buy</button>
     </div>
+  </div>
+
+<!-- Fuse Machine Panel -->
+  <div id="fuseMachinePanel" style="display:none;padding:0 4px 12px;">
+    <div id="fuseMachineContent"></div>
   </div>
 
   <!-- Skins content wrapper (existing cards go inside this) -->
@@ -2493,7 +2509,8 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="fortuneWheel">Fortune Wheel</option>
           <option value="tickets">Ticket Regen</option>
           <option value="boost">Overdrive Boost</option>
-          <option value="safe">🔒 Safe Purchase</option>
+          <option value="safe">Safe Purchase</option>
+           <option value="fuseFusing">Skip Fuse</option>
           <option value="all">ALL Cooldowns</option>
         </select>
         <button class="ap-btn ap-btn-blue" onclick="adminSkipCooldownAll()">⏩ Skip</button>
@@ -2571,6 +2588,28 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="precious_coin">Precious Coin</option>
           <option value="mops">Pug</option>
           <option value="bulldog">Bulldog</option>
+          <optgroup label="─── Fuse Skins ───">
+            <option value="iabloko">Apple Coin</option>
+            <option value="mak">Macadamia Nut</option>
+            <option value="conf">K-Candy</option>
+            <option value="gir">Kettlebell</option>
+            <option value="eka">EK Coin</option>
+            <option value="mil">Soap Token</option>
+            <option value="tel">Old TV</option>
+            <option value="dvd">DVD KSPT</option>
+            <option value="pop">Popcorn</option>
+            <option value="zem">Earth Coin</option>
+            <option value="zam">Hidden Lock</option>
+            <option value="shar">Air Balloon</option>
+            <option value="ogo">Surprise</option>
+            <option value="kak">Mexican Cactus</option>
+            <option value="sve">Wax Candle</option>
+            <option value="glaz">Surveillance Eye</option>
+            <option value="roz">Rose</option>
+            <option value="ras">Potted Mutation</option>
+            <option value="mat">Game Matter</option>
+            <option value="tro">Trojan Horse</option>
+          </optgroup>
           <optgroup label="─── Admin Only ───">
             <option value="capsulememe">💊 Capsule Meme</option>
             <option value="toilet">🚽 Skibidi Toilet</option>
@@ -3305,6 +3344,21 @@ document.addEventListener('DOMContentLoaded', function () {
       <div class="ap-row" style="gap:8px;">
         <button class="ap-btn ap-btn-green" style="flex:1;" onclick="adminSetCountdown()">▶ Start</button>
         <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminStopCountdown()">■ Stop</button>
+      </div>
+    </div>
+
+<!-- Fuse Luck -->
+    <div class="ap-card" style="border-color:#1a3a1a;">
+      <h3 style="color:#ffd700;">🍀 Fuse Lucky Time</h3>
+      <p style="color:#9fa8da;font-size:11px;margin:0 0 10px;">During Lucky Time the Fuse tab glows green and players get boosted bonus skin chance.</p>
+      <div class="ap-row" style="gap:8px;margin-bottom:8px;">
+        <span class="ap-label">Duration (minutes)</span>
+        <input id="apFuseLuckMins" class="ap-input" type="number" min="1" value="30" style="width:80px;">
+      </div>
+      <div id="apFuseLuckStatus" style="font-size:12px;color:#555;margin-bottom:8px;"></div>
+      <div class="ap-row" style="gap:8px;">
+        <button class="ap-btn ap-btn-green" style="flex:1;" onclick="adminSetFuseLuck()">🍀 Start Lucky Time</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminStopFuseLuck()">■ Stop</button>
       </div>
     </div>
 

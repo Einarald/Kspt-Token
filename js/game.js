@@ -173,6 +173,29 @@ const translations = {
     'tap_emote_section': 'Tap Animation',
     'emote_heart': 'Emote With Heart',
     'tap_emote_none': 'None',
+    'fuse_tab': 'Fuse',
+    'fuse_title': '⚗️ Fuse Machine',
+    'fuse_sub': 'Combine 2 skins to get a new one',
+    'fuse_slot_left': 'Skin 1',
+    'fuse_slot_right': 'Skin 2',
+    'fuse_select_skin': 'Select skin',
+    'fuse_possible': 'Possible outcome',
+    'fuse_pay_kspt': 'Pay KSPT',
+    'fuse_pay_ek': 'Pay EK',
+    'fuse_fusing': 'Fusing...',
+    'fuse_ready': 'Ready!',
+    'fuse_cooldown': 'Cooldown: {0}h',
+    'fuse_result': '✨ Fusion Complete!',
+    'fuse_frozen': 'Skin is in Fuse',
+    'fuse_need_2': 'Select 2 different skins',
+    'fuse_collection': 'Fuse Collection',
+    'fuse_bg_reward': '🔬 Lab background unlocked!',
+    'fuse_all_collected': '🎉 All 20 Fuse skins! Lab unlocked!',
+    'rarity_fuse_common': 'Common',
+    'rarity_fuse_rare': 'Rare',
+    'rarity_fuse_champion': 'Champion',
+    'rarity_fuse_secret': 'Secret',
+    'rarity_fuse_god': 'Secret God',
     'dkey_milicuteness': 'Cuteness Box x2',
     'dkey_tokens': '+20 Tokens',
     
@@ -753,6 +776,29 @@ const translations = {
     'tap_emote_section': 'Анимация Тапа',
     'emote_heart': 'Эмоут с сердечком',
     'tap_emote_none': 'Нет',
+    'fuse_tab': 'Слияние',
+    'fuse_title': '⚗️ Машина Слияния',
+    'fuse_sub': 'Объедини 2 скина и получи новый',
+    'fuse_slot_left': 'Скин 1',
+    'fuse_slot_right': 'Скин 2',
+    'fuse_select_skin': 'Выбрать скин',
+    'fuse_possible': 'Возможный результат',
+    'fuse_pay_kspt': 'Заплатить KSPT',
+    'fuse_pay_ek': 'Заплатить EK',
+    'fuse_fusing': 'Слияние...',
+    'fuse_ready': 'Готово!',
+    'fuse_cooldown': 'Кулдаун: {0}ч',
+    'fuse_result': '✨ Слияние завершено!',
+    'fuse_frozen': 'Скин в машине Fuse',
+    'fuse_need_2': 'Выберите 2 разных скина',
+    'fuse_collection': 'Коллекция Fuse',
+    'fuse_bg_reward': '🔬 Фон «Лаборатория» разблокирован!',
+    'fuse_all_collected': '🎉 Все 20 Fuse скинов! Лаборатория разблокирована!',
+    'rarity_fuse_common': 'Обычный',
+    'rarity_fuse_rare': 'Редкий',
+    'rarity_fuse_champion': 'Чемпионский',
+    'rarity_fuse_secret': 'Секретный',
+    'rarity_fuse_god': 'Секретный бог',
     'dkey_milicuteness': 'Сундук Милоты x2',
     'dkey_tokens': '+20 жетонов',
     
@@ -1957,6 +2003,548 @@ function _openMiliBox() {
 }
 // ===== /MILI BOX =====
 
+// =============================================
+// ===== FUSE MACHINE =====
+// =============================================
+
+const FUSE_SKIN_NAMES = {
+  iabloko:'Apple Coin', mak:'Macadamia Nut', conf:'K-Candy', gir:'Kettlebell', eka:'EK Coin',
+  mil:'Soap Token', tel:'Old TV', dvd:'DVD KSPT', pop:'Popcorn', zem:'Earth Coin',
+  zam:'Hidden Lock', shar:'Air Balloon', ogo:'Surprise', kak:'Mexican Cactus', sve:'Wax Candle',
+  glaz:'Surveillance Eye', roz:'Rose', ras:'Potted Mutation', mat:'Game Matter',
+  tro:'Trojan Horse'
+};
+
+function _fuseGetOwnedSelectableSkins() {
+  // Все скины игрока кроме frozen в fuse и default
+  const frozen = [d.fuse?.slot1, d.fuse?.slot2].filter(Boolean);
+  const result = [];
+  const all = Object.keys(SKIN_INCOME).filter(id => id !== 'default');
+  const ekOwned = JSON.parse(localStorage.getItem('ekshop_owned') || '{}');
+  all.forEach(id => {
+    if (frozen.includes(id)) return;
+    const owned = (d.skins && d.skins[id]) ||
+                  (d.secretSkins && d.secretSkins[id]) ||
+                  (d.wonX10 && id === 'priz') ||
+                  ekOwned[id] ||
+                  (d.fuseSkins && d.fuseSkins[id]);
+    if (owned) result.push(id);
+  });
+  return result;
+}
+
+function _fuseTierForSlot(slot) {
+  // Определяем tier по выбранному варианту оплаты (хранится в d.fuse.tier)
+  return d.fuse?.tier || 1;
+}
+
+function _fuseGetPool(tier) {
+  const cfg = FUSE_TIER_POOLS[tier];
+  if (!cfg) return [];
+  const notOwned = (arr) => arr.filter(id => !(d.fuseSkins && d.fuseSkins[id]));
+  const mainSkins = FUSE_SKIN_IDS.filter(id => FUSE_RARITY[id] === cfg.main);
+  const bonusSkins = FUSE_SKIN_IDS.filter(id => FUSE_RARITY[id] === cfg.bonus);
+  const mainPool = notOwned(mainSkins).length >= 3 ? notOwned(mainSkins) : mainSkins;
+  const bonusPool = notOwned(bonusSkins).length > 0 ? notOwned(bonusSkins) : bonusSkins;
+  // Фиксируем 3 конкретных main скина детерминированно (по индексу, не рандом)
+  const seed = (d.fuse?.slot1 || '').length + (d.fuse?.slot2 || '').length + tier;
+  const shuffled = [...mainPool].sort((a, b) => {
+    const ha = (a + seed).split('').reduce((s,c) => s + c.charCodeAt(0), 0);
+    const hb = (b + seed).split('').reduce((s,c) => s + c.charCodeAt(0), 0);
+    return ha - hb;
+  });
+  const picked = shuffled.slice(0, 3);
+  if (bonusPool.length > 0) {
+    const bi = (seed * 7 + tier) % bonusPool.length;
+    picked.push(bonusPool[bi]);
+  }
+  return picked;
+}
+
+function _fuseGetWeights(pool, slot1, slot2) {
+  if (!pool || !pool.length) return [];
+  const hasBonus = pool.length === 4;
+
+  function _slotRarityBoost(id) {
+    const fuseRar = FUSE_RARITY[id];
+    if (fuseRar) {
+      // fuse-редкости: common=0, rare=1, champion=2, secret=4, god=5
+      const fuseMap = { common:0, rare:1, champion:2, secret:5, god:6 };
+      return fuseMap[fuseRar] || 0;
+    }
+    // Обычные скины по доходу:
+    // обычный(≤10)=0, редкий(≤30)=1, эпический(≤50)=2, мифический(≤80)=3,
+    // секретный(≤130)=4, легендарный(≤200)=5, ультралегендарный(>200)=6
+    const inc = SKIN_INCOME[id] || 0;
+    if (inc <= 10)  return 0;
+    if (inc <= 30)  return 1;
+    if (inc <= 50)  return 2;
+    if (inc <= 80)  return 3;
+    if (inc <= 130) return 4;
+    if (inc <= 200) return 5;
+    return 6;
+}
+
+  const luckBoost = (window._fuseLuckActive && window._fuseLuckEnd > Date.now()) ? 10 : 0;
+
+  // Бонусный шанс строго в диапазоне [8, 15] без удачи, [8, 25] с удачей
+  // Каждый суммарный буст шага = 1% (два слота суммируются, макс boost = 6+6 = 12 → но зажимаем в 7)
+  let bonusBase = 0;
+  if (hasBonus) {
+    const rawBoost = _slotRarityBoost(slot1) + _slotRarityBoost(slot2);
+    // Нормируем: 0 boost → 8%, макс boost (12) → 15%, шаг ≈ 0.583% за единицу
+    const bonusFromSkins = Math.round(rawBoost * 7 / 12); // 0..7
+    bonusBase = Math.min(15, 8 + bonusFromSkins) + luckBoost;
+    bonusBase = Math.min(25, bonusBase);
+  }
+
+  const mainTotal = 100 - bonusBase;
+  const mainCount = hasBonus ? 3 : pool.length;
+  const baseMain = mainTotal / mainCount;
+
+  // Детерминированный косметический сдвиг ±1.5% между main-слотами (не влияет на бонус)
+  const seed = (slot1||'').charCodeAt(0) + (slot2||'').charCodeAt(0);
+  const rawWeights = pool.map((id, i) => {
+    if (hasBonus && i === pool.length - 1) return bonusBase; // бонус — точное значение
+    const shift = ((seed + i * 17) % 4) - 1.5; // сдвиг -1.5..+1.5
+    return Math.max(1, baseMain + shift);
+  });
+
+  // Нормализуем так, чтобы бонусный % остался точным, а main-слоты добили до 100
+  if (hasBonus) {
+    const mainSum = rawWeights.slice(0, 3).reduce((a, b) => a + b, 0);
+    const scale = (100 - bonusBase) / mainSum;
+    const result = rawWeights.slice(0, 3).map(w => parseFloat((w * scale).toFixed(1)));
+    result.push(parseFloat(bonusBase.toFixed(1)));
+    return result;
+  }
+  const sum = rawWeights.reduce((a, b) => a + b, 0);
+  return rawWeights.map(w => parseFloat((w / sum * 100).toFixed(1)));
+}
+
+function _fuseRollResult(pool, slot1, slot2) {
+  if (!pool || pool.length === 0) return null;
+  const weights = _fuseGetWeights(pool, slot1, slot2);
+  let r = Math.random() * 100;
+  for (let i = 0; i < pool.length; i++) {
+    r -= weights[i];
+    if (r <= 0) return pool[i];
+  }
+  return pool[0];
+}
+
+function _fuseCalcKSPT(tier) {
+  const h = FUSE_TIER_POOLS[tier]?.kspt_h || 15;
+  const raw = getHourlyRate() * h;
+  return Math.round(raw / 1000) * 1000 || 1000;
+}
+
+function renderFuseMachine() {
+  const el = document.getElementById('fuseMachineContent');
+  if (!el) return;
+  const _fuseMinRate = 500;
+  if (getHourlyRate() < _fuseMinRate) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:30px 16px;">
+        <img src="fuse.png" style="width:100px;height:100px;object-fit:contain;filter:grayscale(1) brightness(0.4);margin-bottom:16px;">
+        <div style="font-size:15px;font-weight:bold;color:#555;margin-bottom:8px;">⚗️ Fuse Machine</div>
+        <div style="font-size:13px;color:#444;margin-bottom:6px;">Reach <span style="color:#c084fc;font-weight:bold;">500 KSPT/h</span> to unlock</div>
+        <div style="font-size:12px;color:#333;">Current: ${Math.round(getHourlyRate())} KSPT/h</div>
+      </div>`;
+    return;
+  }
+  const now = Date.now();
+  const fuse = d.fuse || {};
+  const _fuseAllDone = FUSE_SKIN_IDS.every(id => d.fuseSkins && d.fuseSkins[id]);
+  if (_fuseAllDone) {
+    el.innerHTML = `
+      <div style="text-align:center;padding:30px 16px;">
+        <img src="fuseak.png" style="width:120px;height:120px;object-fit:contain;filter:drop-shadow(0 0 20px #c084fc);margin-bottom:16px;">
+        <div style="font-size:20px;font-weight:bold;color:#c084fc;margin-bottom:8px;">⚗️ Fuse Complete!</div>
+        <div style="font-size:13px;color:#888;margin-bottom:16px;">You have collected all 20 Fuse skins!</div>
+        <div style="font-size:12px;color:#555;">The Lab background has been unlocked.</div>
+      </div>` + _fuseRenderCollection();
+    return;
+  }
+  const isFusing = fuse.active && fuse.fusingEnd > now;
+  const isCooldown = false; // кулдаун отключён
+  const tier = fuse.tier || 1;
+  // Восстанавливаем locked pool из d если window потерял при перезаходе
+  if (!window._fuseCurrentPool && d.fuse?._lockedPool?.length) {
+    window._fuseCurrentPool = d.fuse._lockedPool;
+    window._fuseCurrentWeights = d.fuse._lockedWeights;
+  }
+  const pool = window._fuseCurrentPool || [];
+
+  // Header
+  let html = `
+    <div style="text-align:center;margin-bottom:14px;">
+      <img src="${isFusing ? 'fuseak.png' : 'fuse.png'}" style="width:140px;height:140px;object-fit:contain;filter:${isFusing?'drop-shadow(0 0 20px #7c3aed)':'drop-shadow(0 0 6px #7c3aed44)'};">
+      <div style="font-size:18px;font-weight:bold;color:#c084fc;margin-top:6px;">${t('fuse_title')}</div>
+      <div style="font-size:12px;color:#888;">${t('fuse_sub')}</div>
+    </div>`;
+
+  if (isFusing) {
+    // Показываем таймер слияния
+    const left = fuse.fusingEnd - now;
+    const h = Math.floor(left/3600000), m = Math.floor((left%3600000)/60000);
+    html += `
+      <div style="background:#1a0a2e;border:2px solid #7c3aed;border-radius:14px;padding:16px;text-align:center;margin-bottom:12px;">
+        <div style="font-size:13px;color:#c084fc;margin-bottom:6px;">⚗️ ${t('fuse_fusing')}</div>
+        <div style="font-size:26px;font-weight:bold;color:#fff;">${h}h ${m}m</div>
+        <div style="font-size:11px;color:#555;margin-top:4px;">
+          ${fuse.slot1 ? `🔒 ${FUSE_SKIN_NAMES[fuse.slot1]||fuse.slot1}` : ''} 
+          + ${fuse.slot2 ? `${FUSE_SKIN_NAMES[fuse.slot2]||fuse.slot2}` : ''}
+        </div>
+      </div>`;
+    el.innerHTML = html + _fuseRenderCollection();
+    return;
+  }
+
+  if (isCooldown) {
+    const left = fuse.cooldownEnd - now;
+    const h = Math.floor(left/3600000);
+    html += `<div style="background:#111;border:1px solid #333;border-radius:12px;padding:12px;text-align:center;margin-bottom:12px;color:#ff9800;">
+      ⏳ ${formatTemplate(t('fuse_cooldown'),[h])}
+    </div>`;
+  }
+
+  // Слоты
+  const slot1 = fuse.slot1, slot2 = fuse.slot2;
+  html += `<div style="display:flex;gap:10px;margin-bottom:12px;">`;
+  [1,2].forEach(n => {
+    const slotId = n === 1 ? slot1 : slot2;
+    const img = slotId ? getSkinImage(slotId) : null;
+    html += `<div onclick="_fuseOpenSlotPicker(${n})" style="flex:1;background:#0d0d1a;border:2px dashed ${slotId?'#7c3aed':'#333'};border-radius:12px;padding:10px;text-align:center;cursor:pointer;min-height:90px;display:flex;flex-direction:column;align-items:center;justify-content:center;transition:.2s;">
+      ${slotId
+        ? `<img src="${img}" style="width:52px;height:52px;object-fit:contain;"><div style="font-size:10px;color:#c084fc;margin-top:4px;">${FUSE_SKIN_NAMES[slotId]||slotId}</div>`
+        : `<div style="font-size:28px;color:#333;">+</div><div style="font-size:11px;color:#555;">${t('fuse_slot_'+['left','right'][n-1])}</div>`
+      }
+    </div>`;
+  });
+  html += `</div>`;
+
+  // Возможные варианты
+  if (slot1 && slot2 && pool.length > 0) {
+    // Используем зафиксированные веса, не пересчитываем
+    const displayWeights = window._fuseCurrentWeights || d.fuse?._lockedWeights || _fuseGetWeights(pool, slot1, slot2);
+    const sorted = pool.map((id, i) => ({ id, pct: displayWeights[i] }))
+                       .sort((a, b) => b.pct - a.pct);
+    html += `<div style="margin-bottom:12px;">
+      <div style="font-size:11px;color:#888;margin-bottom:6px;">${t('fuse_possible')}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">`;
+    sorted.forEach(({ id, pct }) => {
+      const col = FUSE_RARITY_COLOR[FUSE_RARITY[id]] || '#888';
+      html += `<div style="flex:1;min-width:60px;background:#111;border:2px solid ${col};border-radius:10px;padding:6px;text-align:center;">
+        <img src="${getSkinImage(id)}" style="width:40px;height:40px;object-fit:contain;">
+        <div style="font-size:9px;color:${col};margin-top:2px;">${FUSE_SKIN_NAMES[id]||id}</div>
+        <div style="font-size:10px;color:#fff;font-weight:bold;">${pct}%</div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  }
+
+  // Кнопки оплаты (только если оба слота заполнены)
+  if (slot1 && slot2 && !isCooldown) {
+    html += `<div style="margin-bottom:10px;">
+      <div style="font-size:11px;color:#888;margin-bottom:6px;">Choose tier:</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:6px;">`;
+    [1,2,3,4].forEach(tr => {
+      const cfg = FUSE_TIER_POOLS[tr];
+      const ksptCost = _fuseCalcKSPT(tr);
+      const isSelected = tier === tr;
+      html += `<div onclick="_fuseSelectTier(${tr})" style="background:${isSelected?'#1a0a2e':'#111'};border:2px solid ${isSelected?'#7c3aed':'#333'};border-radius:10px;padding:8px;cursor:pointer;text-align:center;transition:.2s;">
+        <div style="font-size:11px;color:#c084fc;font-weight:bold;">Tier ${tr}</div>
+        <div style="font-size:10px;color:#aaa;">${formatNumber(ksptCost,0)} KSPT</div>
+        <div style="font-size:10px;color:#00e5ff;">/ ${cfg.ek} EK</div>
+        <div style="font-size:9px;color:#555;">${cfg.wait[0]}-${cfg.wait[1]}h wait</div>
+      </div>`;
+    });
+    html += `</div></div>
+      <div style="display:flex;gap:8px;">
+        <button onclick="_fuseStart('kspt')" style="flex:1;padding:12px;background:linear-gradient(135deg,#7c3aed,#c084fc);color:#fff;font-weight:bold;border:none;border-radius:12px;cursor:pointer;font-size:14px;">
+          ${t('fuse_pay_kspt')}: ${formatNumber(_fuseCalcKSPT(tier),0)}
+        </button>
+        <button onclick="_fuseStart('ek')" style="flex:1;padding:12px;background:linear-gradient(135deg,#0077cc,#00e5ff);color:#fff;font-weight:bold;border:none;border-radius:12px;cursor:pointer;font-size:14px;">
+          ${t('fuse_pay_ek')}: ${FUSE_TIER_POOLS[tier]?.ek} EK
+        </button>
+      </div>`;
+  } else if (!slot1 || !slot2) {
+    html += `<div style="text-align:center;color:#555;font-size:12px;padding:8px;">${t('fuse_need_2')}</div>`;
+  }
+
+  el.innerHTML = html + _fuseRenderCollection();
+
+  // Запускаем таймер обновления если идёт слияние
+  _fuseStartTimer();
+}
+
+function _fuseRenderCollection() {
+  const rows = [
+    { rarity:'common',   ids:['iabloko','mak','conf','gir','eka'] },
+    { rarity:'rare',     ids:['mil','tel','dvd','pop','zem'] },
+    { rarity:'champion', ids:['zam','shar','ogo','kak','sve'] },
+    { rarity:'secret',   ids:['glaz','roz','ras','mat'] },
+    { rarity:'god',      ids:['tro'] }
+  ];
+  const allCollected = FUSE_SKIN_IDS.every(id => d.fuseSkins && d.fuseSkins[id]);
+
+  let html = `<div style="margin-top:16px;">
+    <div style="font-weight:bold;font-size:14px;margin-bottom:8px;color:#c084fc;">${t('fuse_collection')}</div>`;
+
+  rows.forEach(row => {
+    const col = FUSE_RARITY_COLOR[row.rarity];
+    const label = t(FUSE_RARITY_LABEL[row.rarity]);
+    html += `<div style="margin-bottom:10px;">
+      <div style="font-size:10px;color:${col};margin-bottom:4px;text-transform:uppercase;letter-spacing:1px;">${label}</div>
+      <div style="display:flex;gap:6px;flex-wrap:wrap;">`;
+    row.ids.forEach(id => {
+      const owned = d.fuseSkins && d.fuseSkins[id];
+      const isActive = d.skin === id;
+      html += `<div onclick="${owned ? `_fuseSelectActiveSkin('${id}')` : ''}"
+        style="width:56px;background:#0d0d1a;border:2px solid ${owned?col:'#222'};border-radius:10px;padding:5px;text-align:center;cursor:${owned?'pointer':'default'};
+        box-shadow:${owned?`0 0 8px ${col}44`:''};transition:.2s;position:relative;">
+        <img src="${owned ? getSkinImage(id) : 'knowdont.png'}" style="width:36px;height:36px;object-fit:contain;">
+        ${isActive ? '<div style="position:absolute;top:2px;right:2px;width:8px;height:8px;border-radius:50%;background:#00e676;"></div>' : ''}
+        <div style="font-size:8px;color:${owned?col:'#333'};margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${owned?(FUSE_SKIN_NAMES[id]||id):'???'}</div>
+      </div>`;
+    });
+    html += `</div></div>`;
+  });
+
+  // Фон-награда
+  const labOwned = d.ownedBgs && d.ownedBgs.includes('lab');
+  html += `<div style="background:#0d0d1a;border:1px solid ${labOwned?'#c084fc':'#222'};border-radius:10px;padding:10px;margin-top:8px;text-align:center;">
+    <img src="lab.png" style="width:50px;height:50px;object-fit:contain;border-radius:6px;${labOwned?'':'filter:grayscale(1) brightness(0.3);'}">
+    <div style="font-size:11px;color:${labOwned?'#c084fc':'#555'};margin-top:4px;">Lab Background</div>
+    <div style="font-size:10px;color:#444;">Collect all 20 Fuse skins</div>
+  </div>`;
+
+  html += `</div>`;
+  return html;
+}
+
+function _fuseSelectActiveSkin(id) {
+  if (!d.fuseSkins || !d.fuseSkins[id]) return;
+  d.skin = id;
+  save();
+  if (typeof updateSkinImage === 'function') updateSkinImage();
+  if (typeof ui === 'function') ui();
+  renderFuseMachine();
+  showToast('✅ ' + (FUSE_SKIN_NAMES[id]||id) + ' active!');
+}
+
+function _fuseSelectTier(tier) {
+  if (!d.fuse) d.fuse = {};
+  d.fuse.tier = tier;
+  // Пересчитываем пул и веса при смене тира (если оба слота заполнены)
+  if (d.fuse.slot1 && d.fuse.slot2) {
+    window._fuseCurrentPool = _fuseGetPool(tier);
+    window._fuseCurrentWeights = _fuseGetWeights(window._fuseCurrentPool, d.fuse.slot1, d.fuse.slot2);
+    d.fuse._lockedPool = window._fuseCurrentPool.slice();
+    d.fuse._lockedWeights = window._fuseCurrentWeights.slice();
+    save();
+  }
+  renderFuseMachine();
+}
+
+function _fuseOpenSlotPicker(slotNum) {
+  if (d.fuse?.active && d.fuse?.fusingEnd > Date.now()) return;
+  const skins = _fuseGetOwnedSelectableSkins();
+  if (skins.length === 0) { showToast('No skins available!'); return; }
+
+  // Убираем уже выбранный в другом слоте
+  const other = slotNum === 1 ? d.fuse?.slot2 : d.fuse?.slot1;
+  const filtered = skins.filter(id => id !== other);
+
+  let modal = document.getElementById('fusePickerModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'fusePickerModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:20000;background:rgba(0,0,0,0.9);display:flex;flex-direction:column;align-items:center;justify-content:flex-start;padding:20px;overflow-y:auto;box-sizing:border-box;';
+    modal.onclick = e => { if(e.target===modal) modal.style.display='none'; };
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div style="width:100%;max-width:380px;">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;">
+        <div style="font-size:16px;font-weight:bold;color:#c084fc;">${t('fuse_select_skin')} (Slot ${slotNum})</div>
+        <button onclick="document.getElementById('fusePickerModal').style.display='none'" style="background:#333;border:none;color:#fff;border-radius:50%;width:30px;height:30px;cursor:pointer;font-size:16px;">✕</button>
+      </div>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;">
+        ${filtered.map(id => {
+          const isFuse = FUSE_SKIN_IDS.includes(id);
+          const col = isFuse ? (FUSE_RARITY_COLOR[FUSE_RARITY[id]]||'#888') : '#555';
+          return `<div onclick="_fusePickSkin(${slotNum},'${id}')" style="width:64px;background:#111;border:2px solid ${col};border-radius:10px;padding:6px;text-align:center;cursor:pointer;">
+            <img src="${getSkinImage(id)}" style="width:40px;height:40px;object-fit:contain;">
+            <div style="font-size:8px;color:${col};margin-top:2px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${FUSE_SKIN_NAMES[id]||id.charAt(0).toUpperCase()+id.slice(1)}</div>
+          </div>`;
+        }).join('')}
+      </div>
+    </div>`;
+  modal.style.display = 'flex';
+}
+
+function _fusePickSkin(slotNum, id) {
+  if (!d.fuse) d.fuse = {};
+  if (slotNum === 1) d.fuse.slot1 = id;
+  else d.fuse.slot2 = id;
+  const modal = document.getElementById('fusePickerModal');
+  if (modal) modal.style.display = 'none';
+  // Если положили активный скин — переключаемся на default
+  if (d.skin === id) {
+    d.skin = 'default';
+    if (typeof updateSkinImage === 'function') updateSkinImage();
+    if (typeof ui === 'function') ui();
+  }
+  // Фиксируем пул и веса один раз когда оба слота заполнены
+  if (d.fuse.slot1 && d.fuse.slot2) {
+    window._fuseCurrentPool = _fuseGetPool(d.fuse.tier || 1);
+    // Веса зависят от слотов — фиксируем сразу
+    window._fuseCurrentWeights = _fuseGetWeights(window._fuseCurrentPool, d.fuse.slot1, d.fuse.slot2);
+    // Сохраняем в d чтобы не пересчитывались при перезаходе
+    d.fuse._lockedPool = window._fuseCurrentPool.slice();
+    d.fuse._lockedWeights = window._fuseCurrentWeights.slice();
+  }
+  save();
+  renderFuseMachine();
+}
+
+function _fuseStart(currency) {
+  if (!d.fuse?.slot1 || !d.fuse?.slot2) { showToast(t('fuse_need_2')); return; }
+  if (d.fuse?.active && d.fuse?.fusingEnd > Date.now()) return;
+  if (d.fuse?.cooldownEnd > Date.now()) { showToast('Fuse on cooldown!'); return; }
+
+  const tier = d.fuse.tier || 1;
+  const cfg = FUSE_TIER_POOLS[tier];
+  if (!cfg) return;
+
+  if (currency === 'kspt') {
+    const cost = _fuseCalcKSPT(tier);
+    if (d.tokens < cost) { showToast('Not enough KSPT!'); return; }
+    d.tokens -= cost;
+  } else {
+    const cost = cfg.ek;
+    if ((d.ek || 0) < cost) { showToast('Not enough EK!'); return; }
+    d.ek -= cost;
+    localStorage.setItem('ekshop_ek_cache', String(d.ek));
+  }
+
+  // Рассчитываем время ожидания
+  const waitH = cfg.wait[0] + Math.random() * (cfg.wait[1] - cfg.wait[0]);
+  d.fuse.fusingEnd = Date.now() + Math.round(waitH * 3600000);
+  d.fuse.active = true;
+  // Сохраняем пул результата
+  d.fuse._pool = d.fuse._lockedPool || window._fuseCurrentPool || _fuseGetPool(tier);
+
+  save();
+  ui();
+  renderFuseMachine();
+  _fuseStartTimer();
+}
+
+let _fuseTimerInterval = null;
+function _fuseStartTimer() {
+  if (_fuseTimerInterval) clearInterval(_fuseTimerInterval);
+  if (!d.fuse?.active || d.fuse?.fusingEnd <= Date.now()) {
+    _fuseCheckComplete();
+    return;
+  }
+  _fuseTimerInterval = setInterval(() => {
+    if (Date.now() >= d.fuse.fusingEnd) {
+      clearInterval(_fuseTimerInterval);
+      _fuseTimerInterval = null;
+      _fuseComplete();
+    } else {
+      // Обновить только таймер без полного ре-рендера
+      renderFuseMachine();
+    }
+  }, 60000);
+}
+
+function _fuseCheckComplete() {
+  if (d.fuse?.active && d.fuse?.fusingEnd <= Date.now()) {
+    _fuseComplete();
+  }
+}
+
+function _fuseComplete() {
+  if (!d.fuse?.active) return;
+  const pool = d.fuse._pool || _fuseGetPool(d.fuse.tier || 1);
+  const result = _fuseRollResult(pool, d.fuse.slot1, d.fuse.slot2);
+
+  // Возвращаем слоты (они не теряются)
+  const s1 = d.fuse.slot1, s2 = d.fuse.slot2;
+  d.fuse.slot1 = null;
+  d.fuse.slot2 = null;
+  d.fuse.active = false;
+  d.fuse.fusingEnd = 0;
+  d.fuse.cooldownEnd = 0; // кулдаун убран
+  d.fuse._pool = null;
+  d.fuse._lockedPool = null;
+  d.fuse._lockedWeights = null;
+  window._fuseCurrentPool = null;
+  window._fuseCurrentWeights = null;
+
+  // Выдаём скин
+  if (result) {
+    if (!d.fuseSkins) d.fuseSkins = {};
+    const alreadyHad = !!d.fuseSkins[result];
+    d.fuseSkins[result] = true;
+
+    // Проверяем фон-награду
+    const allDone = FUSE_SKIN_IDS.every(id => d.fuseSkins && d.fuseSkins[id]);
+    if (allDone) {
+      if (!d.ownedBgs) d.ownedBgs = ['default'];
+      if (!d.ownedBgs.includes('lab')) {
+        d.ownedBgs.push('lab');
+        if (typeof updateSettingsUI === 'function') updateSettingsUI();
+        setTimeout(() => showToast(t('fuse_all_collected')), 2000);
+      }
+    }
+  }
+
+  save();
+  ui();
+  renderFuseMachine();
+
+  // Показываем результат
+  if (result) {
+    const col = FUSE_RARITY_COLOR[FUSE_RARITY[result]] || '#c084fc';
+    _fuseShowResult(result, col, s1, s2);
+  }
+}
+
+function _fuseShowResult(resultId, col, s1, s2) {
+  let modal = document.getElementById('fuseResultModal');
+  if (!modal) {
+    modal = document.createElement('div');
+    modal.id = 'fuseResultModal';
+    modal.style.cssText = 'position:fixed;inset:0;z-index:21000;background:rgba(0,0,0,0.95);display:flex;align-items:center;justify-content:center;';
+    document.body.appendChild(modal);
+  }
+  modal.innerHTML = `
+    <div style="background:#0d0d1a;border:2px solid ${col};border-radius:20px;padding:28px 24px;text-align:center;max-width:320px;width:90%;box-shadow:0 0 40px ${col}66;">
+      <div style="font-size:22px;font-weight:bold;color:${col};margin-bottom:4px;">${t('fuse_result')}</div>
+      <div style="font-size:12px;color:#555;margin-bottom:16px;">${FUSE_SKIN_NAMES[s1]||s1} + ${FUSE_SKIN_NAMES[s2]||s2}</div>
+      <img src="${getSkinImage(resultId)}" style="width:90px;height:90px;object-fit:contain;filter:drop-shadow(0 0 16px ${col});margin-bottom:12px;">
+      <div style="font-size:18px;font-weight:bold;color:#fff;margin-bottom:4px;">${FUSE_SKIN_NAMES[resultId]||resultId}</div>
+      <div style="font-size:12px;color:${col};margin-bottom:16px;">${t(FUSE_RARITY_LABEL[FUSE_RARITY[resultId]]||'rarity_fuse_common')} · +${SKIN_INCOME[resultId]||0} KSPT/h</div>
+      <button onclick="document.getElementById('fuseResultModal').style.display='none'" style="background:linear-gradient(135deg,#7c3aed,#c084fc);color:#fff;font-weight:bold;border:none;border-radius:12px;padding:12px 28px;cursor:pointer;font-size:15px;">
+        ✨ Collect!
+      </button>
+    </div>`;
+  modal.style.display = 'flex';
+}
+
+// При загрузке — проверяем завершилось ли слияние
+setTimeout(() => {
+  if (typeof _fuseCheckComplete === 'function') _fuseCheckComplete();
+  if (typeof _fuseStartTimer === 'function') _fuseStartTimer();
+}, 2000);
+
+// ===== /FUSE MACHINE =====
+
 const easterEggRewards = [
   { type: 'kspt3h',    weight: 30, name: '3h Offline Income',  img: 'kspt.png' },
   { type: 'znetons',   weight: 20, name: '+3 Tokens',          img: 'zneton.png' },
@@ -2112,6 +2700,8 @@ keys: {
   },
   glitchRewards: [], // полученные награды из текущей сессии
   glitchFragments: [false, false, false],
+  fuseSkins: {},
+  fuse: { slot1: null, slot2: null, fusingEnd: 0, cooldownEnd: 0, tier: 0, active: false },
   diamondCapsule: { obtained: false, taps: 0 },
   capsuleOpenCount: 0,
   miliBox: { obtained: false, taps: 0 },
@@ -2353,6 +2943,20 @@ if (typeof d.puzzle5Done === 'undefined') d.puzzle5Done = false;
 
 if (!d.glitchFragments) d.glitchFragments = [false, false, false];
 
+if (!d.fuseSkins) d.fuseSkins = {};
+if (!d.fuse) d.fuse = { slot1: null, slot2: null, fusingEnd: 0, cooldownEnd: 0, tier: 0, active: false };
+
+// Чистим зависшие temp скины при загрузке
+if (d.skins) {
+  Object.keys(d.skins).forEach(k => {
+    if (d.skins[k] === '_temp') delete d.skins[k];
+  });
+  if (d._adminTempSkinOrigSkin) {
+    d.skin = d._adminTempSkinOrigSkin;
+    delete d._adminTempSkinOrigSkin;
+  }
+}
+
 if (!d.diamondCapsule) d.diamondCapsule = { obtained: false, taps: 0 };
 if (typeof d.capsuleOpenCount === 'undefined') d.capsuleOpenCount = 0;
 if (!d.miliBox) d.miliBox = { obtained: false, taps: 0 };
@@ -2545,8 +3149,18 @@ const SKIN_INCOME = {
   precious_coin: 25,
   mops: 20,
   bulldog: 15,
-  demon: 25
-  };
+  demon: 25,
+  // Fuse Common (5/h)
+  iabloko: 5, mak: 5, conf: 5, gir: 5, eka: 5,
+  // Fuse Rare (15/h)
+  mil: 15, tel: 15, dvd: 15, pop: 15, zem: 15,
+  // Fuse Champion (25/h)
+  zam: 25, shar: 25, ogo: 25, kak: 25, sve: 25,
+  // Fuse Secret (40/h)
+  glaz: 40, roz: 40, ras: 40, mat: 40,
+  // Fuse God (50/h)
+  tro: 50
+};
 
 // Card data - UPDATED WITH EXACT VALUES
 const CARDS = {
@@ -2792,12 +3406,21 @@ function getHourlyRate() {
   }
   if(d.wonX10) rate += SKIN_INCOME.priz;
 
-  // Secret skins income
-  if (d.secretSkins) {
-    if (d.secretSkins.greatjoost) rate += SKIN_INCOME.greatjoost;
-    if (d.secretSkins.angel) rate += SKIN_INCOME.angel;
-    if (d.secretSkins.demon) rate += SKIN_INCOME.demon;
-  }
+ // Secret skins income
+if (d.secretSkins) {
+  if (d.secretSkins.greatjoost) rate += SKIN_INCOME.greatjoost;
+  if (d.secretSkins.angel) rate += SKIN_INCOME.angel;
+  if (d.secretSkins.demon) rate += SKIN_INCOME.demon;
+}
+
+// Fuse skins income
+if (d.fuseSkins) {
+  Object.keys(d.fuseSkins).forEach(id => {
+    if (d.fuseSkins[id] && SKIN_INCOME[id]) {
+      rate += SKIN_INCOME[id];
+    }
+  });
+}
 
 /* ===== EK SHOP INCOME START ===== */
 try {
@@ -3007,7 +3630,17 @@ function getSkinImage(skinId, euroVar = 1, artemVar = 0) {
     'precious_coin': 'codiam.png',
     'mops': 'mops.png',
     'bulldog': 'bul.png',
-    'demon': 'demon.png'
+    'demon': 'demon.png',
+    // Fuse Common
+    'iabloko': 'iabloko.png', 'mak': 'mak.png', 'conf': 'conf.png', 'gir': 'gir.png', 'eka': 'eka.png',
+    // Fuse Rare
+    'mil': 'mil.png', 'tel': 'tel.png', 'dvd': 'dvd.png', 'pop': 'pop.png', 'zem': 'zem.png',
+    // Fuse Champion
+    'zam': 'zam.png', 'shar': 'shar.png', 'ogo': 'ogo.png', 'kak': 'kak.png', 'sve': 'sve.png',
+    // Fuse Secret
+    'glaz': 'glaz.png', 'roz': 'roz.png', 'ras': 'ras.png', 'mat': 'mat.png',
+    // Fuse God
+    'tro': 'tro.png'
   };
   return skinImages[skinId] || 'kspt.png';
 }
@@ -3142,9 +3775,15 @@ function applySkin(skinId, variant = null) {
     window.skinAnimationTimer = null;
   }
   
-  // Check if skin is owned (включая secretSkins)
+  // Заморожен в Fuse?
+  if (d.fuse?.active && (d.fuse?.slot1 === skinId || d.fuse?.slot2 === skinId)) {
+    showToast(t('fuse_frozen'));
+    return;
+  }
+  // Check if skin is owned (включая secretSkins и fuseSkins)
   const _skinOwnedViaSecret = d.secretSkins && d.secretSkins[skinId];
-  if (skinId !== 'default' && !d.skins[skinId] && !_skinOwnedViaSecret) {
+  const _skinOwnedViaFuse = d.fuseSkins && d.fuseSkins[skinId];
+  if (skinId !== 'default' && !d.skins[skinId] && !_skinOwnedViaSecret && !_skinOwnedViaFuse) {
     // Особые скины из боксов (не покупаются)
     if (skinId === 'gkspt' || skinId === 'cyber_android' || skinId === 'dirty' || skinId === 'doge') {
       showToast(t('locked'));
@@ -3524,6 +4163,43 @@ function handleTapSkinAnimation() {
       coin.src = coin.dataset.toggle === "1" ? "demon1.png" : "demon.png";
       break;
     }
+    // Fuse Rare — toggle
+    case "mil": { coin.dataset.toggle = coin.dataset.toggle==="1"?"0":"1"; coin.src = coin.dataset.toggle==="1"?"mil1.png":"mil.png"; break; }
+    case "tel": { coin.dataset.toggle = coin.dataset.toggle==="1"?"0":"1"; coin.src = coin.dataset.toggle==="1"?"tel1.png":"tel.png"; break; }
+    case "dvd": {
+      // DVD: полный оборот как wheel
+      coin.style.transition = 'transform 0.5s ease';
+      const dvdRot = parseInt(coin.dataset.dvdRot || "0", 10) + 360;
+      coin.dataset.dvdRot = dvdRot;
+      coin.style.transform = `rotate(${dvdRot}deg)`;
+      break;
+    }
+    case "pop": { coin.dataset.toggle = coin.dataset.toggle==="1"?"0":"1"; coin.src = coin.dataset.toggle==="1"?"pop1.png":"pop.png"; break; }
+    case "zem": { coin.dataset.toggle = coin.dataset.toggle==="1"?"0":"1"; coin.src = coin.dataset.toggle==="1"?"zem1.png":"zem.png"; break; }
+    // Fuse Champion — toggle
+    case "zam": { coin.dataset.toggle = coin.dataset.toggle==="1"?"0":"1"; coin.src = coin.dataset.toggle==="1"?"zam1.png":"zam.png"; break; }
+    case "shar": {
+      // Воздушный шар: вверх/вниз
+      const sharUp = coin.dataset.sharUp !== "1";
+      coin.dataset.sharUp = sharUp ? "1" : "0";
+      coin.style.transition = 'transform 0.6s ease';
+      coin.style.transform = sharUp ? 'translateY(-18px)' : 'translateY(0)';
+      break;
+    }
+    case "ogo": { coin.dataset.toggle = coin.dataset.toggle==="1"?"0":"1"; coin.src = coin.dataset.toggle==="1"?"ogo1.png":"ogo.png"; break; }
+    case "kak": {
+      // Кактус — звук
+      try { const a = new Audio('gi.mp3'); a.volume = 0.5; a.play(); } catch(e){}
+      break;
+    }
+    case "sve": { coin.dataset.toggle = coin.dataset.toggle==="1"?"0":"1"; coin.src = coin.dataset.toggle==="1"?"sve1.png":"sve.png"; break; }
+    // Fuse Secret — toggle
+    case "glaz": { coin.dataset.toggle = coin.dataset.toggle==="1"?"0":"1"; coin.src = coin.dataset.toggle==="1"?"glaz1.png":"glaz.png"; break; }
+    case "roz": { coin.dataset.toggle = coin.dataset.toggle==="1"?"0":"1"; coin.src = coin.dataset.toggle==="1"?"roz1.png":"roz.png"; break; }
+    case "ras": { coin.dataset.toggle = coin.dataset.toggle==="1"?"0":"1"; coin.src = coin.dataset.toggle==="1"?"ras1.png":"ras.png"; break; }
+    case "mat": { coin.dataset.toggle = coin.dataset.toggle==="1"?"0":"1"; coin.src = coin.dataset.toggle==="1"?"mat1.png":"mat.png"; break; }
+    // Fuse God
+    case "tro": { coin.dataset.toggle = coin.dataset.toggle==="1"?"0":"1"; coin.src = coin.dataset.toggle==="1"?"tro1.png":"tro.png"; break; }
     default:
       break;
   }  
@@ -5592,6 +6268,7 @@ function updateSettingsUI() {
     {id: 'bg-btn-bunny',     key: 'bunny',     price: 0},
     {id: 'bg-btn-zoo',       key: 'zoo',        price: 0},
     {id: 'bg-btn-diamond',   key: 'diamond',    price: 0},
+    {id: 'bg-btn-lab',       key: 'lab',        price: 0},
     {id: 'bg-btn-beach',     key: 'beach',      price: 174000},
     {id: 'bg-btn-kebab',     key: 'kebab',      price: 568000},
   ];
@@ -10069,6 +10746,12 @@ function _startAdminListener() {
     _adminShowPoll(v);
   });
 
+_db.ref('admin/fuseLuck').on('value', snap => {
+    const v = snap?.val();
+    if (!v || !v.end || v.end <= Date.now()) { _fuseLuckDeactivate(); return; }
+    _fuseLuckActivate(v.end);
+  });
+
   // Force Music listener
   _db.ref('admin/countdown').on('value', snap => {
     const v = snap?.val();
@@ -10199,6 +10882,11 @@ _db.ref('admin/maintenance').on('value', snap => {
   const myUid = typeof getMyUid === 'function' ? getMyUid() : null;
   if (myUid) {
     _eastStartListening();
+// Fuse всегда доступна — показываем табы
+    const _fuseTabs = document.getElementById('eastShopTabs');
+    if (_fuseTabs) _fuseTabs.style.display = 'flex';
+    // Проверить завершилось ли слияние
+    setTimeout(() => { if (typeof _fuseCheckComplete === 'function') _fuseCheckComplete(); }, 1500);
     _db.ref(`admin/modActions/${myUid}`).on('value', snap => {
       const v = snap.val();
       if (!v) return;
@@ -10763,6 +11451,52 @@ function _adminShowCountdown(title, titleColor, timerColor, endTs, size, opacity
 }
 // ===== /ADMIN COUNTDOWN =====
 
+// ===== FUSE LUCK =====
+async function adminSetFuseLuck() {
+  if (!_isAdminUser()) return;
+  const mins = parseFloat(document.getElementById('apFuseLuckMins')?.value) || 30;
+  const end = Date.now() + mins * 60000;
+  await _db.ref('admin/fuseLuck').set({ end, ts: Date.now() });
+  const s = document.getElementById('apFuseLuckStatus');
+  if (s) s.textContent = `✅ Lucky Time: ${mins} min`;
+}
+async function adminStopFuseLuck() {
+  if (!_isAdminUser()) return;
+  await _db.ref('admin/fuseLuck').remove();
+  const s = document.getElementById('apFuseLuckStatus');
+  if (s) s.textContent = '■ Stopped.';
+  _fuseLuckDeactivate();
+}
+function _fuseLuckActivate(endTs) {
+  window._fuseLuckEnd = endTs;
+  window._fuseLuckActive = true;
+  // Зелёная подсветка вкладки Fuse
+  const btn = document.getElementById('eastTabFuse');
+  if (btn) {
+    btn.style.background = 'linear-gradient(135deg,#1b5e20,#43a047)';
+    btn.style.color = '#fff';
+    btn.innerHTML = `<img src="luck.png" style="width:16px;height:16px;object-fit:contain;vertical-align:middle;margin-right:4px;" onerror="this.style.display='none'">⚗️ <span data-lang-key="fuse_tab">Fuse</span> 🍀`;
+  }
+  // Таймер деактивации
+  if (window._fuseLuckTimeout) clearTimeout(window._fuseLuckTimeout);
+  const msLeft = endTs - Date.now();
+  if (msLeft > 0) {
+    window._fuseLuckTimeout = setTimeout(_fuseLuckDeactivate, msLeft);
+  }
+}
+function _fuseLuckDeactivate() {
+  window._fuseLuckActive = false;
+  window._fuseLuckEnd = 0;
+  if (window._fuseLuckTimeout) clearTimeout(window._fuseLuckTimeout);
+  const btn = document.getElementById('eastTabFuse');
+  if (btn) {
+    btn.style.background = '#111';
+    btn.style.color = '#7c3aed';
+    btn.innerHTML = `⚗️ <span data-lang-key="fuse_tab">Fuse</span>`;
+  }
+}
+// ===== /FUSE LUCK =====
+
 function _adminClearEffects() {
   if (_adminEffectRAF) { cancelAnimationFrame(_adminEffectRAF); _adminEffectRAF = null; }
   const c = document.getElementById('adminEffectCanvas');
@@ -11134,6 +11868,12 @@ function _adminApplySkipCooldown(type) {
   if (type === 'safe' || type === 'all') {
     if (!d.safe) d.safe = {};
     d.safe.lastOpen = 0;
+  }
+  if (type === 'fuseFusing' || type === 'all') {
+    if (d.fuse?.active) {
+      d.fuse.fusingEnd = Date.now() - 1;
+      if (typeof _fuseCheckComplete === 'function') setTimeout(() => _fuseCheckComplete(), 100);
+    }
   }
   save();
   if (typeof ui === 'function') ui();
@@ -14045,7 +14785,8 @@ function getShopItems(keyColor) {
     ],
     red: [
       { name: 'Puzzle Piece', type: 'puzzle', value: 1, desc: 'Get random puzzle piece' },
-      { name: 'Skip Cooldown', type: 'skipCooldown', value: 1, desc: 'Skip capsule cooldown' }
+      { name: 'Skip Capsule', type: 'skipCooldown', value: 1, desc: 'Skip capsule cooldown' },
+      { name: 'Skip Fuse', type: 'skipFuse', value: 1, desc: 'Skip current fuse timer' }
     ],
     green: [
       { name: 'Glitch Box', type: 'glitchBox', value: 1, desc: 'Open Glitch Box' },
@@ -14186,6 +14927,16 @@ function applyKeyReward(keyColor, item) {
       // Пропускаем кулдаун капсулы
       d.capsule.lastOpen = 0;
       showToast('Capsule cooldown skipped!');
+      break;
+
+    case 'skipFuse':
+      if (d.fuse?.active) {
+        d.fuse.fusingEnd = Date.now() - 1;
+        showToast('⚗️ Fuse timer skipped!');
+        setTimeout(() => { if (typeof _fuseCheckComplete === 'function') _fuseCheckComplete(); }, 200);
+      } else {
+        showToast('No active Fuse to skip!');
+      }
       break;
       
     case 'glitchBox':
@@ -15218,7 +15969,10 @@ function pushMyLeaderboardData() {
     myTokens: (d.market?.myTokens || []).filter(tk => String(tk.creatorId) === _getMyId()).map(tk => ({ ticker: tk.ticker||'', name: tk.name||'' })),
     streakDays: d.streak?.days || 0,
     streakActive: d.streak?.lastClaimTs ? (Date.now() - d.streak.lastClaimTs) < 86400000 * 1.5 : false,
-    verified: d.verified || false
+    verified: d.verified || false,
+    totalTaps: d.totalTaps || 0,
+    puzzlesDone: [d.puzzleDone,d.puzzle2Done,d.puzzle3Done,d.puzzle4Done,d.puzzle5Done].filter(Boolean).length,
+    fuseSkins: d.fuseSkins || {}
   };
   window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).set(entry);
 }
@@ -15276,6 +16030,10 @@ function getPlayerRank(rate, customRank, isBanned) {
     'Divine':      { color: '#26c6da', glow: '#26c6da', border: '#26c6da' },
     'God':         { color: '#ffd700', glow: '#ffd700', border: '#ffd700' },
     'Secret God':  { color: '#b0bec5', glow: '#eceff1', border: '#78909c' },
+    'Madman':      { color: '#ff1744', glow: '#ff6d00', border: '#ff1744' },
+    'Celestial':   { color: '#40c4ff', glow: '#80d8ff', border: '#40c4ff' },
+    'Eternal':     { color: '#e040fb', glow: '#ff80ff', border: '#e040fb' },
+    '∞':           { color: '#ffffff', glow: '#ffffff', border: '#ffffff' },
     'GreatMaster': { color: '#e040fb', glow: '#e040fb', border: '#e040fb' },
     'Admin':       { color: '#ff4081', glow: '#ff4081', border: '#ff4081' },
     'VIP':         { color: '#69f0ae', glow: '#69f0ae', border: '#69f0ae' },
@@ -15287,7 +16045,11 @@ function getPlayerRank(rate, customRank, isBanned) {
   };
   if (customRank && custom[customRank]) return { label: customRank, ...custom[customRank] };
   // Авто по рейту
-  if (rate >= 3000) return { label: 'Secret God', color: '#b0bec5', glow: '#eceff1', border: '#78909c' };
+  if (rate >= 5000) return { label: '∞',           color: '#ffffff', glow: '#ffffff', border: '#ffffff' };
+  if (rate >= 4500) return { label: 'Eternal',     color: '#e040fb', glow: '#ff80ff', border: '#e040fb' };
+  if (rate >= 4000) return { label: 'Celestial',   color: '#40c4ff', glow: '#80d8ff', border: '#40c4ff' };
+  if (rate >= 3500) return { label: 'Madman',      color: '#ff1744', glow: '#ff6d00', border: '#ff1744' };
+  if (rate >= 3000) return { label: 'Secret God',  color: '#b0bec5', glow: '#eceff1', border: '#78909c' };
   if (rate >= 2500) return { label: 'God',        color: '#ffd700', glow: '#ffd700', border: '#ffd700' };
   if (rate >= 2300) return { label: 'Divine',   color: '#26c6da', glow: '#26c6da', border: '#26c6da' };
   if (rate >= 2000) return { label: 'Champion', color: '#ffa726', glow: '#ffa726', border: '#ffa726' };
@@ -17747,14 +18509,28 @@ function renderGameRecordsLB() {
 
 /* ─── Easter Shop Tab Switch ─── */
 function eastSwitchTab(tab) {
-  const skinsContent = document.getElementById('eastSkinsContent');
-  const eastPanel    = document.getElementById('eastShopPanel');
+  const skinsContent  = document.getElementById('eastSkinsContent');
+  const eastPanel     = document.getElementById('eastShopPanel');
+  const fusePanel     = document.getElementById('fuseMachinePanel');
   const btnS = document.getElementById('eastTabSkins');
   const btnE = document.getElementById('eastTabEaster');
+  const btnF = document.getElementById('eastTabFuse');
+
+  // Скрываем всё
+  if (skinsContent) skinsContent.style.display = 'none';
+  if (eastPanel)    eastPanel.style.display    = 'none';
+  if (fusePanel)    fusePanel.style.display    = 'none';
+  // Сброс стилей кнопок
+  if (btnS) { btnS.style.background = '#111'; btnS.style.color = '#888'; }
+  if (btnE) { btnE.style.background = '#111'; btnE.style.color = '#888'; }
+  if (btnF) { btnF.style.background = '#111'; btnF.style.color = '#888'; }
+
+// Убираем overlay при уходе с Fuse
+  const _fo = document.getElementById('_fuseOverlay');
+  if (_fo) _fo.remove();
+
   if (tab === 'easter') {
-    if (skinsContent) skinsContent.style.display = 'none';
-    if (eastPanel)    eastPanel.style.display    = 'block';
-    if (btnS) { btnS.style.background = '#111'; btnS.style.color = '#888'; }
+    if (eastPanel) eastPanel.style.display = 'block';
     if (btnE) { btnE.style.background = 'linear-gradient(135deg,#7b1a1a,#c0392b)'; btnE.style.color = '#fff'; }
     // Update custom item card visibility
     const item3 = window._eastShopItems?.item3;
@@ -17765,7 +18541,6 @@ function eastSwitchTab(tab) {
       if (el) el.textContent = item3.id;
       const ep = document.getElementById('eastShopCustomPrice');
       if (ep) ep.textContent = item3.price + ' eggs';
-      // Обновляем картинку
       const imgEl = document.getElementById('eastShopCustomImg');
       if (imgEl) {
         const imgMap = {
@@ -17779,19 +18554,32 @@ function eastSwitchTab(tab) {
         imgEl.src = imgMap[item3.id] || 'kspt.png';
       }
     }
-    // Update prices from shopItems
     const p1 = window._eastShopItems?.item1?.price || 20;
     const p2 = window._eastShopItems?.item2?.price || 90;
     const ep1 = document.getElementById('eastShopPrice1');
     const ep2 = document.getElementById('eastShopPrice2');
-    if (ep1) ep1.textContent = p1 + ' eggs · 5 min cooldown';
+    if (ep1) ep1.textContent = p1 + ' eggs';
     if (ep2) ep2.textContent = p2 + ' eggs';
     _eastUpdateEggBalanceUI();
+
+  } else if (tab === 'fuse') {
+    if (fusePanel) fusePanel.style.display = 'block';
+    if (btnF) { btnF.style.background = 'linear-gradient(135deg,#4a1d96,#7c3aed)'; btnF.style.color = '#fff'; }
+    // Overlay чтобы текст был виден без смены фона
+    let _fuseOverlay = document.getElementById('_fuseOverlay');
+    if (!_fuseOverlay) {
+      _fuseOverlay = document.createElement('div');
+      _fuseOverlay.id = '_fuseOverlay';
+      _fuseOverlay.style.cssText = 'position:fixed;inset:0;z-index:-1;background:rgba(0,0,0,0.82);pointer-events:none;';
+      document.getElementById('fuseMachinePanel')?.appendChild(_fuseOverlay);
+    }
+    _fuseCheckComplete();
+    renderFuseMachine();
+
   } else {
+    // skins
     if (skinsContent) skinsContent.style.display = 'block';
-    if (eastPanel)    eastPanel.style.display    = 'none';
     if (btnS) { btnS.style.background = 'linear-gradient(135deg,#1a0a2e,#2d1b69)'; btnS.style.color = '#c084fc'; }
-    if (btnE) { btnE.style.background = '#111'; btnE.style.color = '#888'; }
   }
 }
 
@@ -17939,6 +18727,16 @@ function _eastActivate(ev) {
     window._eastNotified = true;
     _adminShowOverlay(t('east_event_started'), '#ff6b6b', 4000);
   }
+  // Авто-деактивация по таймеру
+  if (window._eastEndTimeout) clearTimeout(window._eastEndTimeout);
+  const msLeft = ev.end - Date.now();
+  if (msLeft > 0) {
+    window._eastEndTimeout = setTimeout(() => {
+      _eastDeactivate();
+      // Удаляем из Firebase
+      if (window._firebaseDB) window._firebaseDB.ref('easterEvent').remove();
+    }, msLeft);
+  }
 }
 
 function _eastDeactivate() {
@@ -18014,10 +18812,12 @@ function _eastUpdateEggBalanceUI() {
 
 function _eastUpdateSkinTabVisibility(show) {
   const tabs = document.getElementById('eastShopTabs');
-  if (tabs) tabs.style.display = show ? 'flex' : 'none';
+  // Fuse всегда показывается, Easter — только во время ивента
+  const btnE = document.getElementById('eastTabEaster');
+  if (btnE) btnE.style.display = show ? '' : 'none';
+  if (tabs) tabs.style.display = 'flex'; // всегда показываем (там есть Fuse)
   if (!show) {
-    // Revert to skins tab
-    document.getElementById('eastTabSkins')?.click();
+    eastSwitchTab('skins');
   }
 }
 
@@ -18360,7 +19160,12 @@ function _getMyName() {
   return localStorage.getItem('_kspt_nonTg_name') || d.market?.account?.name || 'Player';
 }
 
-function _getSkinRarity(income, isSecret) {
+function _getSkinRarity(income, isSecret, isFuse, fuseRarity) {
+  if (isFuse) {
+    const col = FUSE_RARITY_COLOR[fuseRarity] || '#ff9800';
+    const glow = fuseRarity === 'god' ? '0 0 12px #ff174488' : `0 0 8px ${col}88`;
+    return { key:'rarity_fuse', border:`2px solid ${col}`, gradient: null, shadow: glow };
+  }
   if (isSecret) return { key:'rarity_secret', border:'2px solid transparent', gradient:'linear-gradient(135deg,#fff,#888,#fff)', shadow:'' };
   if (income <= 10)  return { key:'rarity_common',    border:'2px solid #555',    gradient:null, shadow:'' };
   if (income <= 30)  return { key:'rarity_rare',      border:'2px solid #00c853', gradient:null, shadow:'0 0 6px #00c85388' };
@@ -18574,22 +19379,25 @@ function renderProfileTab() {
           { key:'rarity_legendary', label:'Legendary',       color:'#ffd600' },
           { key:'rarity_ultra',     label:'Ultra Legendary', color:'#9c27b0' },
           { key:'rarity_secret',    label:'Secret',          color:'#888' },
+          { key:'rarity_fuse',      label:'Fuse',            color:'#ff9800' },
         ];
         let html = '';
         rarityGroups.forEach(group => {
-          const groupSkins = ownedSkins.filter(s => _getSkinRarity(s.income, s.isSecret).key === group.key);
+          const groupSkins = ownedSkins.filter(s => _getSkinRarity(s.income, s.isSecret, s.isFuse, s.fuseRarity).key === group.key);
           if (!groupSkins.length) return;
           const totalInGroup = ownedSkins.filter(s => true).length; // все скины уже отфильтрованы
           // Считаем сколько всего скинов такой редкости существует в игре
           const allOfRarity = Object.keys(SKIN_INCOME).filter(id => {
+            const isFuse = FUSE_SKIN_IDS.includes(id);
             const isSecret = SECRET_SKIN_IDS.has(id);
             const income = SKIN_INCOME[id] || 0;
-            return _getSkinRarity(income, isSecret).key === group.key;
+            const fuseRar = isFuse ? FUSE_RARITY[id] : null;
+            return _getSkinRarity(income, isSecret, isFuse, fuseRar).key === group.key;
           }).length;
           html += `<div style="font-size:11px;font-weight:bold;color:${group.color};margin:8px 0 4px;letter-spacing:0.5px;">▸ ${t(group.key)} <span style="color:#555;font-weight:normal;font-size:10px;">${groupSkins.length}/${allOfRarity}</span></div>`;
           html += `<div style="display:flex;flex-wrap:wrap;gap:6px;margin-bottom:4px;">`;
           groupSkins.forEach(s => {
-            const rar = _getSkinRarity(s.income, s.isSecret);
+            const rar = _getSkinRarity(s.income, s.isSecret, s.isFuse, s.fuseRarity);
             const isActive = d.skin === s.id;
             html += `<div onclick="profileShowSkinTip('${s.id}','${s.name}',${s.income},'${rar.key}')"
               style="width:54px;border-radius:10px;padding:4px;text-align:center;background:#1a1a1a;cursor:pointer;
@@ -18611,6 +19419,23 @@ function renderProfileTab() {
 
 // Скины которые считаются секретными по смыслу (не продаются, находятся особым способом)
 const SECRET_SKIN_IDS = new Set(['doge','kostia','metka','seri','artem','mystic','capsule','siulai','gkspt','cyber_android','dirty','crypto_heart','corrupted','failed','goldensafe','bhole','toilet','capsulememe','ufo','dragon','eggi','viking', 'diamond_kspt','precious_coin','mops','bulldog']);
+const FUSE_SKIN_IDS = ['iabloko','mak','conf','gir','eka','mil','tel','dvd','pop','zem','zam','shar','ogo','kak','sve','glaz','roz','ras','mat','tro'];
+const FUSE_RARITY = {
+  iabloko:'common', mak:'common', conf:'common', gir:'common', eka:'common',
+  mil:'rare',    tel:'rare',   dvd:'rare',   pop:'rare',   zem:'rare',
+  zam:'champion',shar:'champion',ogo:'champion',kak:'champion',sve:'champion',
+  glaz:'secret', roz:'secret', ras:'secret', mat:'secret',
+  tro:'god'
+};
+const FUSE_RARITY_COLOR = { common:'#888', rare:'#00c853', champion:'#ffd600', secret:'#aa00ff', god:'#ff1744' };
+const FUSE_RARITY_LABEL = { common:'rarity_fuse_common', rare:'rarity_fuse_rare', champion:'rarity_fuse_champion', secret:'rarity_fuse_secret', god:'rarity_fuse_god' };
+// Пулы по уровням (4 возможных исхода): [3 из данной редкости, 1 из следующей]
+const FUSE_TIER_POOLS = {
+  1: { main:'common',   bonus:'rare',     kspt_h:15, ek:10,  wait:[10,15] },
+  2: { main:'rare',     bonus:'champion', kspt_h:35, ek:25,  wait:[20,30] },
+  3: { main:'champion', bonus:'secret',   kspt_h:55, ek:60,  wait:[35,50] },
+  4: { main:'secret',   bonus:'god',      kspt_h:100, ek:90, wait:[50,60] }
+};
 
 function _getOwnedSkinsList() {
   const result = [];
@@ -18629,14 +19454,18 @@ function _getOwnedSkinsList() {
                   (d.secretSkins && d.secretSkins[id]) ||
                   (id === 'default') ||
                   (d.wonX10 && id === 'priz') ||
-                  ekOwnedNorm[id];
+                  ekOwnedNorm[id] ||
+                  (d.fuseSkins && d.fuseSkins[id]);
     if (owned) {
+      const isFuse = FUSE_SKIN_IDS.includes(id);
       result.push({
         id,
         name: id.charAt(0).toUpperCase() + id.slice(1).replace(/_/g,' '),
         img: getSkinImage(id, d.euroVar||1, d.artemVar||0),
         income: SKIN_INCOME[id] || 0,
-        isSecret
+        isSecret,
+        isFuse,
+        fuseRarity: isFuse ? FUSE_RARITY[id] : null
       });
     }
   });
@@ -19245,6 +20074,14 @@ function _showPublicProfile(uid, p) {
         <div class="profile-stat">
           <div class="profile-stat-val">${p.playtimeMs ? _formatPlaytime(p.playtimeMs) : '—'}</div>
           <div class="profile-stat-lbl">${t('profile_playtime')}</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-val" style="font-size:15px;">${p.totalTaps >= 1000000 ? (p.totalTaps/1000000).toFixed(1)+'M' : p.totalTaps >= 1000 ? (p.totalTaps/1000).toFixed(1)+'K' : (p.totalTaps||0)}</div>
+          <div class="profile-stat-lbl">${t('profile_total_taps')}</div>
+        </div>
+        <div class="profile-stat">
+          <div class="profile-stat-val">${p.puzzlesDone || 0}<span style="font-size:11px;color:#555;"> / 5</span></div>
+          <div class="profile-stat-lbl">Puzzles done</div>
         </div>
       </div>
 

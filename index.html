@@ -28,7 +28,206 @@
   window._firebaseRef = (db, path) => db.ref(path);
   window._firebaseReady = true;
 </script>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+
 <style>
+
+/* ── Global font ── */
+body, button, input, label, span, div, p {
+  font-family: 'Outfit', sans-serif;
+}
+
+/* ── Balance ── */
+.balance-main {
+  font-size: 26px !important;
+  font-weight: 800 !important;
+  letter-spacing: -0.5px;
+}
+.offline-info {
+  font-size: 13px !important;
+  letter-spacing: 0.2px;
+}
+
+/* ── Long btn press feel ── */
+.long-btn { transition: transform 0.1s ease, opacity 0.1s ease; }
+.long-btn:active { transform: scale(0.91); opacity: 0.8; }
+
+/* ── Settings btn press ── */
+.settings-btn { transition: transform 0.1s ease, opacity 0.1s ease; }
+.settings-btn:active { transform: scale(0.88); opacity: 0.7; }
+
+/* ── Reward popup ── */
+.reward-popup {
+  border-radius: 28px !important;
+  box-shadow: 0 0 0 1px rgba(255,152,0,0.15), 0 32px 80px rgba(0,0,0,0.8) !important;
+}
+.reward-popup h2 {
+  font-family: 'Outfit', sans-serif;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  letter-spacing: 3px;
+  text-transform: uppercase;
+  opacity: 0.9;
+  margin-bottom: 4px !important;
+}
+.reward-popup #rewardText {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  line-height: 1.3;
+}
+.reward-popup button {
+  background: linear-gradient(135deg, #ff9800, #e65100) !important;
+  border-radius: 16px !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 700 !important;
+  font-size: 16px !important;
+  letter-spacing: 0.5px;
+  padding: 14px !important;
+  box-shadow: 0 6px 20px rgba(255,152,0,0.3);
+  transition: transform 0.1s, box-shadow 0.1s;
+}
+.reward-popup button:active {
+  transform: scale(0.96);
+  box-shadow: 0 2px 8px rgba(255,152,0,0.2);
+}
+
+/* ── Capsule hint ── */
+#capsuleHint {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700 !important;
+  letter-spacing: 0.5px;
+  font-size: 22px !important;
+  opacity: 0.9;
+}
+
+/* ── Cheat warning ── */
+.warning-modal h2 {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 800 !important;
+  letter-spacing: 2px;
+  font-size: 36px !important;
+}
+.warning-modal p {
+  font-family: 'Outfit', sans-serif;
+  opacity: 0.85;
+  line-height: 1.5;
+}
+.warning-btn-small {
+  border-radius: 10px !important;
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 600 !important;
+  width: 70px !important;
+  height: 38px !important;
+  font-size: 14px !important;
+}
+
+/* ── Settings buttons ── */
+#settings-main .settings-section button {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  text-align: left;
+  padding: 14px 16px !important;
+  border-radius: 16px !important;
+  background: #181818 !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  color: #e8e8e8 !important;
+  transition: background 0.15s, transform 0.1s;
+  font-family: 'Outfit', sans-serif !important;
+}
+#settings-main .settings-section button:active {
+  background: #222 !important;
+  transform: scale(0.98);
+}
+#settings-main .settings-section button::after {
+  content: '›';
+  font-size: 20px;
+  color: #444;
+  font-weight: 300;
+  line-height: 1;
+}
+/* except back button and special buttons */
+#settings-main .settings-section button[onclick*="openLeaderboard"]::after,
+#settings-main .settings-section button[id="profileInSettingsBtn"]::after {
+  content: '';
+}
+
+/* ── Language buttons ── */
+#settings-language .settings-section button {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  text-align: left;
+  padding: 14px 16px !important;
+  border-radius: 16px !important;
+  background: #181818 !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+  transition: background 0.15s, border-color 0.15s;
+  font-family: 'Outfit', sans-serif !important;
+}
+#settings-language .settings-section button:active {
+  background: #222 !important;
+  border-color: rgba(255,255,255,0.12) !important;
+}
+
+/* ── Back button ── */
+button.back {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 500 !important;
+  letter-spacing: 0.2px;
+  border-radius: 14px !important;
+  background: rgba(255,255,255,0.04) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  color: #666 !important;
+  transition: background 0.15s !important;
+}
+button.back:active {
+  background: rgba(255,255,255,0.08) !important;
+}
+
+/* ── Card titles ── */
+.card-title {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+  letter-spacing: -0.1px;
+}
+.card-sub {
+  font-family: 'Outfit', sans-serif;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+/* ── Toast ── */
+.toast {
+  font-family: 'Outfit', sans-serif !important;
+  font-size: 14px !important;
+  font-weight: 600 !important;
+  letter-spacing: 0.1px;
+  border-radius: 16px !important;
+  padding: 11px 22px !important;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255,255,255,0.1) !important;
+  background: rgba(20,20,20,0.85) !important;
+}
+
+/* ── Notif badge ── */
+.notif-badge {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 700;
+}
+
+/* ── Top bar ── */
+.top-bar span {
+  font-family: 'Outfit', sans-serif;
+  font-weight: 600;
+}
 
 @keyframes letterUnfold {
   0%   { opacity:0; transform:scaleY(0.2) translateY(30px); }
@@ -62,9 +261,9 @@
 <div id="whiteFade" class="white-fade"></div>
 
 <div id="rewardPopup" class="reward-popup">
-    <h2 style="color:#ff9800; margin-top:0;">REWARD!</h2>
+    <h2 style="color:#ff9800; margin-top:0; margin-bottom:10px;">🎁 REWARD!</h2>
     <img id="rewardImg" class="reward-img" src="" alt="Reward">
-    <div id="rewardText" style="margin-bottom:20px; font-size:18px;"></div>
+    <div id="rewardText" style="margin-bottom:24px; font-size:18px;"></div>
     <button onclick="closeReward()">Collect</button>
 </div>
 
@@ -74,9 +273,9 @@
 </div>
 
 <div id="cheatWarningModal" class="warning-modal">
-  <h2 style="color:red; font-size: 32px; margin-bottom: 10px;">STOP!</h2>
-  <p style="font-size: 18px;">You are tapping too fast.</p>
-  <p style="font-size: 14px; opacity: 0.7;">Continued fast tapping will reset your progress.</p>
+  <h2 style="color:#ff4444; margin-bottom: 12px;">⚠ STOP!</h2>
+  <p style="font-size: 17px; margin:0 0 8px;">You are tapping too fast.</p>
+  <p style="font-size: 13px; opacity: 0.6; margin:0;">Continued fast tapping will reset your progress.</p>
   <button class="warning-btn-small" onclick="dismissWarning()">OK</button>
 </div>
 
@@ -203,23 +402,21 @@ window.addEventListener('message', (event) => {
   </div>
   
   <div class="bottom-bar">
-    <div class="button-row">
-      <div class="long-btn" onclick="openScreen('skins')" style="position:relative;">
-        <img src="m.png" alt="Skins">
+    <div style="display:flex;gap:10px;justify-content:center;align-items:center;width:100%;padding:0 4px;box-sizing:border-box;">
+      <div class="long-btn" onclick="openScreen('skins')" style="position:relative;flex:1;aspect-ratio:1/1;max-width:80px;">
+        <img src="1.png" alt="Skins" style="width:100%;height:100%;object-fit:cover;border-radius:14px;">
         <div id="badge-main" class="notif-badge" style="display:none;"></div>
       </div>
-      <div class="long-btn" onclick="openScreen('offlineShop')">
-        <img src="k.png" alt="Mining">
+      <div class="long-btn" onclick="openScreen('offlineShop')" style="flex:1;aspect-ratio:1/1;max-width:80px;">
+        <img src="2.png" alt="Mining" style="width:100%;height:100%;object-fit:cover;border-radius:14px;">
       </div>
-    </div>
-    <div class="button-row">
-      <div class="long-btn" onclick="openScreen('tech')" style="position:relative;">
-         <img src="t.png" alt="Tech">
-         <div id="badge-tech" class="notif-badge" style="display:none;"></div>
+      <div class="long-btn" onclick="openScreen('tech')" style="position:relative;flex:1;aspect-ratio:1/1;max-width:80px;">
+        <img src="3.png" alt="Tech" style="width:100%;height:100%;object-fit:cover;border-radius:14px;">
+        <div id="badge-tech" class="notif-badge" style="display:none;"></div>
       </div>
-      <div class="long-btn" onclick="openScreen('capsuleScreen')" style="position:relative;">
-         <img src="puz.png" alt="Capsule">
-         <div id="badge-capsule" class="notif-badge" style="display:none;"></div>
+      <div class="long-btn" onclick="openScreen('capsuleScreen')" style="position:relative;flex:1;aspect-ratio:1/1;max-width:80px;">
+        <img src="4.png" alt="Capsule" style="width:100%;height:100%;object-fit:cover;border-radius:14px;">
+        <div id="badge-capsule" class="notif-badge" style="display:none;"></div>
       </div>
     </div>
     <div class="settings-row">
@@ -955,14 +1152,21 @@ window.addEventListener('message', (event) => {
       <div class="card-sub" data-lang-key="choose_language">Choose your preferred language</div>
       
       <div style="display: flex; flex-direction: column; gap: 10px; margin-top: 15px;">
-        <button onclick="setLanguage('en')" style="text-align: left; padding: 12px; background: #262626; border-radius: 8px; border: none; color: white; cursor: pointer;">
-          <div style="font-weight: bold;">English</div>
-          <div style="font-size: 12px; opacity: 0.7;" data-lang-key="english_desc">Default language</div>
+        <button onclick="setLanguage('en')">
+          <span style="font-size:22px;line-height:1;">🇬🇧</span>
+          <div style="flex:1;"><div style="font-weight:700;font-size:15px;">English</div><div style="font-size:12px;opacity:0.5;" data-lang-key="english_desc">Default language</div></div>
         </button>
-        
-        <button onclick="setLanguage('ru')" style="text-align: left; padding: 12px; background: #262626; border-radius: 8px; border: none; color: white; cursor: pointer;">
-          <div style="font-weight: bold;">Русский</div>
-          <div style="font-size: 12px; opacity: 0.7;" data-lang-key="russian_desc">Russian language</div>
+        <button onclick="setLanguage('ru')">
+          <span style="font-size:22px;line-height:1;">🇷🇺</span>
+          <div style="flex:1;"><div style="font-weight:700;font-size:15px;">Русский</div><div style="font-size:12px;opacity:0.5;" data-lang-key="russian_desc">Russian language</div></div>
+        </button>
+        <button onclick="setLanguage('es')">
+          <span style="font-size:22px;line-height:1;">🇪🇸</span>
+          <div style="flex:1;"><div style="font-weight:700;font-size:15px;">Español</div><div style="font-size:12px;opacity:0.5;" data-lang-key="spanish_desc">Spanish language</div></div>
+        </button>
+        <button onclick="setLanguage('zh')">
+          <span style="font-size:22px;line-height:1;">🇨🇳</span>
+          <div style="flex:1;"><div style="font-weight:700;font-size:15px;">中文</div><div style="font-size:12px;opacity:0.5;" data-lang-key="chinese_desc">Chinese language</div></div>
         </button>
       </div>
     </div>
@@ -1357,8 +1561,33 @@ window.addEventListener('message', (event) => {
 
   <div id="settings-notifications" style="display:none;">
     <div class="settings-section">
-      <div class="card-title" data-lang-key="notifications_title">Notifications</div>
-      <div class="card-sub" data-lang-key="notifications_sub">Red dot badges on tabs when something needs your attention</div>
+      <div class="card-title" data-lang-key="notifications_title">Themes &amp; Features</div>
+
+      <!-- Button Style -->
+      <div style="margin-bottom:18px;">
+        <div style="font-weight:bold;font-size:14px;margin-bottom:4px;" data-lang-key="btn_theme">Button Style</div>
+        <div class="card-sub" style="margin-bottom:10px;" data-lang-key="btn_theme_desc">Choose the style of main menu buttons</div>
+        <div style="display:flex;gap:10px;align-items:center;margin-bottom:10px;">
+          <div onclick="setBtnTheme('default')" id="btnThemeDefault"
+            style="flex:1;padding:10px;border-radius:12px;border:2px solid #00e676;background:#111;text-align:center;cursor:pointer;">
+            <div style="background:#1a1a1a;border-radius:14px;margin:0 auto 6px;width:48px;height:48px;display:flex;align-items:center;justify-content:center;">
+              <img src="m.png" style="width:44px;height:44px;object-fit:contain;">
+            </div>
+            <div style="font-size:11px;color:#fff;" data-lang-key="btn_theme_default">Default</div>
+          </div>
+          <div onclick="setBtnTheme('stone')" id="btnThemeStone"
+            style="flex:1;padding:10px;border-radius:12px;border:2px solid #333;background:#111;text-align:center;cursor:pointer;">
+            <div style="width:48px;height:48px;border-radius:14px;margin:0 auto 6px;overflow:hidden;">
+              <img src="1.png" style="width:48px;height:48px;object-fit:cover;border-radius:10px;" onerror="this.src='m.png'">
+            </div>
+            <div style="font-size:11px;color:#aaa;" data-lang-key="btn_theme_stone">Stone</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Notifications -->
+      <div style="font-weight:bold;font-size:14px;margin-bottom:4px;" data-lang-key="notifications_sub_title">Notifications</div>
+      <div class="card-sub" style="margin-bottom:8px;" data-lang-key="notifications_sub">Red dot badges on tabs when something needs your attention</div>
       <div class="settings-checkbox">
         <div style="flex:1;">
           <label for="toggleNotifications" data-lang-key="notifications_enable">Enable badges</label>

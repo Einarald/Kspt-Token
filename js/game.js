@@ -7406,7 +7406,39 @@ function placePuzzlePieces3() {
 function updateCapsuleUI() {
   const btn = document.getElementById("btnOpenCapsule");
   const txt = document.getElementById("capsuleTimer");
+  const capsuleImg = document.querySelector('.card.capsule-info img.capsule-img-small');
   if (!btn || !txt) return;
+
+  const now = Date.now();
+  const cooldownTime = 23 * 60 * 60 * 1000;
+
+  // Если алмазная капсула ждёт открытия
+  if (d.diamondCapsule?.obtained) {
+    if (capsuleImg) capsuleImg.src = 'cd.png';
+    const hint2 = document.getElementById('diamondCapsuleHint2');
+    if (hint2) hint2.textContent = '';
+    // Обычный кулдаун применяется тоже
+    if (d.capsule.firstOpen || (now - (d.capsule.lastOpen||0)) >= cooldownTime) {
+      txt.innerHTML = '💎 It\'s the Diamond Capsule!';
+      txt.style.color = '#00bfff';
+      btn.style.background = 'linear-gradient(135deg,#0077aa,#00bfff)';
+      btn.textContent = '💎 OPEN!';
+      btn.onclick = () => { startDiamondCapsuleSequence(); };
+    } else {
+      const wait = cooldownTime - (now - (d.capsule.lastOpen||0));
+      const h = Math.floor(wait/3600000), m = Math.floor((wait%3600000)/60000);
+      txt.innerHTML = `💎 Diamond ready in ${h}h ${m}m`;
+      txt.style.color = '#00bfff';
+      btn.style.background = '#333';
+      btn.textContent = t('wait');
+      btn.onclick = null;
+    }
+    return;
+  }
+
+  // Обычный режим — восстановить спрайт
+  if (capsuleImg) capsuleImg.src = 'capsule.png';
+  txt.style.color = '';
 
   // Diamond capsule hint
   const hint2 = document.getElementById('diamondCapsuleHint2');
@@ -7416,11 +7448,9 @@ function updateCapsuleUI() {
     hint2.textContent = till === 1
       ? '💎 Next capsule is Diamond!'
       : `💎 Diamond in ${till} capsules`;
+    hint2.style.color = '#00bfff';
   }
-  
-  const now = Date.now();
-  const cooldownTime = 23 * 60 * 60 * 1000;
-  
+
   if (d.capsule.firstOpen) {
     txt.textContent = t('first_open_free');
     btn.style.background = "#ff9800";
@@ -14532,13 +14562,16 @@ if (siulaiTopBtn) {
       if (d.capsule.firstOpen) {
         d.capsule.firstOpen = false;
       }
-      // Счётчик для алмазной капсулы
-      d.capsuleOpenCount = (d.capsuleOpenCount || 0) + 1;
-      if (d.capsuleOpenCount % 7 === 0) {
-        d.diamondCapsule.obtained = true;
-        d.diamondCapsule.taps = 0;
-        setTimeout(() => showToast('💎 Diamond Capsule unlocked!'), 1500);
+      // Счётчик для алмазной капсулы — только ручные открытия
+      if (!d._skipDiamondCount) {
+        d.capsuleOpenCount = (d.capsuleOpenCount || 0) + 1;
+        if (d.capsuleOpenCount % 7 === 0) {
+          d.diamondCapsule.obtained = true;
+          d.diamondCapsule.taps = 0;
+          if (typeof updateCapsuleUI === 'function') updateCapsuleUI();
+        }
       }
+      delete d._skipDiamondCount;
       
       // Show reward
       showReward(rewardText, rewardImg);
@@ -16201,6 +16234,7 @@ function applyKeyReward(keyColor, item) {
       break;
     case 'adminCapsule':
       d.capsule.lastOpen = 0;
+      d._skipDiamondCount = true; // флаг: не считать в счётчик
       save(); openCapsule();
       break;
     case 'adminGoldCapsule':
@@ -16266,6 +16300,7 @@ function applyKeyReward(keyColor, item) {
 // Открыть N обычных капсул последовательно (без пропуска)
 function openMultipleCapsules(count) {
   if (!count || count <= 0) return;
+  d._skipDiamondCount = true; // массовое открытие не считается
   let opened = 0;
 
   function tryOpenNext() {
@@ -16296,6 +16331,7 @@ function openMultipleCapsules(count) {
   }
 
   tryOpenNext();
+  setTimeout(() => { delete d._skipDiamondCount; }, count * 800 + 500);
 }
 
 // Дать случайный кусочек пазла

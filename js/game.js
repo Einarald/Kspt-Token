@@ -3012,6 +3012,8 @@ function _openDiamondCapsule() {
   diamondCapsuleOpening = false;
   diamondCapsuleTaps = 0;
   d.capsuleOpenCount = (d.capsuleOpenCount || 0) + 1;
+  d.capsule.lastOpen = Date.now(); // кулдаун после алмазной как после обычной
+  d.capsule.firstOpen = false;
   const reward = getDiamondCapsuleReward();
   let rewardText = reward.name;
   let rewardImg  = reward.img;
@@ -3261,8 +3263,10 @@ function _fuseGetPool(tier) {
   const notOwned = (arr) => arr.filter(id => !(d.fuseSkins && d.fuseSkins[id]));
   const mainSkins = FUSE_SKIN_IDS.filter(id => FUSE_RARITY[id] === cfg.main);
   const bonusSkins = FUSE_SKIN_IDS.filter(id => FUSE_RARITY[id] === cfg.bonus);
-  const mainPool = notOwned(mainSkins).length >= 3 ? notOwned(mainSkins) : mainSkins;
-  const bonusPool = notOwned(bonusSkins).length > 0 ? notOwned(bonusSkins) : bonusSkins;
+  const mainPool = notOwned(mainSkins); // только неполученные
+  const bonusPool = notOwned(bonusSkins);
+  // если все main скины получены — тир недоступен (вернём пустой массив)
+  if (mainPool.length === 0) return [];
   // Фиксируем 3 конкретных main скина детерминированно (по индексу, не рандом)
   const seed = (d.fuse?.slot1 || '').length + (d.fuse?.slot2 || '').length + tier;
   const shuffled = [...mainPool].sort((a, b) => {
@@ -3471,12 +3475,21 @@ function renderFuseMachine() {
       const cfg = FUSE_TIER_POOLS[tr];
       const ksptCost = _fuseCalcKSPT(tr);
       const isSelected = tier === tr;
-      html += `<div onclick="_fuseSelectTier(${tr})" style="background:${isSelected?'#1a0a2e':'#111'};border:2px solid ${isSelected?'#7c3aed':'#333'};border-radius:10px;padding:8px;cursor:pointer;text-align:center;transition:.2s;">
-        <div style="font-size:11px;color:#c084fc;font-weight:bold;">Tier ${tr}</div>
-        <div style="font-size:10px;color:#aaa;">${formatNumber(ksptCost,0)} KSPT</div>
-        <div style="font-size:10px;color:#00e5ff;">/ ${cfg.ek} EK</div>
-        <div style="font-size:9px;color:#555;">${cfg.wait[0]}-${cfg.wait[1]}h wait</div>
-      </div>`;
+      const tierPool = _fuseGetPool(tr);
+      const tierLocked = tierPool.length === 0;
+      if (tierLocked) {
+        html += `<div style="background:#0a0a0a;border:2px solid #222;border-radius:10px;padding:8px;text-align:center;opacity:0.4;">
+          <div style="font-size:11px;color:#555;font-weight:bold;">Tier ${tr}</div>
+          <div style="font-size:9px;color:#333;margin-top:4px;">All collected ✓</div>
+        </div>`;
+      } else {
+        html += `<div onclick="_fuseSelectTier(${tr})" style="background:${isSelected?'#1a0a2e':'#111'};border:2px solid ${isSelected?'#7c3aed':'#333'};border-radius:10px;padding:8px;cursor:pointer;text-align:center;transition:.2s;">
+          <div style="font-size:11px;color:#c084fc;font-weight:bold;">Tier ${tr}</div>
+          <div style="font-size:10px;color:#aaa;">${formatNumber(ksptCost,0)} KSPT</div>
+          <div style="font-size:10px;color:#00e5ff;">/ ${cfg.ek} EK</div>
+          <div style="font-size:9px;color:#555;">${cfg.wait[0]}-${cfg.wait[1]}h wait</div>
+        </div>`;
+      }
     });
     html += `</div></div>
       <div style="display:flex;gap:8px;">

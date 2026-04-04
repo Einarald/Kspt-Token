@@ -2,13 +2,13 @@
 *{box-sizing:border-box}
 body{
   margin:0;
-  background-color:#0b0b0b;
+  background-color:#080810;
   background-size: cover;
   background-position: center;
   background-attachment: fixed;
   background-repeat: no-repeat;
   font-family:Arial,sans-serif;
-  color:#fff;
+  color:#f0f0f0;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation; 
   user-select: none;
@@ -132,7 +132,7 @@ img {
 .long-btn{
   flex:1;
   height:70px;
-  background:#1a1a1a;
+  background:#0f0f1a;
   border-radius:22px;
   display:flex;
   align-items:center;
@@ -152,7 +152,7 @@ img {
 .settings-btn {
   width: 60px;
   height: 60px;
-  background: #1a1a1a;
+  background: #0f0f1a;
   border-radius: 18px;
   display: flex;
   align-items: center;
@@ -166,7 +166,7 @@ img {
 
 /* ===== CARDS ===== */
 .card{
-  background:#161616;
+  background:#0f0f1a;
   border-radius:18px;
   padding:14px;
   margin-bottom:14px;
@@ -680,8 +680,8 @@ input{
   left: 0;
   right: 0;
   height: 65px;
-  background: #111;
-  border-top: 1px solid #333;
+  background: #08080f;
+  border-top: 1px solid rgba(255,255,255,0.07);
   display: flex;
   justify-content: space-around;
   align-items: center;
@@ -701,18 +701,18 @@ input{
   cursor: pointer;
 }
 .nav-item.active {
-  color: #ff9800;
+  color: #7c8cff;
 }
 .nav-icon {
   width: 24px;
   height: 24px;
   margin-bottom: 4px;
-  background-color: #444;
+  background-color: #3a3a55;
   /* Fallback */
   border-radius: 50%;
 }
 .nav-item.active .nav-icon {
-  background-color: #ff9800;
+  background-color: #7c8cff;
 }
 
 /* Market Specifics */
@@ -721,13 +721,13 @@ input{
   margin-top: 50px;
 }
 .market-intro h1 {
-  color: #ff9800;
+  color: #7c8cff;
   font-size: 28px;
 }
 .market-list-item {
   display: flex;
   align-items: center;
-  background: #1a1a1a;
+  background: #0f0f1a;
   padding: 12px;
   border-radius: 12px;
   margin-bottom: 10px;
@@ -735,7 +735,7 @@ input{
   border: 1px solid transparent;
 }
 .market-list-item:active {
-  background: #222;
+  background: #13131f;
 }
 .token-icon {
   width: 40px;
@@ -757,8 +757,8 @@ font-size: 16px; }
 .chart-container {
   width: 100%;
   height: 150px;
-  background: #111;
-  border: 1px solid #333;
+  background: #0a0a14;
+  border: 1px solid rgba(255,255,255,0.07);
   border-radius: 12px;
   position: relative;
   margin-bottom: 15px;
@@ -790,11 +790,11 @@ font-size: 16px; }
 
 /* Account Section */
 .account-box {
-  background: #161616;
+  background: #0f0f1a;
   padding: 15px;
   border-radius: 16px;
   margin-bottom: 20px;
-  border: 1px solid #333;
+  border: 1px solid rgba(124,140,255,0.12);
 }
 .acc-header {
   display: flex;
@@ -802,7 +802,7 @@ font-size: 16px; }
   align-items: flex-start;
   margin-bottom: 10px;
 }
-.acc-name { font-size: 18px; font-weight: bold; color: #ff9800; }
+.acc-name { font-size: 18px; font-weight: bold; color: #7c8cff; }
 .acc-desc { font-size: 12px; color: #888; margin-top: 4px;
 }
 .acc-edit-btn {
@@ -1008,7 +1008,7 @@ input:checked + .toggle-slider:before {
   align-items: center;
   margin-bottom: 10px;
   padding: 8px;
-  background: #1a1a1a;
+  background: #13131e;
   border-radius: 8px;
 }
 
@@ -1027,7 +1027,7 @@ input:checked + .toggle-slider:before {
 .settings-section {
   margin-bottom: 20px;
   padding: 15px;
-  background: #161616;
+  background: #0f0f1a;
   border-radius: 12px;
 }
 
@@ -1035,7 +1035,7 @@ input:checked + .toggle-slider:before {
   font-size: 18px;
   font-weight: bold;
   margin-bottom: 10px;
-  color: #ff9800;
+  color: #7c8cff;
   text-align: center;
 }
 
@@ -1098,7 +1098,7 @@ input:checked + .toggle-slider:before {
 }
 
 .card-item {
-  background: #1a1a1a;
+  background: #0f0f1a;
   border-radius: 12px;
   padding: 12px;
   text-align: center;
@@ -1355,7 +1355,7 @@ input:checked + .toggle-slider:before {
 }
 
 .ivent-day {
-  background: #1a1a1a;
+  background: #0f0f1a;
   border-radius: 10px;
   padding: 10px;
   text-align: center;
@@ -1381,7 +1381,7 @@ input:checked + .toggle-slider:before {
 }
 
 .ivent-day.current {
-  border: 2px solid #ff9800;
+  border: 2px solid #7c8cff;
 }
 
 .ivent-day-number {
@@ -2598,3 +2598,294 @@ input:checked + .toggle-slider {
 }
 
 /* ── END ── */
+
+/* ═══════════════════════════════════════════════
+   🎨 GLOBAL STYLE REFRESH — Pleasant Dark Theme
+   ═══════════════════════════════════════════════ */
+
+/* ── Root accent colours (no JS needed) ── */
+:root {
+  --accent:      #7c8cff;
+  --accent-dim:  rgba(124,140,255,0.12);
+  --accent-glow: rgba(124,140,255,0.18);
+  --surface-1:   #0f0f1a;
+  --surface-2:   #13131e;
+  --surface-3:   #181828;
+  --border:      rgba(255,255,255,0.07);
+  --text-main:   #f0f0f0;
+  --text-sub:    #7a7a9a;
+  --green:       #4ade80;
+  --orange:      #ff9800;
+}
+
+/* ── Base button ── */
+button {
+  font-family: 'Outfit', Arial, sans-serif;
+  font-weight: 500;
+  border-radius: 14px;
+  background: var(--surface-2);
+  transition: background 0.15s ease;
+}
+button.active { background: #1b5e20; }
+
+/* ── Long-btn & settings-btn borders ── */
+.long-btn {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+.long-btn:active { transform: scale(0.93); opacity: 0.75; }
+
+.settings-btn {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  transition: transform 0.1s ease, opacity 0.1s ease;
+}
+.settings-btn:active { transform: scale(0.88); opacity: 0.7; }
+
+/* ── Cards ── */
+.card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+.card-title { font-weight: 700; }
+.card-lvl { color: var(--orange); }
+
+/* ── Card items (upgrade grid) ── */
+.card-item {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.card-item-button {
+  border-radius: 10px;
+  font-weight: 600;
+  font-size: 12px;
+  background: var(--surface-3);
+}
+.card-item-button.active { background: #1b5e20; }
+.card-item-button.owned  { background: var(--surface-2); opacity: 0.55; }
+
+/* ── Balance ── */
+.balance-main {
+  font-size: 28px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  text-align: center;
+  margin: 12px 0 4px;
+  color: var(--text-main);
+}
+.offline-info {
+  font-size: 13px;
+  color: var(--text-sub);
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+/* ── Top bar ── */
+.top-bar {
+  padding-bottom: 12px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 14px;
+}
+.top-bar span { font-weight: 600; font-size: 15px; }
+.close-x { opacity: 0.5; }
+
+/* ── Back button ── */
+.back {
+  color: var(--text-sub);
+  font-size: 14px;
+  border-radius: 14px;
+  background: rgba(255,255,255,0.04);
+  border: 1px solid var(--border);
+  margin-top: 16px;
+  opacity: 1;
+}
+
+/* ── Settings sections ── */
+.settings-section {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+  padding: 16px;
+  margin-bottom: 14px;
+}
+.settings-title { color: var(--accent); }
+
+#settings-main .settings-section button {
+  background: var(--surface-2) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: 14px !important;
+  color: #e0e0e0 !important;
+  font-size: 15px !important;
+  font-weight: 500 !important;
+}
+#settings-main .settings-section button:active {
+  background: var(--surface-3) !important;
+  transform: scale(0.98);
+}
+
+.settings-checkbox {
+  background: var(--surface-2);
+  border-radius: 10px;
+  border: 1px solid var(--border);
+}
+.settings-checkbox label { font-weight: 500; font-size: 14px; color: #ddd; }
+.settings-checkbox .subtext { color: var(--text-sub); font-size: 11px; }
+
+/* ── Toggle accent ── */
+input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #5a6aef, var(--accent));
+}
+
+/* ── Reward popup ── */
+.reward-popup {
+  background: var(--surface-2);
+  border: 1px solid rgba(255,152,0,0.22);
+  border-radius: 26px;
+  box-shadow: 0 30px 80px rgba(0,0,0,0.75);
+}
+.reward-popup button {
+  background: linear-gradient(135deg, #ff9800, #e65100) !important;
+  border-radius: 14px !important;
+  font-weight: 700 !important;
+}
+
+/* ── Toast ── */
+.toast {
+  font-family: 'Outfit', Arial, sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  border-radius: 16px;
+  padding: 11px 22px;
+  background: rgba(15,15,26,0.93);
+  border: 1px solid var(--border);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+}
+
+/* ── Global nav ── */
+.global-nav {
+  background: #08080f;
+  border-top: 1px solid var(--border);
+}
+.nav-item { color: var(--text-sub); }
+.nav-item.active { color: var(--accent); }
+.nav-icon { background-color: #2e2e48; }
+.nav-item.active .nav-icon { background-color: var(--accent); }
+
+/* ── Market ── */
+.market-intro h1 { color: var(--accent); }
+.market-list-item {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+.market-list-item:active { background: var(--surface-2); }
+
+/* ── Account box ── */
+.account-box {
+  background: var(--surface-1);
+  border: 1px solid var(--accent-dim);
+  border-radius: 18px;
+}
+.acc-name { color: var(--accent); }
+
+/* ── Chart ── */
+.chart-container {
+  background: #0a0a14;
+  border: 1px solid var(--border);
+}
+
+/* ── Profile ── */
+.profile-card {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+}
+.profile-stat {
+  background: var(--surface-2);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+}
+.profile-stat-val { font-weight: 700; font-size: 17px; color: var(--accent); }
+.profile-stat-lbl { color: var(--text-sub); }
+
+/* ── Friends ── */
+.friend-item {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+}
+
+/* ── Puzzle grid ── */
+.puzzle-grid {
+  background: #1a1a2e;
+}
+.puzzle-cell { background: var(--surface-1); }
+.puzzle-cell-sm { background: var(--surface-1); }
+.puzzle-grid-5x5 { background: #1a1a2e; }
+
+/* ── Capsule info ── */
+.capsule-info {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 18px;
+}
+
+/* ── Cardik tabs ── */
+.cardik-tabs button {
+  background: var(--surface-1);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+}
+.cardik-tabs button.active { background: #1b5e20; }
+
+/* ── Vib toggle ── */
+.vib-toggle-btn { background: var(--surface-2); border-radius: 10px; }
+.vib-toggle-btn.active { background: #1b5e20; }
+
+/* ── Energy box ── */
+.energy-box {
+  background: rgba(8,8,16,0.65);
+  border: 1px solid var(--border);
+  border-radius: 20px;
+}
+
+/* ── Ivent days ── */
+.ivent-day { background: var(--surface-1); }
+.ivent-day.current { border: 2px solid var(--accent); }
+
+/* ── Leaderboard rows ── */
+#lbList > div { border-radius: 14px; transition: background 0.15s; }
+
+/* ── Notif badge ── */
+.notif-badge {
+  box-shadow: 0 0 8px rgba(229,57,53,0.5);
+  font-weight: 700;
+}
+
+/* ── Fuse machine ── */
+#fuseMachineContent button[onclick*="_fuseStart"] {
+  font-family: 'Outfit', Arial, sans-serif;
+  font-weight: 700;
+  font-size: 14px;
+  border-radius: 14px;
+}
+
+/* ── Tap text ── */
+.tap-text {
+  color: #fff;
+  font-weight: 800;
+  font-size: 22px;
+  text-shadow: 0 0 8px rgba(124,140,255,0.5);
+}
+
+/* ── Scrollbars (webkit) ── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #2a2a40; border-radius: 4px; }
+
+/* ── END REFRESH ── */

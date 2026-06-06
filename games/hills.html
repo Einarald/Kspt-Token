@@ -802,7 +802,9 @@
             try { (window.parent || window.top).postMessage({ type: 'kspt_new_round' }, '*'); } catch(e) {}
             initGameState(); startCountdown();
         }
-        function exitGame() { restartGame(); }
+        function exitGame() {
+            try { (window.parent || window.top).postMessage({ type: 'kspt_exit_game' }, '*'); } catch(e) {}
+        }
 
         function registerPedalEvents(element, setPressed) {
             const pressHandler = (e) => { e.preventDefault(); setPressed(true); element.classList.add('pedal-active'); sfx.init(); };

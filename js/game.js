@@ -13230,6 +13230,7 @@ function _adminApplyModAction(v) {
         d.fuseSkins[v.skinId] = true;
       }
       save(); if (typeof ui === 'function') ui();
+      if (typeof pushMyLeaderboardData === 'function') pushMyLeaderboardData();
       _adminShowOverlay(v.take ? `⚗️ Fuse skin "${v.skinId}" removed` : `⚗️ Admin gave Fuse skin: ${v.skinId}!`, '#4fc3f7', 4000);
       break;
     case 'giveSkinMod':
@@ -17275,7 +17276,8 @@ function pushMyLeaderboardData() {
     verified: d.verified || false,
     totalTaps: d.totalTaps || 0,
     puzzlesDone: [d.puzzleDone,d.puzzle2Done,d.puzzle3Done,d.puzzle4Done,d.puzzle5Done].filter(Boolean).length,
-    fuseSkins: d.fuseSkins || {}
+    fuseSkins: d.fuseSkins || {},
+    gameRecords: d.gameRecords || {}
   };
   window._firebaseRef(window._firebaseDB, 'leaderboard/' + uid).set(entry);
 }

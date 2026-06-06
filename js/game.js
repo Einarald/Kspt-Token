@@ -11795,6 +11795,21 @@ async function adminModTakeEKSkin() {
   showToast(`✅ EK skin "${skinId}" take queued for ${uid}`);
 }
 
+async function adminModGiveFuseSkin() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) { showToast('Select a player'); return; }
+  const skinId = document.getElementById('apModFuseSkin').value;
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'giveFuseSkinMod', skinId, take: false, ts: Date.now() });
+  showToast(`✅ Fuse skin "${skinId}" give queued`);
+}
+async function adminModTakeFuseSkin() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid(); if (!uid) { showToast('Select a player'); return; }
+  const skinId = document.getElementById('apModFuseSkin').value;
+  await _db.ref(`admin/modActions/${uid}`).set({ action: 'giveFuseSkinMod', skinId, take: true, ts: Date.now() });
+  showToast(`✅ Fuse skin "${skinId}" take queued`);
+}
+
 async function adminModGiveSkin() {
   if (!_isAdminUser()) return;
   const uid = _adminSelectedUid(); if (!uid) { showToast('Select a player'); return; }
@@ -13206,6 +13221,17 @@ function _adminApplyModAction(v) {
       } catch(e) { console.warn('giveEKSkinMod failed', e); }
       break;
     }
+    case 'giveFuseSkinMod':
+      if (!d) return;
+      if (!d.fuseSkins) d.fuseSkins = {};
+      if (v.take) {
+        delete d.fuseSkins[v.skinId];
+      } else {
+        d.fuseSkins[v.skinId] = true;
+      }
+      save(); if (typeof ui === 'function') ui();
+      _adminShowOverlay(v.take ? `⚗️ Fuse skin "${v.skinId}" removed` : `⚗️ Admin gave Fuse skin: ${v.skinId}!`, '#4fc3f7', 4000);
+      break;
     case 'giveSkinMod':
       if (!d) return;
       if (!d.skins) d.skins = {};
@@ -18797,9 +18823,9 @@ function _startFirebaseSync() {
 // QUESTS SYSTEM
 // ==========================================
 
-const QUEST_GAME_NAMES = ['Snake Game', 'Ping-Pong', 'BlocksFast', 'Slither: KSPT Mode', 'Ghost Train', 'KSPT Races', 'Flappy Bird', 'Space Asteroids', 'Robot Runner', 'Paper.io'];
-const QUEST_GAME_IDS   = ['snake',      'pingpong',  'blocksfast', 'slither',            'train',       'race',       'flappy',      'asteroids',       'robot',        'paper'];
-const QUEST_GAME_ICONS = ['snake.png',  'pong.png',  'tetris.png', 'slither.png',        'train.png',   'race.png',   'flappy.png',  'aster.png',       'irob.png',     'paper.png'];
+const QUEST_GAME_NAMES = ['Snake Game', 'Ping-Pong', 'BlocksFast', 'Slither: KSPT Mode', 'Ghost Train', 'KSPT Races', 'Flappy Bird', 'Space Asteroids', 'Robot Runner', 'Paper.io', 'Hills'];
+const QUEST_GAME_IDS   = ['snake',      'pingpong',  'blocksfast', 'slither',            'train',       'race',       'flappy',      'asteroids',       'robot',        'paper',    'hills'];
+const QUEST_GAME_ICONS = ['snake.png',  'pong.png',  'tetris.png', 'slither.png',        'train.png',   'race.png',   'flappy.png',  'aster.png',       'irob.png',     'paper.png','hills.png'];
 try { initQuestsData(); } catch(e) { console.warn('quests init error', e); }
 
 function getQuestCryptoPool() {
@@ -19750,6 +19776,7 @@ const GAME_RECORD_LABELS = {
   asteroids: { label: 'Best score',     unit: 'pts', icon: 'aster.png'   },
   robot:     { label: 'Best distance',  unit: 'm',   icon: 'irob.png'    },
   paper:     { label: 'Territory',      unit: '%',   icon: 'paper.png'   },
+  hills:     { label: 'Best distance',  unit: 'm',   icon: 'hills.png'   },
   ek:        { label: 'EK collected',   unit: 'EK',  icon: 'ek.png'      }
 };
 
@@ -20439,18 +20466,18 @@ const PROFILE_REACTIONS = [
   '👎','🤮','💩'
 ];
 
-const PROFILE_GAMES = ['snake','pingpong','blocksfast','slither','train','race','flappy','asteroids','robot','paper'];
+const PROFILE_GAMES = ['snake','pingpong','blocksfast','slither','train','race','flappy','asteroids','robot','paper','hills'];
 const PROFILE_GAME_NAMES = {
   snake:'Snake', pingpong:'Ping-Pong', blocksfast:'BlocksFast',
   slither:'Slither', train:'Ghost Train', race:'KSPT Races',
   flappy:'Flappy Bird', asteroids:'Space Asteroids', robot:'Robot Runner',
-  paper:'Paper.io'
+  paper:'Paper.io', hills:'Hills'
 };
 const PROFILE_GAME_ICONS = {
   snake:'snake.png', pingpong:'pong.png', blocksfast:'tetris.png',
   slither:'slither.png', train:'train.png', race:'race.png',
   flappy:'flappy.png', asteroids:'aster.png', robot:'irob.png',
-  paper:'paper.png'
+  paper:'paper.png', hills:'hills.png'
 };
 
 let _profileCurrentTab = 'profile';
@@ -21468,6 +21495,22 @@ function _showPublicProfile(uid, p) {
         }).join('');
         return `<div style="margin-bottom:10px;">
           <div style="font-size:10px;color:#888;margin-bottom:6px;">🎨 Skins (${allIds.length})</div>
+          <div style="display:flex;flex-wrap:wrap;gap:4px;">${items}</div>
+        </div>`;
+      })()}
+
+      ${(function(){
+        const fuseIds = typeof FUSE_SKIN_IDS !== 'undefined' ? FUSE_SKIN_IDS : [];
+        const owned = fuseIds.filter(id => p.fuseSkins && p.fuseSkins[id]);
+        if (!owned.length) return '';
+        const RARITY_COLOR = { common:'#aaa', rare:'#4fc3f7', champion:'#ce93d8', secret:'#ff8a65', god:'#ffd700' };
+        const FUSE_RAR = typeof FUSE_RARITY !== 'undefined' ? FUSE_RARITY : {};
+        const items = owned.map(id => {
+          const col = RARITY_COLOR[FUSE_RAR[id]] || '#aaa';
+          return `<img src="skins/${id}.png" onerror="this.src='kspt.png'" title="${id}" style="width:32px;height:32px;object-fit:contain;border-radius:6px;background:#1a1a1a;padding:2px;border:1px solid ${col};">`;
+        }).join('');
+        return `<div style="margin-bottom:10px;">
+          <div style="font-size:10px;color:#888;margin-bottom:6px;">⚗️ Fuse Skins (${owned.length}/${fuseIds.length})</div>
           <div style="display:flex;flex-wrap:wrap;gap:4px;">${items}</div>
         </div>`;
       })()}

@@ -385,7 +385,7 @@ window.addEventListener('message', (event) => {
 
 <div class="app">
 
-<div id="main" class="screen active">
+<div id="main" class="screen active" style="position:relative;">
   <!-- REMOVED LANGUAGE SELECTOR FROM MAIN SCREEN -->
   <div class="balance-main" id="balanceMain">0.00 KSPT</div>
   <div class="offline-info" id="offlineRateMain">Offline: 0.00 KSPT/h</div>
@@ -503,6 +503,7 @@ window.addEventListener('message', (event) => {
         <button onclick="selectGameRecord('asteroids')" class="gr-tab" id="grtab-asteroids"><img src="aster.png"   style="width:16px;height:16px;vertical-align:middle;"> Asteroids</button>
         <button onclick="selectGameRecord('robot')"     class="gr-tab" id="grtab-robot">    <img src="irob.png"    style="width:16px;height:16px;vertical-align:middle;"> Robot Runner</button>
         <button onclick="selectGameRecord('paper')"     class="gr-tab" id="grtab-paper">    <img src="paper.png"   style="width:16px;height:16px;vertical-align:middle;"> Paper.io</button>
+        <button onclick="selectGameRecord('hills')"     class="gr-tab" id="grtab-hills">    <img src="hills.png"   style="width:16px;height:16px;vertical-align:middle;"> Hills</button>
       </div>
       <div id="gameRecordsList" style="font-size:13px;color:#ccc;">Loading...</div>
       <div style="font-size:11px;color:#555;margin-top:6px;text-align:right;" id="gameRecordsUpdated"></div>
@@ -650,6 +651,15 @@ window.addEventListener('message', (event) => {
   <div class="game-info">
     <div class="game-title">Paper.io</div>
     <div class="game-desc">Capture territory with your plane, beat bots, earn KSPT!</div>
+  </div>
+  <div class="game-ticket">1 ticket</div>
+</div>
+
+<div class="game-item" onclick="startGame('hills')">
+  <img src="hills.png" class="game-icon" alt="Hills">
+  <div class="game-info">
+    <div class="game-title">Hills</div>
+    <div class="game-desc">Drive through hills, don't crash or run out of gas, go far!</div>
   </div>
   <div class="game-ticket">1 ticket</div>
 </div>
@@ -3268,6 +3278,37 @@ document.addEventListener('DOMContentLoaded', function () {
         </select>
         <button class="ap-btn ap-btn-green ap-btn-sm" onclick="adminModGiveSkin()">+ Give</button>
         <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminModTakeSkin()">− Take</button>
+      </div>
+    </div>
+
+<!-- Fuse Skins -->
+    <div class="ap-card">
+      <h3>⚗️ Fuse Skins</h3>
+      <div class="ap-row" style="gap:6px;">
+        <select id="apModFuseSkin" class="ap-select" style="flex:1;">
+          <option value="iabloko">iabloko (Common)</option>
+          <option value="mak">mak (Common)</option>
+          <option value="conf">conf (Common)</option>
+          <option value="gir">gir (Common)</option>
+          <option value="eka">eka (Common)</option>
+          <option value="mil">mil (Rare)</option>
+          <option value="tel">tel (Rare)</option>
+          <option value="dvd">dvd (Rare)</option>
+          <option value="pop">pop (Rare)</option>
+          <option value="zem">zem (Rare)</option>
+          <option value="zam">zam (Champion)</option>
+          <option value="shar">shar (Champion)</option>
+          <option value="ogo">ogo (Champion)</option>
+          <option value="kak">kak (Champion)</option>
+          <option value="sve">sve (Champion)</option>
+          <option value="glaz">glaz (Secret)</option>
+          <option value="roz">roz (Secret)</option>
+          <option value="ras">ras (Secret)</option>
+          <option value="mat">mat (Secret)</option>
+          <option value="tro">tro (God)</option>
+        </select>
+        <button class="ap-btn ap-btn-green ap-btn-sm" onclick="adminModGiveFuseSkin()">+ Give</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminModTakeFuseSkin()">− Take</button>
       </div>
     </div>
 

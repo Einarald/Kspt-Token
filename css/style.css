@@ -2889,3 +2889,299 @@ input:checked + .toggle-slider {
 ::-webkit-scrollbar-thumb { background: #2a2a40; border-radius: 4px; }
 
 /* ── END REFRESH ── */
+
+/* ═══════════════════════════════════════════
+   ✨ VISUAL OVERHAUL v3
+   ═══════════════════════════════════════════ */
+
+/* Screen transition: subtle slide-up */
+.screen.active {
+  animation: screenIn 0.22s cubic-bezier(.25,1,.4,1) both;
+}
+@keyframes screenIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ── MAIN SCREEN LAYOUT ─────────────────── */
+
+/* Balance */
+#balanceMain {
+  font-size: 32px !important;
+  font-weight: 800 !important;
+  letter-spacing: -1.5px !important;
+  color: #eef0ff !important;
+  text-align: center !important;
+  margin-bottom: 2px !important;
+}
+
+/* Offline rate */
+#offlineRateMain {
+  font-size: 12px !important;
+  color: #3a3a58 !important;
+  text-align: center !important;
+  letter-spacing: 0.3px;
+}
+
+/* Main screen must fill viewport for energy-box absolute positioning */
+#main {
+  min-height: 100vh;
+  position: relative;
+}
+
+/* Energy box: keep absolute, just restyle */
+.energy-box {
+  position: absolute !important;
+  bottom: 180px !important;
+  left: 16px !important;
+  display: flex !important;
+  align-items: center !important;
+  gap: 6px !important;
+  background: rgba(12,12,24,0.85) !important;
+  border: 1px solid rgba(124,140,255,0.13) !important;
+  border-radius: 20px !important;
+  padding: 6px 14px !important;
+  font-size: 13px !important;
+  font-weight: 600 !important;
+  color: #6060a0 !important;
+  pointer-events: none !important;
+  white-space: nowrap !important;
+  z-index: 10 !important;
+}
+.energy-box img {
+  width: 16px !important;
+  height: 16px !important;
+  flex-shrink: 0 !important;
+}
+
+/* Long buttons */
+.long-btn {
+  background: #0d0d1c !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 18px !important;
+  transition: transform 0.1s ease, opacity 0.1s ease !important;
+}
+.long-btn:active {
+  transform: scale(0.91) !important;
+  opacity: 0.7 !important;
+}
+
+/* Settings button */
+.settings-btn {
+  background: #0d0d1c !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  border-radius: 18px !important;
+  width: 52px !important;
+  height: 52px !important;
+}
+.settings-btn img {
+  width: 24px !important;
+  height: 24px !important;
+  opacity: 0.5 !important;
+}
+.settings-row {
+  border-top: 1px solid rgba(255,255,255,0.04) !important;
+  padding-top: 8px !important;
+  margin-top: 6px !important;
+}
+
+/* ── GLOBAL NAV ─────────────────────────── */
+.global-nav {
+  background: rgba(5,5,12,0.98) !important;
+  border-top: 1px solid rgba(255,255,255,0.05) !important;
+  height: 62px !important;
+}
+.nav-item {
+  color: #2e2e50 !important;
+  font-size: 10px !important;
+  font-weight: 600 !important;
+}
+.nav-item.active { color: #8892ff !important; }
+.nav-icon {
+  background-color: #181828 !important;
+  border-radius: 50% !important;
+  width: 22px !important;
+  height: 22px !important;
+}
+.nav-item.active .nav-icon { background-color: #8892ff !important; }
+
+/* ── CARDS ──────────────────────────────── */
+.card {
+  background: #0d0d18 !important;
+  border: 1px solid rgba(255,255,255,0.055) !important;
+  border-radius: 20px !important;
+}
+.card-title { font-weight: 700 !important; }
+.card-sub { color: #44445a !important; line-height: 1.5 !important; }
+.card-lvl { color: #ff9800 !important; font-weight: 600 !important; }
+
+/* ── CARD ITEMS (upgrade grid) ──────────── */
+.card-item {
+  background: #0d0d18 !important;
+  border: 1px solid rgba(255,255,255,0.055) !important;
+  border-radius: 16px !important;
+}
+.card-item-button {
+  background: #13131e !important;
+  border-radius: 10px !important;
+  font-weight: 600 !important;
+  border: 1px solid rgba(255,255,255,0.05) !important;
+}
+.card-item-button.active {
+  background: #1a3a20 !important;
+  border-color: rgba(74,222,128,0.18) !important;
+  color: #4ade80 !important;
+}
+.card-item-button.owned { opacity: 0.45 !important; }
+
+/* ── TOP BAR ────────────────────────────── */
+.top-bar {
+  padding-bottom: 14px !important;
+  border-bottom: 1px solid rgba(255,255,255,0.05) !important;
+  margin-bottom: 16px !important;
+}
+.top-bar span {
+  font-weight: 700 !important;
+  color: #dde0ff !important;
+}
+.close-x { opacity: 0.3 !important; }
+
+/* ── BUTTONS ────────────────────────────── */
+button {
+  font-family: 'Outfit', sans-serif !important;
+  transition: transform 0.1s ease, background 0.15s ease !important;
+}
+button:active { transform: scale(0.97) !important; }
+button.active { background: #1a3a20 !important; }
+.back {
+  background: rgba(255,255,255,0.03) !important;
+  border: 1px solid rgba(255,255,255,0.06) !important;
+  color: #33334a !important;
+}
+
+/* ── SETTINGS ───────────────────────────── */
+.settings-section {
+  background: #0d0d18 !important;
+  border: 1px solid rgba(255,255,255,0.055) !important;
+  border-radius: 18px !important;
+  padding: 16px !important;
+  margin-bottom: 12px !important;
+}
+.settings-title {
+  color: #8892ff !important;
+  font-size: 11px !important;
+  font-weight: 700 !important;
+  letter-spacing: 1.5px !important;
+  text-transform: uppercase !important;
+}
+#settings-main .settings-section button {
+  background: #111120 !important;
+  border: 1px solid rgba(255,255,255,0.055) !important;
+  border-radius: 14px !important;
+  color: #c0c0da !important;
+  font-size: 14px !important;
+  padding: 13px 16px !important;
+}
+.settings-checkbox {
+  background: #111120 !important;
+  border: 1px solid rgba(255,255,255,0.05) !important;
+  border-radius: 12px !important;
+}
+.settings-checkbox label { color: #c0c0da !important; }
+.settings-checkbox .subtext { color: #33334a !important; }
+input:checked + .toggle-slider {
+  background: linear-gradient(135deg, #5a6aef, #8892ff) !important;
+}
+
+/* ── PROFILE ────────────────────────────── */
+.profile-card {
+  background: #0d0d18 !important;
+  border: 1px solid rgba(255,255,255,0.055) !important;
+  border-radius: 18px !important;
+}
+.profile-stat {
+  background: #111120 !important;
+  border: 1px solid rgba(255,255,255,0.05) !important;
+  border-radius: 12px !important;
+}
+.profile-stat-val { color: #8892ff !important; font-weight: 800 !important; }
+.profile-stat-lbl { color: #33334a !important; }
+.friend-item {
+  background: #0d0d18 !important;
+  border: 1px solid rgba(255,255,255,0.05) !important;
+  border-radius: 14px !important;
+}
+
+/* ── MARKET ─────────────────────────────── */
+.market-list-item {
+  background: #0d0d18 !important;
+  border: 1px solid rgba(255,255,255,0.055) !important;
+  border-radius: 16px !important;
+}
+.market-list-item:active { background: #111120 !important; }
+.market-intro h1 { color: #8892ff !important; }
+.price-up   { color: #4ade80 !important; }
+.price-down { color: #f87171 !important; }
+
+/* ── TOAST ──────────────────────────────── */
+.toast {
+  font-family: 'Outfit', sans-serif !important;
+  font-weight: 600 !important;
+  font-size: 13px !important;
+  border-radius: 18px !important;
+  padding: 12px 24px !important;
+  background: rgba(8,8,20,0.96) !important;
+  border: 1px solid rgba(255,255,255,0.07) !important;
+  box-shadow: 0 8px 32px rgba(0,0,0,0.6) !important;
+}
+
+/* ── REWARD POPUP ───────────────────────── */
+.reward-popup {
+  background: #0e0e1c !important;
+  border: 1px solid rgba(255,152,0,0.18) !important;
+  border-radius: 28px !important;
+  box-shadow: 0 32px 80px rgba(0,0,0,0.85) !important;
+}
+.reward-popup button {
+  background: linear-gradient(135deg, #ff9800, #e65100) !important;
+  border-radius: 16px !important;
+  font-weight: 700 !important;
+}
+
+/* ── ACCOUNT / CHART ────────────────────── */
+.account-box {
+  background: #0d0d18 !important;
+  border: 1px solid rgba(136,146,255,0.1) !important;
+  border-radius: 18px !important;
+}
+.acc-name { color: #8892ff !important; }
+.chart-container {
+  background: #08080e !important;
+  border: 1px solid rgba(255,255,255,0.055) !important;
+}
+
+/* ── TAP TEXT ───────────────────────────── */
+.tap-text {
+  font-weight: 800 !important;
+  font-size: 22px !important;
+  color: #fff !important;
+  text-shadow: 0 0 14px rgba(136,146,255,0.55) !important;
+}
+
+/* ── CAPSULE HINT ───────────────────────── */
+#capsuleHint {
+  font-size: 20px !important;
+  font-weight: 700 !important;
+  color: rgba(255,255,255,0.7) !important;
+}
+
+/* ── IVENT DAYS ─────────────────────────── */
+.ivent-day { background: #0d0d18 !important; }
+.ivent-day.current { border: 2px solid #8892ff !important; }
+
+/* ── SCROLLBARS ─────────────────────────── */
+::-webkit-scrollbar { width: 3px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #1a1a30; border-radius: 4px; }
+
+/* ── END v3 ── */

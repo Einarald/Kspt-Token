@@ -27933,7 +27933,8 @@ function _showPublicProfile(uid, p) {
         const FUSE_RAR = typeof FUSE_RARITY !== 'undefined' ? FUSE_RARITY : {};
         const items = owned.map(id => {
           const col = RARITY_COLOR[FUSE_RAR[id]] || '#aaa';
-          return `<img src="skins/${id}.png" onerror="this.src='kspt.png'" title="${id}" style="width:32px;height:32px;object-fit:contain;border-radius:6px;background:#1a1a1a;padding:2px;border:1px solid ${col};">`;
+          const img = getSkinImage(id, 1, 0);
+          return `<img src="${img}" onerror="this.src='kspt.png'" title="${id}" style="width:32px;height:32px;object-fit:contain;border-radius:6px;background:#1a1a1a;padding:2px;border:1px solid ${col};">`;
         }).join('');
         return `<div style="margin-bottom:10px;">
           <div style="font-size:10px;color:#888;margin-bottom:6px;">⚗️ Fuse Skins (${owned.length}/${fuseIds.length})</div>

@@ -425,9 +425,48 @@ let _rampJump = null; // { startTime, duration, height, good }
         }
 
         // ========== ИНИЦИАЛИЗАЦИЯ THREE.JS ==========
+        function createRenderer(canvas) {
+            // На слабых/старых телефонах WebGL-контекст с antialias может
+            // не создаться (падает исключение из-за GPU-драйвера).
+            // Пробуем сначала с сглаживанием, потом без, потом совсем без опций.
+            const attemptOptions = [
+                { canvas, antialias: true, alpha: false },
+                { canvas, antialias: false, alpha: false },
+                { canvas, antialias: false, alpha: false, powerPreference: 'default', failIfMajorPerformanceCaveat: false }
+            ];
+            let lastError = null;
+            for (const opts of attemptOptions) {
+                try {
+                    return new THREE.WebGLRenderer(opts);
+                } catch (err) {
+                    lastError = err;
+                    console.warn('WebGLRenderer failed with options', opts, err);
+                }
+            }
+            throw lastError || new Error('WebGL renderer could not be created');
+        }
+
+        function showFatalError(message) {
+            const cdElem = document.getElementById('countdownDisplay');
+            if (cdElem) {
+                cdElem.style.display = 'block';
+                cdElem.style.fontSize = '20px';
+                cdElem.style.padding = '16px';
+                cdElem.innerText = message;
+            } else {
+                alert(message);
+            }
+        }
+
         function initThree() {
             const canvas = document.getElementById('gameCanvas');
-            renderer = new THREE.WebGLRenderer({ canvas, antialias: true, alpha: false });
+            try {
+                renderer = createRenderer(canvas);
+            } catch (err) {
+                console.error('Не удалось создать WebGL-рендерер:', err);
+                showFatalError('Ваше устройство не поддерживает 3D-графику (WebGL), нужную для этой игры. Попробуйте обновить браузер или использовать другое устройство.');
+                throw err;
+            }
             renderer.setSize(360, 360);
             renderer.shadowMap.enabled = true;
             renderer.shadowMap.type = THREE.PCFSoftShadowMap;
@@ -1807,13 +1846,16 @@ scene.add(car);
         }
 
         function initGame() {
+            // Джойстик и педаль газа вешаем САМЫМИ ПЕРВЫМИ, до всего, что связано
+            // с Three.js/WebGL — если ниже что-то упадёт (слабый GPU и т.п.),
+            // управление всё равно будет работать.
+            setupControls();
             initOnlineSystem();
             initThree();
             generateTrack();
             initCars();
             spawnCoins();
             spawnModifiers();
-            setupControls();
             initMinimap();
 
             raceActive = false;

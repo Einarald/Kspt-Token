@@ -312,6 +312,15 @@
         let wheelBack = { rx: -28, ry: 18, x: 0, y: 0, rot: 0, radius: 14, grounded: false };
         let wheelFront = { rx: 30, ry: 18, x: 0, y: 0, rot: 0, radius: 14, grounded: false };
 
+        // Случайный цвет машинки из радуги — обновляется при каждом новом старте/рестарте
+        let carBodyColor = '#f43f5e';
+        let carBodyStroke = '#be123c';
+        function randomizeCarColor() {
+            const hue = Math.floor(Math.random() * 360);
+            carBodyColor = `hsl(${hue}, 82%, 56%)`;
+            carBodyStroke = `hsl(${hue}, 82%, 34%)`;
+        }
+
         const terrainSeed = Math.random() * 5000;
 
         // Генерация ландшафта (сглаженная, усложняется дальше по трассе)
@@ -367,6 +376,7 @@
         }
 
         function initGameState() {
+            randomizeCarColor();
             car.x = 120; car.y = getTerrainHeight(car.x) - 30;
             car.vx = 0; car.vy = 0; car.angle = 0; car.angularVelocity = 0; car.fuel = 40; car.maxFuel = 40; car.isGrounded = true;
             wheelBack.x = car.x + wheelBack.rx; wheelBack.y = car.y + wheelBack.ry; wheelBack.grounded = true;
@@ -384,9 +394,14 @@
         // Честная проверка на проигрыш: ТОЛЬКО удар головой или отсутствие топлива
         function checkCrash() {
             const gCenter = getTerrainHeight(car.x);
-            // Координаты шлема относительно центра машины
+            // Координаты шлема относительно центра машины (локальная точка (-8, -18),
+            // повёрнутая на car.angle — та же формула поворота, что и в drawVehicle).
+            // Раньше знак у синуса в driverX был перепутан, из-за чего на крутых
+            // подъёмах/спусках (большой car.angle) точка головы "прыгала" далеко назад,
+            // ground там мог оказаться выше машины — и игра ошибочно засчитывала аварию,
+            // хотя игрок просто долго и ровно ехал по трассе.
             const driverY = car.y - 18 * Math.cos(car.angle) - 8 * Math.sin(car.angle);
-            const driverX = car.x - 18 * Math.sin(car.angle) - 8 * Math.cos(car.angle);
+            const driverX = car.x - 8 * Math.cos(car.angle) + 18 * Math.sin(car.angle);
             const groundUnderHead = getTerrainHeight(driverX);
 
             // Чуточку усложняем: увеличили хитбокс головы водителя (проверка строже на 2 пикселя)
@@ -704,7 +719,7 @@
             ctx.beginPath(); ctx.moveTo(wheelFront.rx, wheelFront.ry - 5); ctx.lineTo(rwfX, rwfY); ctx.stroke();
 
             // Кузов
-            ctx.fillStyle = '#f43f5e'; ctx.strokeStyle = '#be123c'; ctx.lineWidth = 2.5;
+            ctx.fillStyle = carBodyColor; ctx.strokeStyle = carBodyStroke; ctx.lineWidth = 2.5;
             ctx.beginPath(); ctx.moveTo(-33, 11); ctx.lineTo(31, 11); ctx.lineTo(35, 3); ctx.lineTo(33, -4);
             ctx.lineTo(9, -4); ctx.lineTo(3, -17); ctx.lineTo(-19, -17); ctx.lineTo(-27, 0); ctx.lineTo(-34, -2);
             ctx.closePath(); ctx.fill(); ctx.stroke();

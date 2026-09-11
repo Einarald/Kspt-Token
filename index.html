@@ -8655,14 +8655,20 @@ function ensureMusicPlays() {
     if (window.appMusic.src.indexOf(audioFile) === -1) window.appMusic.src = audioFile;
     if (!d.musicMuted) {
       window.appMusic.play().catch(() => {
-        // user gesture required — resume on first tap/click
+        // user gesture required — keep retrying on tap/click until play() actually succeeds
+        // (on some Android WebViews the very first attempt can still be rejected,
+        // so we must not remove the listener until we get a real success)
+        if (window._musicResumeAttached) return;
+        window._musicResumeAttached = true;
         const resume = () => {
-          window.appMusic.play().catch(()=>{});
-          document.removeEventListener('click', resume);
-          document.removeEventListener('touchstart', resume);
+          window.appMusic.play().then(() => {
+            window._musicResumeAttached = false;
+            document.removeEventListener('click', resume);
+            document.removeEventListener('touchstart', resume);
+          }).catch(() => {});
         };
-        document.addEventListener('click', resume, { once: true });
-        document.addEventListener('touchstart', resume, { once: true });
+        document.addEventListener('click', resume);
+        document.addEventListener('touchstart', resume);
       });
     }
   } catch(e) { console.warn('ensureMusicPlays:', e); }
@@ -10672,7 +10678,8 @@ function ui() {
       "balanceTech": t('balance') + d.tokens.toFixed(2) + " KSPT",
       "balanceOffline": t('balance') + d.tokens.toFixed(2) + " KSPT",
       "balanceSettings": t('balance') + d.tokens.toFixed(2) + " KSPT",
-      "balanceCapsule": t('balance') + d.tokens.toFixed(2) + " KSPT"
+      "balanceCapsule": t('balance') + d.tokens.toFixed(2) + " KSPT",
+      "balanceGames": d.tokens.toFixed(2) + " KSPT  •  " + Number(d.ek || 0) + " EK"
     };
     
     for (const [id, text] of Object.entries(elements)) {
@@ -14319,7 +14326,7 @@ function disable3DEffect() {
 
 function updateBuyCooldownInfo() {
   const now = Date.now();
-  const timeSinceLastBuy = now - lastMarketBuyTime;
+  const timeSinceLastBuy = now - (d.lastMarketBuyTime || 0);
   const cooldownRemaining = 40000 - timeSinceLastBuy;
   
   const cooldownElem = document.getElementById("buyCooldownInfo");
@@ -15490,7 +15497,7 @@ function closeTrade() {
 
 function buyToken() {
   const now = Date.now();
-  const timeSinceLastBuy = now - lastMarketBuyTime;
+  const timeSinceLastBuy = now - (d.lastMarketBuyTime || 0);
   
   if (timeSinceLastBuy < 40000) {
     showToast(formatTemplate(t('wait_buy'), [(40 - timeSinceLastBuy/1000).toFixed(1)]));
@@ -15561,7 +15568,13 @@ function buyToken() {
   tokenData.lastBuyTime = now;
   tokenData.lastUserBuyPrice = tokenData.price;
   tokenData.volume = (tokenData.volume || 0) + amountKSPT;
-  lastMarketBuyTime = now;
+  if (tokenData.firebaseId && window._firebaseReady) {
+    window._firebaseRef(window._firebaseDB, 'market/userTokens/' + tokenData.firebaseId).update({
+      volume: firebase.database.ServerValue.increment(amountKSPT)
+    });
+  }
+  d.lastMarketBuyTime = now;
+  lastMarketBuyTime = now; // kept in sync for any legacy in-memory reads this session
   // Покупка двигает цену вверх: 1 KSPT = +0.01%, макс +30%
   const _buyImpact = Math.min(0.30, amountKSPT * 0.0001);
   tokenData.price = tokenData.price * (1 + _buyImpact);
@@ -15610,6 +15623,11 @@ function sellToken() {
   let earnedKSPT = amountTokens * tokenData.price;
   d.tokens += earnedKSPT;
   tokenData.volume = (tokenData.volume || 0) + earnedKSPT;
+  if (tokenData.firebaseId && window._firebaseReady) {
+    window._firebaseRef(window._firebaseDB, 'market/userTokens/' + tokenData.firebaseId).update({
+      volume: firebase.database.ServerValue.increment(earnedKSPT)
+    });
+  }
   d.questExchangeVolume = (d.questExchangeVolume || 0) + earnedKSPT;
   // Продажа двигает цену вниз: 1 KSPT = -0.01%, макс -30%
   const _sellImpact = Math.min(0.30, earnedKSPT * 0.0001);
@@ -18378,7 +18396,7 @@ _db.ref('admin/fuseLuck').on('value', snap => {
       amarrun:'amarrun.mp3', brain:'brain.mp3', saliutas:'saliutas.mp3',
       klikobak:'klikobak.mp3', rickroll:'rickroll.mp3', tiktok:'tiktok.mp3',
       batidao:'batidao.mp3', eind:'eind.mp3',
-      gl:'gl.m4a', fdog:'fdog.mp3', dracula:'dracula.mp3', yara:'yara.m4a',
+      gl:'gl.m4a', fdog:'fdog.mp3', dracula:'dracula.m4a', yara:'yara.m4a',
       otr:'otr.mp3', sarah:'sarah.mp3'
     };
     try {
@@ -30852,9 +30870,14 @@ document.addEventListener('DOMContentLoaded', function () {
           <option value="minion.mp4">🍌 Minion Bob</option>
           <option value="woke.mp4">😴 Woke Up</option>
           <option value="math.mp4">📐 Math Edit</option>
-          <option value="ferto.mp4">Ferto</option>
+          <option value="ferto.mp4">🔥 Ferto</option>
           <option value="spidermen.mp4">🕷️ Spider Man Edit</option>
           <option value="cdlol.mp4">🐱 Cat Dance Lol</option>
+          <option value="yara.mp4">🎤 Yara Yara</option>
+          <option value="beast.mp4">💰 MrBeast Rise</option>
+          <option value="dancedancedance.mp4">🩸 First Blood Dance</option>
+          <option value="rdr.mp4">🤠 RDR2 Edit</option>
+          <option value="iphone.mp4">📱 Cat Iphone Cool Dih</option>
         </select>
       </div>
       <div class="ap-row">

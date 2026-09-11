@@ -661,6 +661,7 @@ if (ball.y - ball.radius < 0) {
     ball.speedY = Math.abs(ball.speedY);
     playSound('bounce');
     gameVibrate([50]);
+    if (window.__ppOnlineMode && window.__ppIsLeftSide) ppSendState(true);
 }
 
 // Ball collision with bottom wall
@@ -669,6 +670,7 @@ if (ball.y + ball.radius > canvas.height) {
     ball.speedY = -Math.abs(ball.speedY);
     playSound('bounce');
     gameVibrate([50]);
+    if (window.__ppOnlineMode && window.__ppIsLeftSide) ppSendState(true);
 }
             
             // Ball collision with player paddle
@@ -1553,7 +1555,10 @@ window.ppInterpolateTick = function() {
   // --- МЯЧ: dead reckoning ---
   // Ждём первого пакета от хоста — пока не пришёл, мяч не двигаем
   if (ppRemote.snapTime && ppRemote.ballX !== undefined) {
-    const msSince = Math.min(now - ppRemote.snapTime, 300);
+    // Кап нужен только как страховка при обрыве связи, а не для обычных пауз
+    // между отскоками — иначе мяч будет "замерзать" каждый раз, когда между
+    // событиями (удар/отскок) проходит больше 300мс.
+    const msSince = Math.min(now - ppRemote.snapTime, 2500);
     const dtFrames = msSince / 16.6667;
     let bx = ppRemote.ballX + (ppRemote.ballSpeedX || 0) * gameSpeed * dtFrames;
     let by = ppRemote.ballY + (ppRemote.ballSpeedY || 0) * gameSpeed * dtFrames;

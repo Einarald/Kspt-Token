@@ -13,14 +13,13 @@
         .game-header { display: flex; justify-content: space-between; width: 100%; margin-bottom: 10px; padding: 10px; background: rgba(0,0,0,0.45); border-radius: 10px; border: 1px solid var(--accent); flex-shrink: 0; }
         .game-title { color: var(--accent-2); font-weight: bold; font-size: 18px; }
         .game-stats { display: flex; gap: 15px; font-size: 14px; flex-wrap: wrap; }
-        /* flex:1 + min-height:0 — canvas-wrapper забирает только оставшееся место,
-           а не наоборот, чтобы джойстик/газ/кнопки ниже НИКОГДА не выталкивались за экран */
-        .canvas-wrapper { position: relative; width: 100%; display: flex; justify-content: center; align-items: center; flex: 1 1 auto; min-height: 0; }
-        #gameCanvas { width: auto; height: auto; max-width: 100%; max-height: 100%; aspect-ratio: 1/1; border: 2px solid var(--accent); border-radius: 10px; display: block; background: #000; }
-        /* Мини-карта и overlay */
-        .mini-map { position: absolute; bottom: 10px; left: 10px; width: 120px; height: 120px; background: rgba(0,0,0,0.5); border: 1px solid var(--accent); border-radius: 10px; overflow: hidden; }
-        .mini-map canvas { width: 100%; height: 100%; display: block; }
-        .position-indicator { position: absolute; top: 70px; left: 10px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 20px; border: 1px solid var(--accent-2); font-weight: bold; font-size: 14px; }
+        /* Канвас теперь фиксированного квадратного размера (360x360), как в pingpong.html —
+           .canvas-wrapper просто оборачивает канвас (не растягивается флексом),
+           а реальный fit под экран делает fitGameUI() ниже, масштабируя canvas.style.width/height. */
+        .canvas-wrapper { position: relative; width: 360px; height: 360px; flex-shrink: 0; margin: 0 auto; }
+        #gameCanvas { display: block; width: 360px; height: 360px; border: 2px solid var(--accent); border-radius: 10px; background: #000; }
+        .position-indicator { position: absolute; top: 10px; left: 10px; background: rgba(0,0,0,0.6); padding: 4px 8px; border-radius: 20px; border: 1px solid var(--accent-2); font-weight: bold; font-size: 14px; }
+        /* было top:70px, когда под ней была мини-карта — теперь мини-карты нет, поднимаем к верхнему левому углу */
         /* Отсчёт */
         #countdownDisplay { display: none; position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); font-size: 80px; font-weight: bold; color: var(--accent-2); text-shadow: 0 0 20px #000, 0 0 10px var(--accent-2); z-index: 50; pointer-events: none; }
         /* Джойстик и педаль. flex-shrink:0 — эти блоки ОБЯЗАТЕЛЬНО сохраняют
@@ -86,8 +85,7 @@
         </div>
 
         <div class="canvas-wrapper">
-            <canvas id="gameCanvas"></canvas>
-            <div class="mini-map" id="miniMap"></div>
+            <canvas id="gameCanvas" width="360" height="360"></canvas>
             <div class="position-indicator" id="posIndicator">1/6</div>
             <div id="countdownDisplay">3</div>
 <div id="boostHUD">⚡ BOOST 5s</div>
@@ -1627,50 +1625,6 @@ scene.add(car);
             if (posIndicator) posIndicator.innerText = `${playerRank}/${total}`;
         }
 
-        // ========== МИНИ-КАРТА ==========
-        function initMinimap() {
-            const mc = document.createElement('canvas');
-            mc.width = 120; mc.height = 120;
-            document.getElementById('miniMap').appendChild(mc);
-            window.mmCtx = mc.getContext('2d');
-        }
-
-        function drawMinimap() {
-            if (!window.mmCtx) return;
-            const ctx = window.mmCtx;
-            ctx.clearRect(0,0,120,120);
-            ctx.save();
-            ctx.translate(60,60);
-            ctx.scale(0.29, 0.29);
-
-            // Draw track
-            ctx.beginPath();
-            for(let i=0; i<=40; i++) {
-                let p = roadCurve.getPointAt(i/40);
-                if(i===0) ctx.moveTo(p.x, p.z);
-                else ctx.lineTo(p.x, p.z);
-            }
-            ctx.strokeStyle = '#666'; ctx.lineWidth = 3; ctx.stroke();
-
-            // Боты (офлайн)
-            botCars.forEach(b => {
-                ctx.fillStyle = '#' + b.userData.color.toString(16).padStart(6,'0');
-                ctx.beginPath(); ctx.arc(b.position.x, b.position.z, 2, 0, Math.PI*2); ctx.fill();
-            });
-
-            // Онлайн-игроки
-            Object.values(remotePlayers).forEach(rp => {
-                ctx.fillStyle = '#00bcd4';
-                ctx.beginPath(); ctx.arc(rp.mesh.position.x, rp.mesh.position.z, 2, 0, Math.PI*2); ctx.fill();
-            });
-
-            // Игрок (всегда белый, поверх всех)
-            ctx.fillStyle = '#fff';
-            ctx.beginPath(); ctx.arc(playerCar.position.x, playerCar.position.z, 2.5, 0, Math.PI*2); ctx.fill();
-
-            ctx.restore();
-        }
-
         let finishOrder = []; // порядок финиша
 
         function endRace(winnerName) {
@@ -1836,7 +1790,6 @@ scene.add(car);
                 camera.position.lerp(carPos.clone().add(offset), 0.15);
                 camera.lookAt(carPos.clone().add(new THREE.Vector3(0, 0, 3).applyQuaternion(playerCar.quaternion)));
 
-                drawMinimap();
             updateRemotePlayers();
             // Медленное движение облаков
             if (window._clouds) {
@@ -1860,7 +1813,6 @@ scene.add(car);
             initCars();
             spawnCoins();
             spawnModifiers();
-            initMinimap();
 
             raceActive = false;
             countdownActive = true;
@@ -2124,6 +2076,7 @@ function startOnlineRace(room) {
     countdownActive = true;
   }
   document.getElementById('gameButtonsRow').style.display = 'none';
+  if (window._raceFitGameUI) window._raceFitGameUI();
 
   // Запускаем отсчёт 3-2-1-GO для всех
   const cdElem = document.getElementById('countdownDisplay');
@@ -2351,34 +2304,54 @@ function cleanupOnline() {
             }, 2000);
         });
 
-        // ========== АДАПТАЦИЯ ==========
-        // Канвас теперь сам вписывается в оставшееся место через CSS/flexbox
-        // (.canvas-wrapper { flex:1; min-height:0 } + #gameCanvas { max-width/max-height:100% }),
-        // поэтому джойстик, педаль газа и кнопки ГАРАНТИРОВАННО не выталкиваются
-        // за пределы экрана — они не участвуют в этом расчёте.
-        // Здесь только лёгкое уменьшение джойстика/педали по ШИРИНЕ экрана
-        // (для очень узких телефонов), без завязки на высоту.
+        // ========== АДАПТАЦИЯ (как в pingpong.html) ==========
+        // Канвас теперь фиксированного дизайн-размера 360x360 (совпадает с renderer.setSize(360,360)),
+        // а под реальный экран подстраивается ЭТИМ скриптом: считаем, сколько места реально
+        // осталось под канвас (высота экрана минус header минус джойстик/газ минус кнопки),
+        // и одним и тем же scale уменьшаем канвас, джойстик и педаль газа — так канвас
+        // всегда остаётся КВАДРАТНЫМ и никогда не выталкивает управление за экран,
+        // а джойстик и педаль газа при этом остаются видны у ВСЕХ игроков (и хоста, и гостей),
+        // потому что этот блок не завязан на isHost/онлайн-режим вообще.
         (function(){
+            const BASE = 360; // дизайн-размер канваса
             function fitGameUI() {
-                const availW = window.innerWidth;
-                const scale = Math.max(0.6, Math.min(1, availW / 360));
+                const header = document.querySelector('.game-header');
+                const controlsRow = document.querySelector('.controls-row');
+                const buttonsRow = document.getElementById('gameButtonsRow');
+                const headerH = header ? header.getBoundingClientRect().height : 0;
+                const controlsH = controlsRow ? controlsRow.getBoundingClientRect().height : 140;
+                const buttonsVisible = buttonsRow && getComputedStyle(buttonsRow).display !== 'none';
+                const buttonsH = buttonsVisible ? buttonsRow.getBoundingClientRect().height : 0;
+
+                const availW = window.innerWidth - 20; // паддинги контейнера
+                const availH = window.innerHeight - headerH - controlsH - buttonsH - 40; // запас на отступы
+
+                const scale = Math.max(0.5, Math.min(1, Math.min(availW / BASE, availH / BASE)));
+                const size = Math.round(BASE * scale);
+
+                const wrapper = document.querySelector('.canvas-wrapper');
+                const canvas = document.getElementById('gameCanvas');
+                if (wrapper) { wrapper.style.width = size + 'px'; wrapper.style.height = size + 'px'; }
+                if (canvas) { canvas.style.width = size + 'px'; canvas.style.height = size + 'px'; }
+
                 const joystick = document.getElementById('joystickArea');
                 if (joystick) {
-                    const size = Math.max(70, Math.round(120 * scale));
-                    joystick.style.width = size + 'px';
-                    joystick.style.height = size + 'px';
+                    const jSize = Math.max(70, Math.round(120 * scale));
+                    joystick.style.width = jSize + 'px';
+                    joystick.style.height = jSize + 'px';
                 }
                 const gasPedal = document.getElementById('gasPedal');
                 if (gasPedal) {
-                    const size = Math.max(50, Math.round(80 * scale));
-                    gasPedal.style.width = size + 'px';
-                    gasPedal.style.height = size + 'px';
-                    gasPedal.style.fontSize = (size*0.2) + 'px';
+                    const gSize = Math.max(50, Math.round(80 * scale));
+                    gasPedal.style.width = gSize + 'px';
+                    gasPedal.style.height = gSize + 'px';
+                    gasPedal.style.fontSize = (gSize * 0.2) + 'px';
                 }
             }
             window.addEventListener('resize', fitGameUI);
             window.addEventListener('orientationchange', () => setTimeout(fitGameUI, 120));
             window.addEventListener('load', fitGameUI);
+            window._raceFitGameUI = fitGameUI; // можно дёрнуть вручную после смены режима (лобби/старт)
             fitGameUI(); // сразу при старте, не дожидаясь события load
         })();
     </script>

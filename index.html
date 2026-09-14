@@ -17519,6 +17519,7 @@ function openAdminPanel() {
   if (m) {
     m.style.display = 'flex';
     _adminLoadPlayers();
+    _adminRenderSaveClipboardStatus();
     _adminUpdateActiveBar();
     clearInterval(window._adminBarInterval);
     window._adminBarInterval = setInterval(_adminUpdateActiveBar, 1000);
@@ -18105,6 +18106,103 @@ async function adminRestoreToLeaderboard() {
 
   showToast(`♻️ Restored "${entry.name}" to leaderboard (forced)`);
   setTimeout(() => _adminLoadPlayers(), 1500);
+}
+
+/* ---- MOD: Copy / Paste player save (backup between accounts) ---- */
+function _adminGetSaveClipboard() {
+  if (window._adminSaveClipboard) return window._adminSaveClipboard;
+  try {
+    const raw = localStorage.getItem('_kspt_admin_save_clipboard');
+    if (raw) {
+      window._adminSaveClipboard = JSON.parse(raw);
+      return window._adminSaveClipboard;
+    }
+  } catch(e) { console.warn('read save clipboard failed', e); }
+  return null;
+}
+
+function _adminRenderSaveClipboardStatus() {
+  const statusEl = document.getElementById('apSaveClipboardStatus');
+  if (!statusEl) return;
+  const clip = _adminGetSaveClipboard();
+  if (!clip || !clip.data) {
+    statusEl.textContent = 'Clipboard is empty. Select a player above and press "Copy Save".';
+    return;
+  }
+  const when = new Date(clip.meta.copiedAt).toLocaleString();
+  statusEl.textContent = `📋 Holding save from ${clip.meta.name} (uid ${clip.meta.uid}) — copied ${when}`;
+}
+
+async function adminCopyPlayerSave() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid();
+  if (!uid) { showToast('Select a player first'); return; }
+  if (!window._firebaseReady) { showToast('Firebase not ready'); return; }
+  const statusEl = document.getElementById('apSaveClipboardStatus');
+  if (statusEl) statusEl.textContent = 'Loading save…';
+  try {
+    const snap = await _db.ref(`cloudSave/${uid}`).once('value');
+    const data = snap.val();
+    if (!data) {
+      showToast('❌ No cloud save found for this player');
+      if (statusEl) statusEl.textContent = 'No cloud save found for the selected player.';
+      return;
+    }
+    const p = _adminPlayers ? _adminPlayers[uid] : null;
+    const name = (p && (p.username ? '@' + p.username : p.name)) || uid;
+    const meta = { uid, name, copiedAt: Date.now() };
+    window._adminSaveClipboard = { data, meta };
+    try { localStorage.setItem('_kspt_admin_save_clipboard', JSON.stringify({ data, meta })); }
+    catch(e) { console.warn('save clipboard persist failed', e); }
+    _adminRenderSaveClipboardStatus();
+    showToast(`📋 Copied save from ${name}`);
+  } catch(e) {
+    console.warn('adminCopyPlayerSave error', e);
+    showToast('❌ Failed to copy save');
+    if (statusEl) statusEl.textContent = 'Failed to load save — try again.';
+  }
+}
+
+async function adminPastePlayerSave() {
+  if (!_isAdminUser()) return;
+  const uid = _adminSelectedUid();
+  if (!uid) { showToast('Select a target player first'); return; }
+  if (!window._firebaseReady) { showToast('Firebase not ready'); return; }
+  const clip = _adminGetSaveClipboard();
+  if (!clip || !clip.data) { showToast('Clipboard is empty — copy a save first'); return; }
+  const confirmMsg = clip.meta.uid === uid
+    ? 'Re-apply this stored save back onto the same player?'
+    : `Overwrite the save of "${uid}" with the save copied from "${clip.meta.name}"?\n\nThis cannot be undone — consider copying the target's current save first if you might need it back.`;
+  if (!confirm(confirmMsg)) return;
+  try {
+    const snapshot = JSON.parse(JSON.stringify(clip.data));
+    snapshot._savedAt = Date.now();
+    // Cloud save is the source of truth the game reads/writes on load & every 30s
+    await _db.ref(`cloudSave/${uid}`).set(snapshot);
+    // If the player is online right now, push a live command so it applies
+    // immediately instead of waiting for their next app restart.
+    await _db.ref(`admin/modActions/${uid}`).set({ action: 'restoreSave', data: snapshot, ts: Date.now() });
+    showToast(`✅ Save applied to ${uid}`);
+  } catch(e) {
+    console.warn('adminPastePlayerSave error', e);
+    showToast('❌ Failed to paste save');
+  }
+}
+
+function adminDownloadSaveClipboard() {
+  const clip = _adminGetSaveClipboard();
+  if (!clip || !clip.data) { showToast('Clipboard is empty'); return; }
+  try {
+    const blob = new Blob([JSON.stringify(clip, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `kspt_save_${clip.meta.uid}_${clip.meta.copiedAt}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    setTimeout(() => URL.revokeObjectURL(url), 3000);
+  } catch(e) { console.warn('adminDownloadSaveClipboard error', e); showToast('❌ Download failed'); }
 }
 
 /* ---- MOD: Personal message ---- */
@@ -19675,6 +19773,23 @@ function _adminApplyModAction(v) {
       if (typeof pushMyLeaderboardData === 'function') pushMyLeaderboardData();
       _adminShowOverlay('Your "' + v.game + '" record was reset by admin', '#ff7043', 5000);
       break;
+    case 'restoreSave': {
+      // Admin copied another player's save onto this account — apply it live
+      // the same way a normal cloud restore would, then reload cleanly.
+      try {
+        const incoming = JSON.parse(JSON.stringify(v.data || {}));
+        if (incoming._ekshop && typeof incoming._ekshop === 'object') {
+          localStorage.setItem('ekshop_owned', JSON.stringify(incoming._ekshop));
+        }
+        delete incoming._savedAt;
+        delete incoming._ekshop;
+        const merged = typeof migrateData === 'function' ? migrateData(incoming, defaultData) : incoming;
+        localStorage.setItem('kspt', JSON.stringify(merged));
+      } catch(e) { console.warn('restoreSave apply failed', e); }
+      showToast('♻️ Admin restored your save — reloading…');
+      setTimeout(() => location.reload(), 800);
+      break;
+    }
   }
 }
 
@@ -31488,6 +31603,24 @@ document.addEventListener('DOMContentLoaded', function () {
       <select id="apPlayerList" size="6"></select>
       <button class="ap-btn ap-btn-blue ap-btn-sm" style="margin-top:8px;"
         onclick="_adminLoadPlayers()">🔄 Refresh</button>
+    </div>
+
+    <!-- Save Backup / Restore -->
+    <div class="ap-card" style="border-color:#3949ab;">
+      <h3>💾 Save Backup / Transfer</h3>
+      <p style="color:#7986cb;font-size:11px;margin:0 0 8px;">
+        Copy the selected player's full save (like a backup), then select another
+        player and paste it onto them — handy when someone switches devices.</p>
+      <div class="ap-row" style="gap:6px;">
+        <button class="ap-btn ap-btn-blue ap-btn-sm" style="flex:1;" onclick="adminCopyPlayerSave()">📋 Copy Save</button>
+        <button class="ap-btn ap-btn-green ap-btn-sm" style="flex:1;" onclick="adminPastePlayerSave()">📥 Paste to Selected</button>
+      </div>
+      <div class="ap-row" style="margin-top:6px;">
+        <button class="ap-btn ap-btn-sm" style="flex:1;background:#263238;" onclick="adminDownloadSaveClipboard()">⬇️ Download Backup File</button>
+      </div>
+      <div id="apSaveClipboardStatus" style="margin-top:8px;font-size:11px;color:#9fa8da;line-height:1.4;">
+        Clipboard is empty. Select a player above and press "Copy Save".
+      </div>
     </div>
 
     <!-- KSPT -->

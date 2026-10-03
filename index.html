@@ -4971,7 +4971,7 @@ window.addEventListener('message', (event) => {
   </div>
 
   <div class="card" id="skinCardMichaBottle" style="display:none">
-    <img id="skin-img-michabottle" src="" class="card-img">
+    <img id="skin-img-michabottle" src="data:image/gif;base64,R0lGODlhAQABAAAAACH5BAEKAAEALAAAAAABAAEAAAICTAEAOw==" data-keep-err="1" class="card-img">
     <div class="card-title">Micha Bottle 🍾</div>
     <div class="card-sub">Promo skin · 5 KSPT/h</div>
     <button id="skin-michabottle" onclick="applySkin('michabottle')">Select</button>
@@ -10965,6 +10965,11 @@ if (d.skin === 'dragon') {
   }
   const coin = document.getElementById("coin");
   if (!coin) return;
+  // если картинка скина не загрузилась — не оставляем сломанную монету
+  coin.onerror = function () {
+    this.onerror = null;
+    this.src = d.skin === 'goldcoin' ? _goldCoinSvg() : 'kspt.png';
+  };
 
 // Black Hole particles
   const existingParticles = document.getElementById('bholeParticles');
@@ -11981,6 +11986,20 @@ function updateSkinButtons() {
   });
 }
 
+// Inline gold coin (резерв, если goldcoin.png / def.png не загрузились) — купленный скин не должен падать в dontwhat.png
+function _goldCoinSvg() {
+  return 'data:image/svg+xml,' + encodeURIComponent(
+`<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200">
+  <defs>
+    <radialGradient id="gcG" cx="35%" cy="30%" r="80%"><stop offset="0%" stop-color="#fff3a0"/><stop offset="55%" stop-color="#ffc400"/><stop offset="100%" stop-color="#b8860b"/></radialGradient>
+  </defs>
+  <ellipse cx="100" cy="186" rx="52" ry="7" fill="#000" opacity="0.15"/>
+  <circle cx="100" cy="100" r="82" fill="url(#gcG)" stroke="#8a6200" stroke-width="6"/>
+  <circle cx="100" cy="100" r="64" fill="none" stroke="#b8860b" stroke-width="4"/>
+  <text x="100" y="124" font-family="Arial,sans-serif" font-size="68" font-weight="900" text-anchor="middle" fill="#8a6200">K</text>
+</svg>`);
+}
+
 function updateSkinPreviews() {
   const skinImageMap = {
     'default': 'kspt.png',
@@ -12048,7 +12067,7 @@ function updateSkinPreviews() {
       if (skin === 'mystic') {
         isOwned = d.puzzleDone;
       } else if (skin === 'capsule') {
-        isOwned = d.skins['capsule'];
+        isOwned = d.skins['capsule'] || (d.secretSkins && d.secretSkins['capsule']);
       } else if (skin === 'gkspt' || skin === 'cyber_android') {
         isOwned = d.skins[skin] || false;  // Скины из капсулы
       } else if (skin === 'artem' || skin === 'kostia' || skin === 'metka' || skin === 'seri') {
@@ -12064,9 +12083,18 @@ function updateSkinPreviews() {
       } else if (skin === 'greatjoost' || skin === 'angel' || skin === 'demon') {
         isOwned = (d.secretSkins && d.secretSkins[skin]);
       } else {
-        isOwned = d.skins[skin] || (skin === 'default');
+        // Секретные скины (напр. Micha Bottle по промокоду) лежат в d.secretSkins, а не в d.skins
+        isOwned = d.skins[skin] || (d.secretSkins && d.secretSkins[skin]) || (skin === 'default');
       }
       
+      if (skin === 'goldcoin') {
+        // goldcoin.png -> def.png -> inline SVG: купленный скин не должен падать в dontwhat.png
+        imgElement.dataset.keepErr = '1';
+        imgElement.onerror = function () {
+          this.onerror = function () { this.onerror = null; this.src = _goldCoinSvg(); };
+          this.src = 'def.png';
+        };
+      }
       if (isOwned) {
         imgElement.src = img;
       } else {
@@ -17559,6 +17587,7 @@ function adminTab(tab) {
     _adminLoadVerifyList();
     updatePaperEventButton();
     _adminUpdateEastStatus();
+    _adminRenderPassDiscStatus();
     window._firebaseDB.ref('paperEvent').once('value', snap => {
       const ev = snap.val();
       const status = document.getElementById('apPaperEventStatus');
@@ -17781,6 +17810,37 @@ async function adminModTakePet() {
   const petId = document.getElementById('apModPetId').value;
   await _db.ref(`admin/modActions/${uid}`).set({ action: 'takePet', petId, ts: Date.now() });
   showToast(`🚫 Take pet "${petId}" queued for ${uid} (applies on their next login if offline)`);
+}
+
+/* ---- GLOBAL: KSPT Pass discount ---- */
+function _adminPassDiscountEnd(mode) {
+  const now = Date.now();
+  if (mode === 'hour') return now + 3600000;
+  if (mode === 'day') return now + 86400000;
+  if (mode === 'week') return now + 7 * 86400000;
+  return getPassSeasonEndTime(); // 'season' — until the current pass ends
+}
+async function adminSetPassDiscount() {
+  if (!_isAdminUser()) return;
+  const percent = Math.round(Number(document.getElementById('apPassDiscPct').value) || 0);
+  const mode = document.getElementById('apPassDiscDur').value;
+  if (percent < 1 || percent > 90) { showToast('Discount must be 1–90%'); return; }
+  const end = _adminPassDiscountEnd(mode);
+  await _db.ref('admin/passDiscount').set({ percent, mode, start: Date.now(), end, ts: Date.now() });
+  showToast(`🏷 KSPT Pass -${percent}% (${Math.max(1, Math.round(PASS_COST_EK * (1 - percent / 100)))} EK) until ${new Date(end).toLocaleString()}`);
+}
+async function adminClearPassDiscount() {
+  if (!_isAdminUser()) return;
+  await _db.ref('admin/passDiscount').remove();
+  showToast('🏷 Pass discount removed');
+}
+function _adminRenderPassDiscStatus() {
+  const el = document.getElementById('apPassDiscStatus');
+  if (!el) return;
+  const p = getPassDiscountPercent();
+  el.textContent = p
+    ? `Active: -${p}% → ${getPassPrice()} EK, until ${new Date(window._passDiscount.end).toLocaleString()}`
+    : `No discount. Price: ${PASS_COST_EK} EK`;
 }
 
 /* ---- GLOBAL: Give free food to everyone (with an active pet) ---- */
@@ -18457,6 +18517,16 @@ function _startAdminListener() {
     });
     save();
     if (removed) showToast('🐾 ' + _pwL('A pet was removed by admin', 'Питомец был отозван админом'));
+  });
+
+  _db.ref('admin/passDiscount').on('value', snap => {
+    const v = snap.val();
+    window._passDiscount = (v && v.end > Date.now()) ? v : null;
+    try { if (typeof _adminRenderPassDiscStatus === 'function') _adminRenderPassDiscStatus(); } catch (e) {}
+    const _rerender = () => { try { if (d && d.pass && !d.pass.purchased && document.getElementById('passTab') && typeof renderPassTab === 'function') renderPassTab(); } catch (e) {} };
+    _rerender();
+    clearTimeout(window._passDiscTimer);
+    if (window._passDiscount) window._passDiscTimer = setTimeout(_rerender, Math.min(window._passDiscount.end - Date.now(), 2147000000) + 200);
   });
 
   _db.ref('admin/giveFood').on('value', snap => {
@@ -22057,6 +22127,7 @@ function initGame() {
 
     // Add error handlers for images
     document.querySelectorAll('img').forEach(img => {
+        if (img.dataset && img.dataset.keepErr) return; // у скинов своя цепочка фолбэков
         img.onerror = function() {
             console.warn('Image failed to load:', this.src);
             if (!this.src.includes('dontwhat.png') && !this.src.includes('knowdont.png')) {
@@ -28164,7 +28235,28 @@ const PASS_SEASON_NAMES = [
 // Type cycle across the 12 seasons: A,B,C repeated 4 times.
 const PASS_SEASON_TYPES = ['A','B','C','A','B','C','A','B','C','A','B','C'];
 
-const PASS_COST_EK = 100;
+const PASS_COST_EK = 90;   // базовая цена KSPT Pass (было 100)
+
+// Скидка на пасс, выставленная из админ-панели (admin/passDiscount): {percent, start, end, mode}
+window._passDiscount = window._passDiscount || null;
+function getPassDiscountPercent() {
+  const x = window._passDiscount;
+  const now = Date.now();
+  if (!x || !x.percent || now >= x.end || now < (x.start || 0)) return 0;
+  return Math.min(95, Math.max(0, Number(x.percent) || 0));
+}
+function getPassPrice() {
+  const p = getPassDiscountPercent();
+  return Math.max(1, Math.round(PASS_COST_EK * (1 - p / 100)));
+}
+function _passDiscountNote() {
+  const p = getPassDiscountPercent();
+  if (!p) return '';
+  const left = window._passDiscount.end - Date.now();
+  const h = Math.floor(left / 3600000), m = Math.floor((left % 3600000) / 60000);
+  const when = left >= 86400000 ? Math.ceil(left / 86400000) + (currentLang === 'ru' ? ' дн.' : ' d') : (h ? h + (currentLang === 'ru' ? ' ч ' : 'h ') : '') + m + (currentLang === 'ru' ? ' мин' : 'min');
+  return `<div style="margin-top:6px;font-size:12px;color:#69f0ae;font-weight:700;">🔥 -${p}% <span style="color:#888;text-decoration:line-through;font-weight:400;">${PASS_COST_EK} EK</span> · ${currentLang === 'ru' ? 'ещё' : 'ends in'} ${when}</div>`;
+}
 const PASS_LEVELS = 15;
 const PASS_XP_PER_LEVEL = 120;      // XP needed to advance one pass level (1800 XP total for 15 levels)
 const PASS_XP_DAILY_QUEST = 30;     // XP granted per claimed daily quest
@@ -28522,11 +28614,12 @@ function claimPassLevel(track, level) {
 function buyPass() {
   ensurePassSeason();
   if (d.pass.purchased) { showToast(t('pass_already_purchased')); return; }
-  if ((d.ek || 0) < PASS_COST_EK) {
-    showToast(t('pass_need_ek', PASS_COST_EK));
+  const _price = getPassPrice();
+  if ((d.ek || 0) < _price) {
+    showToast(t('pass_need_ek', _price));
     return;
   }
-  d.ek -= PASS_COST_EK;
+  d.ek -= _price;
   d.pass.purchased = true;
   showToast(t('pass_unlocked_toast'));
   save();
@@ -28590,7 +28683,7 @@ function renderPassTab() {
       <div style="font-size:10px; color:#666; margin-top:8px; line-height:1.4;">${t('pass_xp_info')}</div>
       ${d.pass.purchased
         ? `<div style="margin-top:10px; color:#8892ff; font-weight:bold; font-size:13px;">${t('pass_active')}</div>`
-        : `<button onclick="buyPass()" style="margin-top:10px; background:#7b5a00; border:none; border-radius:10px; color:#ffd54f; font-weight:bold; padding:10px 16px;">${t('pass_unlock_btn', PASS_COST_EK)}</button>`}
+        : `<button onclick="buyPass()" style="margin-top:10px; background:#7b5a00; border:none; border-radius:10px; color:#ffd54f; font-weight:bold; padding:10px 16px;">${t('pass_unlock_btn', getPassPrice())}</button>${_passDiscountNote()}`}
     </div>
     ${level >= PASS_LEVELS ? `
     <div style="background:#161624; border:1px solid rgba(255,213,79,0.25); border-radius:12px; padding:12px 14px; margin-bottom:14px;">
@@ -29772,10 +29865,10 @@ function _petFormatTimeLeft(ms) {
 // ==========================================
 
 const PET_FOOD_DEFS = {
-  minik: { label: 'Snack',  happiness: 10, incomeHours: 2,  sprite: 'minik.png' },
-  malek: { label: 'Small',  happiness: 20, incomeHours: 5,  sprite: 'malek.png' },
-  sredk: { label: 'Medium', happiness: 30, incomeHours: 7,  sprite: 'sredk.png' },
-  bolsk: { label: 'Large',  happiness: 50, incomeHours: 12, sprite: 'bolsk.png' }
+  minik: { label: 'Snack',  happiness: 10, incomeHours: 1.4, sprite: 'minik.png' },
+  malek: { label: 'Small',  happiness: 20, incomeHours: 2.6, sprite: 'malek.png' },
+  sredk: { label: 'Medium', happiness: 30, incomeHours: 3.7, sprite: 'sredk.png' },
+  bolsk: { label: 'Large',  happiness: 50, incomeHours: 5.8, sprite: 'bolsk.png' }
 };
 
 const PET_HAPPINESS_CAP_FROM_FOOD = 85;
@@ -32194,6 +32287,30 @@ document.addEventListener('DOMContentLoaded', function () {
   </div><!-- /modSection -->
 
   <div id="adminOtherSection" style="display:none;">
+
+    <!-- KSPT Pass discount -->
+    <div class="ap-card" style="border-color:#7b5a00;">
+      <h3 style="color:#ffd54f;">🏷 KSPT Pass Discount</h3>
+      <p style="color:#9fa8da;font-size:11px;margin:0 0 10px;">Base price is 90 EK. The discount applies to every player who has not bought the pass yet (also those who open the game later, while it lasts).</p>
+      <div class="ap-row" style="flex-direction:column;align-items:flex-start;gap:4px;">
+        <label style="color:#9fa8da;font-size:11px;">Discount, %</label>
+        <input id="apPassDiscPct" type="number" class="ap-input" value="20" min="1" max="90" style="width:100%;box-sizing:border-box;">
+      </div>
+      <div class="ap-row" style="flex-direction:column;align-items:flex-start;gap:4px;margin-top:6px;">
+        <label style="color:#9fa8da;font-size:11px;">Duration</label>
+        <select id="apPassDiscDur" class="ap-select" style="width:100%;">
+          <option value="hour">1 hour</option>
+          <option value="day">1 day</option>
+          <option value="week">1 week</option>
+          <option value="season">Until the end of the pass</option>
+        </select>
+      </div>
+      <div id="apPassDiscStatus" style="font-size:12px;color:#69f0ae;margin:8px 0;"></div>
+      <div class="ap-row" style="gap:8px;">
+        <button class="ap-btn ap-btn-green" style="flex:1;" onclick="adminSetPassDiscount()">🏷 Apply</button>
+        <button class="ap-btn ap-btn-red ap-btn-sm" onclick="adminClearPassDiscount()">✕ Remove</button>
+      </div>
+    </div>
 
     <!-- Verified Badge -->
     <div class="ap-card" style="border-color:#1a5276;">
